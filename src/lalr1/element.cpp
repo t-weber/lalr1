@@ -218,8 +218,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		const SymbolPtr sym = (*rhs)[i];
 
 		ostr << sym->GetStrId();
-		//if(i < rhs->size()-1)
-			ostr << " ";
+		ostr << " ";
 	}
 
 	if(elem.IsCursorAtEnd())

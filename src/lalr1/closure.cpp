@@ -79,8 +79,6 @@ const Closure& Closure::operator=(const Closure& closure)
  */
 void Closure::AddElement(const ElementPtr elem)
 {
-	//std::cout << "adding " << *elem << std::endl;
-
 	// full element already in closure?
 	if(HasElement(elem, false).first)
 		return;
@@ -91,7 +89,6 @@ void Closure::AddElement(const ElementPtr elem)
 	{
 		// add new lookahead
 		m_elems[core_idx]->AddLookaheads(elem->GetLookaheads());
-		//return;
 	}
 
 	// new element
@@ -122,7 +119,6 @@ void Closure::AddElement(const ElementPtr elem)
 				// copy ruleaftercursor and add lookahead
 				WordPtr _ruleaftercursor = std::make_shared<Word>(*ruleaftercursor);
 				_ruleaftercursor->AddSymbol(la);
-				//std::cout << nonterm->GetId() << ", " << *_ruleaftercursor << std::endl;
 
 				NonTerminalPtr tmpNT = std::make_shared<NonTerminal>(0, "tmp");
 				tmpNT->AddRule(*_ruleaftercursor);
@@ -136,16 +132,11 @@ void Closure::AddElement(const ElementPtr elem)
 					const Terminal::t_terminalset& set_first = set_first_pair.second;
 					for(const TerminalPtr& la : set_first)
 					{
-						//std::cout << "lookahead: " << la->GetId() << std::endl;
 						if(la->IsEps())
 							continue;
 						first_la.insert(la);
 					}
 				}
-				/*if(first_la.size() != 1)
-				{
-					std::cerr << "Info: Multiple look-ahead terminals, epsilon transition?" << std::endl;
-				}*/
 
 				AddElement(std::make_shared<Element>(nonterm, nonterm_rhsidx, 0, first_la));
 			}
@@ -237,8 +228,6 @@ bool Closure::AddLookaheads(const ClosurePtr closure)
 	{
 		ElementPtr elem = m_elems[elemidx];
 		std::size_t elem_hash = elem->hash(true);
-
-		//ElementPtr closure_elem = closure->m_elems[elemidx];
 
 		// find the element whose core has the same hash
 		if(auto iter = std::find_if(closure->m_elems.begin(), closure->m_elems.end(),
@@ -371,7 +360,6 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals(
 		[](const TerminalPtr term1, const TerminalPtr term2) -> bool
 		{
 			return term1->hash() < term2->hash();
-			//return term1->GetId() < term2->GetId();
 		});
 	auto end = std::unique(terms.begin(), terms.end(),
 		[](const TerminalPtr term1, const TerminalPtr term2) -> bool
@@ -414,6 +402,5 @@ std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
 	for(std::size_t i=0; i<closure.NumElements(); ++i)
 		ostr << "\t" << *closure.GetElement(i)<< "\n";
 
-	//closure.PrintComefroms(ostr);
 	return ostr;
 }

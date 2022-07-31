@@ -56,10 +56,6 @@ bool Collection::CompareTransitionsEqual::operator()(
 bool Collection::CompareTransitionsLess::operator()(
 	const t_transition& tr1, const t_transition& tr2) const
 {
-	/*std::size_t hash1 = HashTransition{}(tr1);
-	std::size_t hash2 = HashTransition{}(tr2);
-	return hash1 < hash2;*/
-
 	ClosurePtr from1 = std::get<0>(tr1);
 	ClosurePtr from2 = std::get<0>(tr2);
 	ClosurePtr to1 = std::get<1>(tr1);
@@ -133,9 +129,7 @@ void Collection::DoTransitions(const ClosurePtr closure_from, t_closurecache clo
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
 			<< closure_from->GetId() << " -> " << closure_to->GetId() << ".";
-		//ostrMsg << " Transition symbol: " << trans_sym->GetId() << ".";
 		ReportProgress(ostrMsg.str(), false);
-		//std::cout << std::hex << closure_to->hash() << ", " << *closure_to << std::endl;
 
 		if(new_closure)
 		{
@@ -259,10 +253,7 @@ bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 		const ClosurePtr closure_to = std::get<1>(tup);
 		const SymbolPtr symTrans = std::get<2>(tup);
 
-		//bool symIsTerm = symTrans->IsTerminal();
-		bool symIsEps = symTrans->IsEps();
-
-		if(symIsEps)
+		if(symTrans->IsEps())
 			continue;
 
 		ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
@@ -622,7 +613,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	std::stable_sort(transitions.begin(), transitions.end(), Collection::CompareTransitionsLess{});
 
 	std::ostringstream ostrActionShift, ostrActionReduce, ostrJump;
-	for(const Collection::t_transition& tup : /*coll.m_transitions*/ transitions)
+	for(const Collection::t_transition& tup : transitions)
 	{
 		const ClosurePtr& stateFrom = std::get<0>(tup);
 		const ClosurePtr& stateTo = std::get<1>(tup);

@@ -200,7 +200,8 @@ public:
 	/**
 	 * get a semantic rule index for a given rule number
 	 */
-	std::optional<std::size_t> GetSemanticRule(std::size_t i) const { return m_semantics[i]; }
+	std::optional<std::size_t> GetSemanticRule(std::size_t i) const
+	{ return m_semantics[i]; }
 
 	/**
 	 * does this non-terminal have a rule which produces epsilon?

@@ -12,6 +12,7 @@
 #include "parser.h"
 
 #include <stack>
+#include <sstream>
 
 
 Parser::Parser(

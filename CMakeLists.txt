@@ -43,6 +43,15 @@ add_library(lalr1 STATIC
 )
 
 target_link_libraries(lalr1 ${Boost_LIBRARIES})
+
+
+# lalr(1) parser
+add_library(lalr1-parser STATIC
+	src/lalr1/parser.cpp src/lalr1/parser.h
+	src/lalr1/table.h src/lalr1/common.h src/lalr1/ast.h
+)
+
+target_link_libraries(lalr1-parser ${Boost_LIBRARIES})
 # -----------------------------------------------------------------------------
 
 
@@ -52,8 +61,6 @@ if(BUILD_EXAMPLES)
 	# script compiler library
 	add_library(script STATIC
 		src/lalr1/symbol.cpp src/lalr1/symbol.h
-		src/lalr1/table.h src/lalr1/common.h
-		src/lalr1/parser.cpp src/lalr1/parser.h
 		src/script/lexer.cpp src/script/lexer.h
 		src/script/sym.h src/script/ast.h
 		src/script/ast_printer.cpp src/script/ast_printer.h
@@ -76,25 +83,28 @@ if(BUILD_EXAMPLES)
 	)
 
 
+	# vm
 	add_executable(script_vm src/script_vm/main.cpp)
 	target_link_libraries(script_vm script-vm)
 
 
+	# script compiler
 	add_executable(script_create src/script/script.cpp)
 	target_compile_definitions(script_create PUBLIC -DCREATE_PARSER)
 	target_link_libraries(script_create lalr1)
 
 	add_executable(script_run src/script/script.cpp)
 	target_compile_definitions(script_run PUBLIC -DRUN_PARSER)
-	target_link_libraries(script_run script script-vm)
+	target_link_libraries(script_run script lalr1-parser script-vm)
 
 
+	# expression compiler
 	add_executable(expr_create src/script/expr.cpp)
 	target_compile_definitions(expr_create PUBLIC -DCREATE_PARSER)
 	target_link_libraries(expr_create lalr1)
 
 	add_executable(expr_run src/script/expr.cpp)
 	target_compile_definitions(expr_run PUBLIC -DRUN_PARSER)
-	target_link_libraries(expr_run script script-vm)
+	target_link_libraries(expr_run script lalr1-parser script-vm)
 endif()
 # -----------------------------------------------------------------------------
