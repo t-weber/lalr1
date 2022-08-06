@@ -25,8 +25,7 @@
 /**
  * hash a transition element
  */
-std::size_t Closure::HashComefromTransition::operator()(
-	const t_comefrom_transition& trans) const
+std::size_t Closure::HashTransition::operator()(const t_transition& trans) const
 {
 	std::size_t hashSym = std::get<0>(trans)->hash();
 	std::size_t hashFrom = std::get<1>(trans)->hash(true);
@@ -39,10 +38,10 @@ std::size_t Closure::HashComefromTransition::operator()(
 /**
  * compare two transition elements for equality
  */
-bool Closure::CompareComefromTransitionsEqual::operator()(
-	const t_comefrom_transition& tr1, const t_comefrom_transition& tr2) const
+bool Closure::CompareTransitionsEqual::operator()(
+	const t_transition& tr1, const t_transition& tr2) const
 {
-	return HashComefromTransition{}(tr1) == HashComefromTransition{}(tr2);
+	return HashTransition{}(tr1) == HashTransition{}(tr2);
 }
 // ----------------------------------------------------------------------------
 
@@ -51,7 +50,8 @@ bool Closure::CompareComefromTransitionsEqual::operator()(
 std::size_t Closure::g_id = 0;
 
 
-Closure::Closure() : std::enable_shared_from_this<Closure>{}, m_elems{}, m_id{g_id++}
+Closure::Closure() : std::enable_shared_from_this<Closure>{},
+	m_elems{}, m_id{g_id++}
 {}
 
 
@@ -67,17 +67,30 @@ const Closure& Closure::operator=(const Closure& closure)
 	this->m_id = closure.m_id;
 	this->m_comefrom_transitions = closure.m_comefrom_transitions;
 
-	for(ElementPtr elem : closure.m_elems)
+	for(const ElementPtr& elem : closure.m_elems)
 		this->m_elems.emplace_back(std::make_shared<Element>(*elem));
 
 	return *this;
 }
 
 
+std::size_t Closure::GetId() const
+{
+	return m_id;
+}
+
+
+void Closure::SetId(std::size_t id)
+{
+	m_id = id;
+	m_hash = m_hash_core = std::nullopt;
+}
+
+
 /**
  * adds an element and generates the rest of the closure
  */
-void Closure::AddElement(const ElementPtr elem)
+void Closure::AddElement(const ElementPtr& elem)
 {
 	// full element already in closure?
 	if(HasElement(elem, false).first)
@@ -99,7 +112,7 @@ void Closure::AddElement(const ElementPtr elem)
 
 
 	// if the cursor is before a non-terminal, add the rule as element
-	const Word* rhs = elem->GetRhs();
+	const WordPtr& rhs = elem->GetRhs();
 	std::size_t cursor = elem->GetCursor();
 	if(cursor < rhs->size() && !(*rhs)[cursor]->IsTerminal())
 	{
@@ -108,7 +121,9 @@ void Closure::AddElement(const ElementPtr elem)
 		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
 
 		// get non-terminal at cursor
-		NonTerminalPtr nonterm = std::dynamic_pointer_cast<NonTerminal>((*rhs)[cursor]);
+		const NonTerminalPtr& nonterm =
+			std::dynamic_pointer_cast<NonTerminal>(
+				(*rhs)[cursor]);
 
 		// iterate all rules of the non-terminal
 		for(std::size_t nonterm_rhsidx=0; nonterm_rhsidx<nonterm->NumRules(); ++nonterm_rhsidx)
@@ -121,27 +136,29 @@ void Closure::AddElement(const ElementPtr elem)
 				_ruleaftercursor->AddSymbol(la);
 
 				NonTerminalPtr tmpNT = std::make_shared<NonTerminal>(0, "tmp");
-				tmpNT->AddRule(*_ruleaftercursor);
+				tmpNT->AddRule(_ruleaftercursor);
 
-				t_map_first tmp_first;
-				calc_first(tmpNT, tmp_first);
+				t_map_first tmp_first = tmpNT->CalcFirst();
 
 				Terminal::t_terminalset first_la;
 				for(const auto& set_first_pair : tmp_first)
 				{
-					const Terminal::t_terminalset& set_first = set_first_pair.second;
+					const Terminal::t_terminalset& set_first
+						= set_first_pair.second;
 					for(const TerminalPtr& la : set_first)
 					{
-						if(la->IsEps())
-							continue;
-						first_la.insert(la);
+						if(!la->IsEps())
+							first_la.insert(la);
 					}
 				}
 
-				AddElement(std::make_shared<Element>(nonterm, nonterm_rhsidx, 0, first_la));
+				AddElement(std::make_shared<Element>(
+					nonterm, nonterm_rhsidx, 0, first_la));
 			}
 		}
 	}
+
+	m_hash = m_hash_core = std::nullopt;
 }
 
 
@@ -149,38 +166,46 @@ void Closure::AddElement(const ElementPtr elem)
  * checks if an element is already in the closure and returns its index
  */
 std::pair<bool, std::size_t> Closure::HasElement(
-	const ElementPtr elem, bool only_core) const
+	const ElementPtr& elem, bool only_core) const
 {
-	for(std::size_t idx=0; idx<m_elems.size(); ++idx)
+	if(auto iter = std::find_if(m_elems.begin(), m_elems.end(),
+		[&elem, only_core](const ElementPtr& theelem) -> bool
+		{
+			return theelem->IsEqual(*elem, only_core);
+		}); iter != m_elems.end())
 	{
-		const ElementPtr theelem = m_elems[idx];
-
-		if(theelem->IsEqual(*elem, only_core, false))
-			return std::make_pair(true, idx);
+		return std::make_pair(true, iter - m_elems.begin());
 	}
 
 	return std::make_pair(false, 0);
 }
 
 
+std::size_t Closure::NumElements() const
+{
+	return m_elems.size();
+}
+
+
+const ElementPtr& Closure::GetElement(std::size_t i) const
+{
+	return m_elems[i];
+}
+
+
 /**
- * get the element of the collection whose cursor points to the given symbol
+ * get the element of the closure whose cursor points to the given symbol
  */
-const ElementPtr Closure::GetElementWithCursorAtSymbol(
-	const SymbolPtr& sym) const
+ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
 {
 	for(std::size_t idx=0; idx<m_elems.size(); ++idx)
 	{
-		const ElementPtr theelem = m_elems[idx];
-
-		const Word* rhs = theelem->GetRhs();
-		if(!rhs)
-			continue;
+		const ElementPtr& theelem = m_elems[idx];
 		std::size_t cursor = theelem->GetCursor();
+		const WordPtr& rhs = theelem->GetRhs();
 
-		if(cursor >= rhs->NumSymbols())
+		if(!rhs || cursor >= rhs->NumSymbols())
 			continue;
-
 		if(rhs->GetSymbol(cursor)->GetId() == sym->GetId())
 			return theelem;
 	}
@@ -192,19 +217,20 @@ const ElementPtr Closure::GetElementWithCursorAtSymbol(
 /**
  * get possible transition symbols from all elements
  */
-std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
+std::vector<SymbolPtr> Closure::GetPossibleTransitionSymbols() const
 {
 	std::vector<SymbolPtr> syms;
+	syms.reserve(m_elems.size());
 
 	for(const ElementPtr& theelem : m_elems)
 	{
-		const SymbolPtr sym = theelem->GetPossibleTransition();
+		const SymbolPtr& sym = theelem->GetPossibleTransitionSymbol();
 		if(!sym)
 			continue;
 
 		// do we already have this symbol?
 		bool sym_already_seen = std::find_if(syms.begin(), syms.end(),
-			[sym](const SymbolPtr sym2) -> bool
+			[sym](const SymbolPtr& sym2) -> bool
 			{
 				return *sym == *sym2;
 			}) != syms.end();
@@ -220,43 +246,63 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
 /**
  * add the lookaheads from another closure with the same core
  */
-bool Closure::AddLookaheads(const ClosurePtr closure)
+bool Closure::AddLookaheads(const ClosurePtr& closure)
 {
 	bool lookaheads_added = false;
 
 	for(std::size_t elemidx=0; elemidx<m_elems.size(); ++elemidx)
 	{
-		ElementPtr elem = m_elems[elemidx];
+		ElementPtr& elem = m_elems[elemidx];
 		std::size_t elem_hash = elem->hash(true);
 
 		// find the element whose core has the same hash
 		if(auto iter = std::find_if(closure->m_elems.begin(), closure->m_elems.end(),
-			[elem_hash](const ElementPtr closure_elem) -> bool
+			[elem_hash](const ElementPtr& closure_elem) -> bool
 			{
 				return closure_elem->hash(true) == elem_hash;
 			}); iter != closure->m_elems.end())
 		{
-			ElementPtr closure_elem = *iter;
+			const ElementPtr& closure_elem = *iter;
 			if(elem->AddLookaheads(closure_elem->GetLookaheads()))
 				lookaheads_added = true;
 		}
 	}
 
+	m_hash = m_hash_core = std::nullopt;
 	return lookaheads_added;
 }
 
 
+void Closure::AddComefrom(Closure::t_comefrom_transition&& comefrom)
+{
+	m_comefrom_transitions.emplace(comefrom);
+}
+
+
+void Closure::AddComefroms(const Closure::t_comefrom_transitions& comefroms)
+{
+	for(const t_comefrom_transition& comefrom : comefroms)
+		m_comefrom_transitions.insert(comefrom);
+}
+
+
+const Closure::t_comefrom_transitions& Closure::GetComefroms() const
+{
+	return m_comefrom_transitions;
+}
+
+
 /**
- * perform a transition and get the corresponding lr(1) closure
+ * perform a transition and get the corresponding lalr(1) closure
  */
-ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
+ClosurePtr Closure::DoTransition(const SymbolPtr& transsym) const
 {
 	ClosurePtr newclosure = std::make_shared<Closure>();
 
 	// look for elements with that transition
 	for(const ElementPtr& theelem : m_elems)
 	{
-		const SymbolPtr sym = theelem->GetPossibleTransition();
+		const SymbolPtr& sym = theelem->GetPossibleTransitionSymbol();
 		if(!sym || *sym != *transsym)
 			continue;
 
@@ -264,8 +310,9 @@ ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
 		newelem->AdvanceCursor();
 
-		ClosurePtr this_closure = std::const_pointer_cast<Closure>(
-			shared_from_this());
+		const ClosurePtr& this_closure =
+			std::const_pointer_cast<Closure>(
+				shared_from_this());
 		newclosure->AddElement(newelem);
 		newclosure->m_comefrom_transitions.emplace(
 			std::make_tuple(transsym, this_closure));
@@ -277,31 +324,37 @@ ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
 
 /**
  * perform all possible transitions from this closure
- * and get the corresponding lr(1) collection
+ * and get the corresponding lalr(1) collection
  * @return [transition symbol, destination closure]
  */
-std::vector<std::tuple<SymbolPtr, ClosurePtr>> Closure::DoTransitions() const
+Closure::t_transitions Closure::DoTransitions() const
 {
-	std::vector<std::tuple<SymbolPtr, ClosurePtr>> coll;
-	std::vector<SymbolPtr> possible_transitions = GetPossibleTransitions();
+	std::vector<SymbolPtr> possible_transitions = GetPossibleTransitionSymbols();
+	t_transitions transitions;
+	transitions.reserve(possible_transitions.size());
 
 	for(const SymbolPtr& transition : possible_transitions)
 	{
 		ClosurePtr closure = DoTransition(transition);
-		coll.emplace_back(std::make_tuple(transition, closure));
+		transitions.emplace_back(std::make_tuple(transition, closure));
 	}
 
-	return coll;
+	return transitions;
 }
 
 
 std::size_t Closure::hash(bool only_core) const
 {
+	if(m_hash && !only_core)
+		return *m_hash;
+	if(m_hash_core && only_core)
+		return *m_hash_core;
+
 	// sort element hashes before combining them
 	std::vector<std::size_t> hashes;
 	hashes.reserve(m_elems.size());
 
-	for(ElementPtr elem : m_elems)
+	for(const ElementPtr& elem : m_elems)
 		hashes.emplace_back(elem->hash(only_core));
 
 	std::sort(hashes.begin(), hashes.end(),
@@ -313,6 +366,12 @@ std::size_t Closure::hash(bool only_core) const
 	std::size_t fullhash = 0;
 	for(std::size_t hash : hashes)
 		boost::hash_combine(fullhash, hash);
+
+
+	if(only_core)
+		m_hash_core = fullhash;
+	else
+		m_hash = fullhash;;
 	return fullhash;
 }
 
@@ -320,36 +379,43 @@ std::size_t Closure::hash(bool only_core) const
 /**
  * get all terminal symbols that lead to this closure
  */
-std::vector<TerminalPtr> Closure::GetComefromTerminals(
-	std::shared_ptr<std::unordered_set<std::size_t>> seen_closures) const
+std::vector<TerminalPtr> Closure::GetComefromTerminals() const
+{
+	m_seen_closures = std::make_shared<std::unordered_set<std::size_t>>();
+	return _GetComefromTerminals();
+}
+
+
+/**
+ * get all terminal symbols that lead to this closure (internal function)
+ */
+std::vector<TerminalPtr> Closure::_GetComefromTerminals() const
 {
 	std::vector<TerminalPtr> terms;
 	terms.reserve(m_comefrom_transitions.size());
 
-	if(!seen_closures)
-		seen_closures = std::make_shared<std::unordered_set<std::size_t>>();
-
 	for(const t_comefrom_transition& comefrom : m_comefrom_transitions)
 	{
-		SymbolPtr sym = std::get<0>(comefrom);
-		const ClosurePtr closure = std::get<1>(comefrom);
+		const SymbolPtr& sym = std::get<0>(comefrom);
+		const ClosurePtr& closure = std::get<1>(comefrom);
 
 		if(sym->IsTerminal())
 		{
-			TerminalPtr term = std::dynamic_pointer_cast<Terminal>(sym);
+			const TerminalPtr& term =
+				std::dynamic_pointer_cast<Terminal>(sym);
 			terms.emplace_back(std::move(term));
 		}
 		else if(closure)
 		{
 			// closure not yet seen?
 			std::size_t hash = closure->hash();
-			if(seen_closures->find(hash) == seen_closures->end())
+			if(m_seen_closures->find(hash) == m_seen_closures->end())
 			{
-				seen_closures->insert(hash);
+				m_seen_closures->insert(hash);
 
 				// get terminals from comefrom closure
 				std::vector<TerminalPtr> _terms =
-					closure->GetComefromTerminals(seen_closures);
+					closure->_GetComefromTerminals();
 				terms.insert(terms.end(), _terms.begin(), _terms.end());
 			}
 		}
@@ -357,17 +423,19 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals(
 
 	// remove duplicates
 	std::stable_sort(terms.begin(), terms.end(),
-		[](const TerminalPtr term1, const TerminalPtr term2) -> bool
+		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
 		{
 			return term1->hash() < term2->hash();
 		});
-	auto end = std::unique(terms.begin(), terms.end(),
-		[](const TerminalPtr term1, const TerminalPtr term2) -> bool
+
+	if(auto end = std::unique(terms.begin(), terms.end(),
+		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
 		{
 			return *term1 == *term2;
-		});
-	if(end != terms.end())
+		}); end != terms.end())
+	{
 		terms.resize(end - terms.begin());
+	}
 
 	return terms;
 }
@@ -404,3 +472,4 @@ std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
 
 	return ostr;
 }
+

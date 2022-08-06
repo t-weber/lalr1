@@ -392,7 +392,7 @@ static void lr1_create_parser()
 		t_map_first first;
 		t_map_first_perrule first_per_rule;
 		for(const NonTerminalPtr& nonterminal : all_nonterminals)
-			calc_first(nonterminal, first, &first_per_rule);
+			nonterminal->CalcFirst(first, &first_per_rule);
 
 		for(const auto& pair : first)
 		{
@@ -406,7 +406,7 @@ static void lr1_create_parser()
 		std::cout << "FOLLOW sets:\n";
 		t_map_follow follow;
 		for(const NonTerminalPtr& nonterminal : all_nonterminals)
-			calc_follow(all_nonterminals, start, nonterminal, first, follow);
+			nonterminal->CalcFollow(all_nonterminals, start, first, follow);
 
 		for(const auto& pair : follow)
 		{
@@ -479,7 +479,7 @@ static void lalr1_run_parser()
 	try
 	{
 		// get created parsing tables
-		auto parsetables = get_lr1_tables();
+		auto parsetables = get_lalr1_tables();
 
 		const t_mapIdIdx* mapTermIdx = std::get<3>(parsetables);
 		mapNonTermIdx = std::get<4>(parsetables);

@@ -5,8 +5,8 @@
  * @license see 'LICENSE' file
  */
 
-#ifndef __LR1_TYPES_H__
-#define __LR1_TYPES_H__
+#ifndef __LALR1_TYPES_H__
+#define __LALR1_TYPES_H__
 
 #include "table.h"
 #include "ast.h"

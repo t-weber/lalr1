@@ -159,11 +159,12 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 					<< std::endl;
 			}
 
-			// take the symbols from the stack and create an argument vector for the semantic rule
+			// take the symbols from the stack and create an
+			// argument vector for the semantic rule
 			std::vector<t_lalrastbaseptr> args;
 			for(std::size_t arg=0; arg<numSyms; ++arg)
 			{
-				args.push_back(symbols.top());
+				args.emplace_back(std::move(symbols.top()));
 
 				symbols.pop();
 				states.pop();

@@ -35,34 +35,32 @@
 class Element : public std::enable_shared_from_this<Element>
 {
 public:
-	Element(const NonTerminalPtr lhs, std::size_t rhsidx,
+	Element(const NonTerminalPtr& lhs, std::size_t rhsidx,
 		std::size_t cursor, const Terminal::t_terminalset& la);
 
 	Element(const Element& elem);
 	const Element& operator=(const Element& elem);
 
-	const NonTerminalPtr GetLhs() const { return m_lhs; }
-	const Word* GetRhs() const { return m_rhs; }
-	std::optional<std::size_t> GetSemanticRule() const { return m_semanticrule; }
+	const NonTerminalPtr& GetLhs() const;
+	const WordPtr& GetRhs() const;
+	std::optional<std::size_t> GetSemanticRule() const;
 
-	std::size_t GetCursor() const { return m_cursor; }
-	const Terminal::t_terminalset& GetLookaheads() const { return m_lookaheads; }
+	std::size_t GetCursor() const;
+	const Terminal::t_terminalset& GetLookaheads() const;
 	WordPtr GetRhsAfterCursor() const;
-	const SymbolPtr GetSymbolAtCursor() const;
+	SymbolPtr GetSymbolAtCursor() const;
 
-	bool AddLookahead(TerminalPtr term);
+	bool AddLookahead(const TerminalPtr& term);
 	bool AddLookaheads(const Terminal::t_terminalset& las);
 	void SetLookaheads(const Terminal::t_terminalset& las);
 
-	const SymbolPtr GetPossibleTransition() const;
+	SymbolPtr GetPossibleTransitionSymbol() const;
 
 	void AdvanceCursor();
 	bool IsCursorAtEnd() const;
 
-	bool IsEqual(const Element& elem, bool only_core=false,
-		bool full_equal=true) const;
-	bool operator==(const Element& other) const
-	{ return IsEqual(other, false); }
+	bool IsEqual(const Element& elem, bool only_core = false) const;
+	bool operator==(const Element& other) const;
 	bool operator!=(const Element& other) const
 	{ return !operator==(other); }
 
@@ -73,13 +71,17 @@ public:
 
 private:
 	NonTerminalPtr m_lhs{nullptr};
-	const Word* m_rhs{nullptr};
+	WordPtr m_rhs{nullptr};
 	std::optional<std::size_t> m_semanticrule{std::nullopt};
 
 	std::size_t m_rhsidx{0};  // rule index
 	std::size_t m_cursor{0};  // pointing before element at this index
 
 	Terminal::t_terminalset m_lookaheads{};
+
+	// cached hash values
+	mutable std::optional<std::size_t> m_hash{ std::nullopt };
+	mutable std::optional<std::size_t> m_hash_core{ std::nullopt };
 };
 
 

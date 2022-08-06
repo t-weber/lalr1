@@ -56,12 +56,12 @@ bool Collection::CompareTransitionsEqual::operator()(
 bool Collection::CompareTransitionsLess::operator()(
 	const t_transition& tr1, const t_transition& tr2) const
 {
-	ClosurePtr from1 = std::get<0>(tr1);
-	ClosurePtr from2 = std::get<0>(tr2);
-	ClosurePtr to1 = std::get<1>(tr1);
-	ClosurePtr to2 = std::get<1>(tr2);
-	SymbolPtr sym1 = std::get<2>(tr1);
-	SymbolPtr sym2 = std::get<2>(tr2);
+	const ClosurePtr& from1 = std::get<0>(tr1);
+	const ClosurePtr& from2 = std::get<0>(tr2);
+	const ClosurePtr& to1 = std::get<1>(tr1);
+	const ClosurePtr& to2 = std::get<1>(tr2);
+	const SymbolPtr& sym1 = std::get<2>(tr1);
+	const SymbolPtr& sym2 = std::get<2>(tr2);
 
 	if(from1->GetId() < from2->GetId())
 		return true;
@@ -74,15 +74,14 @@ bool Collection::CompareTransitionsLess::operator()(
 // ----------------------------------------------------------------------------
 
 
-Collection::Collection(const ClosurePtr closure)
-	: std::enable_shared_from_this<Collection>{}, m_collection{}, m_transitions{}
+Collection::Collection(const ClosurePtr& closure)
+	: std::enable_shared_from_this<Collection>{}
 {
 	m_collection.push_back(closure);
 }
 
 
-Collection::Collection()
-	: std::enable_shared_from_this<Collection>{}, m_collection{}, m_transitions{}
+Collection::Collection() : std::enable_shared_from_this<Collection>{}
 {
 }
 
@@ -103,28 +102,27 @@ void Collection::ReportProgress(const std::string& msg, bool finished)
 /**
  * perform all possible lalr(1) transitions from all collections
  */
-void Collection::DoTransitions(const ClosurePtr closure_from, t_closurecache closure_cache)
+void Collection::DoTransitions(const ClosurePtr& closure_from)
 {
-	if(!closure_cache)
+	if(!m_closure_cache)
 	{
-		closure_cache = std::make_shared<std::unordered_map<std::size_t, ClosurePtr>>();
-		closure_cache->emplace(std::make_pair(closure_from->hash(true), closure_from));
+		m_closure_cache = std::make_shared<std::unordered_map<std::size_t, ClosurePtr>>();
+		m_closure_cache->emplace(std::make_pair(closure_from->hash(true), closure_from));
 	}
 
-	std::vector<std::tuple<SymbolPtr, ClosurePtr>> closure =
-		closure_from->DoTransitions();
+	Closure::t_transitions transitions = closure_from->DoTransitions();
 
 	// no more transitions?
-	if(closure.size() == 0)
+	if(transitions.size() == 0)
 		return;
 
-	for(const auto& tup : closure)
+	for(const Closure::t_transition& tup : transitions)
 	{
-		const SymbolPtr trans_sym = std::get<0>(tup);
-		const ClosurePtr closure_to = std::get<1>(tup);
+		const SymbolPtr& trans_sym = std::get<0>(tup);
+		const ClosurePtr& closure_to = std::get<1>(tup);
 		std::size_t hash_to = closure_to->hash(true);
-		auto cacheIter = closure_cache->find(hash_to);
-		bool new_closure = (cacheIter == closure_cache->end());
+		auto cacheIter = m_closure_cache->find(hash_to);
+		bool new_closure = (cacheIter == m_closure_cache->end());
 
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
@@ -134,12 +132,12 @@ void Collection::DoTransitions(const ClosurePtr closure_from, t_closurecache clo
 		if(new_closure)
 		{
 			// new unique closure
-			closure_cache->emplace(std::make_pair(hash_to, closure_to));
+			m_closure_cache->emplace(std::make_pair(hash_to, closure_to));
 			m_collection.push_back(closure_to);
 			m_transitions.emplace(std::make_tuple(
 				closure_from, closure_to, trans_sym));
 
-			DoTransitions(closure_to, closure_cache);
+			DoTransitions(closure_to);
 		}
 		else
 		{
@@ -149,22 +147,21 @@ void Collection::DoTransitions(const ClosurePtr closure_from, t_closurecache clo
 			// unite lookaheads
 			bool lookaheads_added = closure_to_existing->AddLookaheads(closure_to);
 
+			// add the transition from the closure
 			m_transitions.emplace(std::make_tuple(
 				closure_from, closure_to_existing, trans_sym));
 
 			// unite lookbacks
-			for(const Closure::t_comefrom_transition& comefrom
-				: closure_to->m_comefrom_transitions)
-				closure_to_existing->m_comefrom_transitions.insert(comefrom);
+			closure_to_existing->AddComefroms(closure_to->GetComefroms());
 
 			// also add the comefrom symbol to the closure
-			closure_to_existing->m_comefrom_transitions.emplace(
+			closure_to_existing->AddComefrom(
 				std::make_tuple(trans_sym, closure_from));
 
 			// if a lookahead of an old closure has changed,
 			// the transitions of that closure need to be redone
 			if(lookaheads_added)
-				DoTransitions(closure_to_existing, closure_cache);
+				DoTransitions(closure_to_existing);
 		}
 	}
 }
@@ -172,105 +169,49 @@ void Collection::DoTransitions(const ClosurePtr closure_from, t_closurecache clo
 
 void Collection::DoTransitions()
 {
-	DoTransitions(m_collection[0]);
+	m_closure_cache = nullptr;
+	DoTransitions(*m_collection.begin());
 	Simplify();
+
 	ReportProgress("All transitions done.", true);
 }
 
 
 void Collection::Simplify()
 {
-	constexpr bool do_sort = 1;
-	constexpr bool do_cleanup = 1;
-
 	// sort rules
-	if constexpr(do_sort)
-	{
-		std::sort(m_collection.begin(), m_collection.end(),
-			[](const ClosurePtr closure1, const ClosurePtr closure2) -> bool
-			{
-				return closure1->GetId() < closure2->GetId();
-			});
-	}
+	m_collection.sort(
+		[](const ClosurePtr& closure1, const ClosurePtr& closure2) -> bool
+		{
+			return closure1->GetId() < closure2->GetId();
+		});
 
 	// cleanup ids
-	if constexpr(do_cleanup)
-	{
-		std::unordered_map<std::size_t, std::size_t> idmap;
-		std::unordered_set<std::size_t> already_seen;
-		std::size_t newid = 0;
+	std::unordered_map<std::size_t, std::size_t> idmap;
+	std::unordered_set<std::size_t> already_seen;
+	std::size_t newid = 0;
 
-		for(ClosurePtr closure : m_collection)
-		{
-			std::size_t oldid = closure->GetId();
-			std::size_t hash = closure->hash();
-
-			if(already_seen.find(hash) != already_seen.end())
-				continue;
-
-			auto iditer = idmap.find(oldid);
-			if(iditer == idmap.end())
-				iditer = idmap.emplace(
-					std::make_pair(oldid, newid++)).first;
-
-			closure->SetId(iditer->second);
-			already_seen.insert(hash);
-		}
-	}
-}
-
-
-/**
- * write out the transitions graph
- */
-bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
-{
-	std::string outfile_graph = file + ".graph";
-	std::string outfile_svg = file + ".svg";
-
-	std::ofstream ofstr{outfile_graph};
-	if(!ofstr)
-		return false;
-
-	ofstr << "digraph G_lr1\n{\n";
-
-	// write states
 	for(const ClosurePtr& closure : m_collection)
 	{
-		ofstr << "\t" << closure->GetId() << " [label=\"";
-		if(write_full_coll)
-			ofstr << *closure;
-		else
-			ofstr << closure->GetId();
-		ofstr << "\"];\n";
-	}
+		std::size_t oldid = closure->GetId();
+		std::size_t hash = closure->hash();
 
-	// write transitions
-	ofstr << "\n";
-	for(const t_transition& tup : m_transitions)
-	{
-		const ClosurePtr closure_from = std::get<0>(tup);
-		const ClosurePtr closure_to = std::get<1>(tup);
-		const SymbolPtr symTrans = std::get<2>(tup);
-
-		if(symTrans->IsEps())
+		if(already_seen.find(hash) != already_seen.end())
 			continue;
 
-		ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
-			<< " [label=\"" << symTrans->GetStrId() << "\"];\n";
+		auto iditer = idmap.find(oldid);
+		if(iditer == idmap.end())
+			iditer = idmap.emplace(
+				std::make_pair(oldid, newid++)).first;
+
+		closure->SetId(iditer->second);
+		already_seen.insert(hash);
 	}
-
-	ofstr << "}" << std::endl;
-	ofstr.flush();
-	ofstr.close();
-
-	return std::system(("dot -Tsvg " + outfile_graph + " -o " + outfile_svg).c_str()) == 0;
 }
 
 
-
 /**
- * creates the lr(1) parser tables
+ * creates the lalr(1) parse tables
  */
 std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx, t_vecIdx>
 Collection::CreateParseTables(bool stopOnConflicts) const
@@ -312,7 +253,7 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 	};
 
 
-	for(const Collection::t_transition& tup : m_transitions)
+	for(const t_transition& tup : m_transitions)
 	{
 		const ClosurePtr& stateFrom = std::get<0>(tup);
 		const ClosurePtr& stateTo = std::get<1>(tup);
@@ -353,11 +294,9 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 				continue;
 			std::size_t rule = *rulenr;
 
-			const Word* rhs = elem->GetRhs();
-			std::size_t numRhsSyms = rhs->NumSymbols(false);
 			if(numRhsSymsPerRule.size() <= rule)
 				numRhsSymsPerRule.resize(rule+1);
-			numRhsSymsPerRule[rule] = numRhsSyms;
+			numRhsSymsPerRule[rule] = elem->GetRhs()->NumSymbols(false);
 
 			auto& _action_row = _action_reduce[closure->GetId()];
 
@@ -381,20 +320,18 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 		t_table{_action_shift, errorVal, acceptVal, numStates, curTermIdx},
 		t_table{_action_reduce, errorVal, acceptVal, numStates, curTermIdx},
 		t_table{_jump, errorVal, acceptVal, numStates, curNonTermIdx},
-		mapTermIdx, mapNonTermIdx,
-		numRhsSymsPerRule);
+		mapTermIdx, mapNonTermIdx, numRhsSymsPerRule);
 
 	// check for and try to resolve shift/reduce conflicts
-	for(std::size_t state=0; state<numStates; ++state)
+	std::size_t state = 0;
+	for(const ClosurePtr& closureState : m_collection)
 	{
-		ClosurePtr closureState = m_collection[state];
 		std::vector<TerminalPtr> comefromTerms = closureState->GetComefromTerminals();
 
 		for(std::size_t termidx=0; termidx<curTermIdx; ++termidx)
 		{
 			std::size_t& shiftEntry = std::get<0>(tables)(state, termidx);
 			std::size_t& reduceEntry = std::get<1>(tables)(state, termidx);
-			//const t_mapIdIdx& mapTermIdx = std::get<3>(tables);
 
 			std::optional<std::string> termid;
 			ElementPtr conflictelem = nullptr;
@@ -418,7 +355,7 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 				// try to resolve conflict using operator precedences/associativities
 				if(sym_at_cursor && sym_at_cursor->IsTerminal())
 				{
-					const TerminalPtr term_at_cursor =
+					const TerminalPtr& term_at_cursor =
 						std::dynamic_pointer_cast<Terminal>(sym_at_cursor);
 
 					for(const TerminalPtr& comefromTerm : comefromTerms)
@@ -502,6 +439,8 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 				}
 			}
 		}
+
+		++state;
 	}
 
 	return tables;
@@ -509,7 +448,7 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 
 
 /**
- * export lr(1) tables to C++ code
+ * export lalr(1) tables to C++ code
  */
 bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 	t_mapIdIdx, t_mapIdIdx, t_vecIdx>& tabs, const std::string& file)
@@ -518,8 +457,8 @@ bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 	if(!ofstr)
 		return false;
 
-	ofstr << "#ifndef __LR1_TABLES__\n";
-	ofstr << "#define __LR1_TABLES__\n\n";
+	ofstr << "#ifndef __LALR1_TABLES__\n";
+	ofstr << "#define __LALR1_TABLES__\n\n";
 
 	ofstr <<"namespace _lr1_tables {\n\n";
 
@@ -564,7 +503,7 @@ bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 
 
 	ofstr << "static std::tuple<const t_table*, const t_table*, const t_table*, const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>\n";
-	ofstr << "get_lr1_tables()\n{\n";
+	ofstr << "get_lalr1_tables()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n"
 		<< "\t\t&_lr1_tables::tab_action_shift, &_lr1_tables::tab_action_reduce, &_lr1_tables::tab_jump,\n"
 		<< "\t\t&_lr1_tables::map_term_idx, &_lr1_tables::map_nonterm_idx, &_lr1_tables::vec_num_rhs_syms);\n";
@@ -573,6 +512,54 @@ bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 
 	ofstr << "\n#endif" << std::endl;
 	return true;
+}
+
+
+/**
+ * write out the transitions graph
+ */
+bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
+{
+	std::string outfile_graph = file + ".graph";
+	std::string outfile_svg = file + ".svg";
+
+	std::ofstream ofstr{outfile_graph};
+	if(!ofstr)
+		return false;
+
+	ofstr << "digraph G_lr1\n{\n";
+
+	// write states
+	for(const ClosurePtr& closure : m_collection)
+	{
+		ofstr << "\t" << closure->GetId() << " [label=\"";
+		if(write_full_coll)
+			ofstr << *closure;
+		else
+			ofstr << closure->GetId();
+		ofstr << "\"];\n";
+	}
+
+	// write transitions
+	ofstr << "\n";
+	for(const t_transition& tup : m_transitions)
+	{
+		const ClosurePtr& closure_from = std::get<0>(tup);
+		const ClosurePtr& closure_to = std::get<1>(tup);
+		const SymbolPtr& symTrans = std::get<2>(tup);
+
+		if(symTrans->IsEps())
+			continue;
+
+		ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
+			<< " [label=\"" << symTrans->GetStrId() << "\"];\n";
+	}
+
+	ofstr << "}" << std::endl;
+	ofstr.flush();
+	ofstr.close();
+
+	return std::system(("dot -Tsvg " + outfile_graph + " -o " + outfile_svg).c_str()) == 0;
 }
 
 

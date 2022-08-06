@@ -34,10 +34,11 @@ using WordPtr = std::shared_ptr<Word>;
 /**
  * symbol base class
  */
-class Symbol
+class Symbol : protected std::enable_shared_from_this<Symbol>
 {
 public:
-	Symbol(std::size_t id, const std::string& strid="", bool bEps=false, bool bEnd=false);
+	Symbol(std::size_t id, const std::string& strid = "",
+		bool bEps = false, bool bEnd = false);
 	Symbol() = delete;
 	virtual ~Symbol() = default;
 
@@ -52,16 +53,16 @@ public:
 	bool operator==(const Symbol& other) const;
 	bool operator!=(const Symbol& other) const { return !operator==(other); }
 
-	virtual void print(std::ostream& ostr, bool bnf=false) const = 0;
+	virtual void print(std::ostream& ostr, bool bnf = false) const = 0;
 	virtual std::size_t hash() const = 0;
 
 
 private:
-	std::size_t m_id{0};
-	std::string m_strid{};
+	std::size_t m_id{ 0 };    // numeric identifier of the symbol
+	std::string m_strid{ };   // string identifier of the symbol
 
-	bool m_iseps{false};
-	bool m_isend{false};
+	bool m_iseps{ false };    // the symbol is the epsilon transition
+	bool m_isend{ false };    // the symbol is the end marker
 
 
 public:
@@ -70,15 +71,7 @@ public:
 	 */
 	struct HashSymbol
 	{
-		std::size_t operator()(const SymbolPtr sym) const;
-	};
-
-	/**
-	 * comparator for terminals
-	 */
-	struct CompareSymbolsLess
-	{
-		bool operator()(const SymbolPtr sym1, const SymbolPtr sym2) const;
+		std::size_t operator()(const SymbolPtr& sym) const;
 	};
 
 	/**
@@ -86,7 +79,7 @@ public:
 	 */
 	struct CompareSymbolsEqual
 	{
-		bool operator()(const SymbolPtr sym1, const SymbolPtr sym2) const;
+		bool operator()(const SymbolPtr& sym1, const SymbolPtr& sym2) const;
 	};
 };
 
@@ -98,41 +91,31 @@ public:
 class Terminal : public Symbol
 {
 public:
-	Terminal(std::size_t id, const std::string& strid="", bool bEps=false, bool bEnd=false)
-		: Symbol{id, strid, bEps, bEnd}, m_semantic{} {}
+	Terminal(std::size_t id, const std::string& strid = "",
+		bool bEps = false, bool bEnd = false);
 	Terminal() = delete;
 	virtual ~Terminal() = default;
 
 	virtual bool IsTerminal() const override { return true; }
 
-	/**
-	 * get the semantic rule index
-	 */
-	std::optional<std::size_t> GetSemanticRule() const { return m_semantic; }
+	// get the semantic rule index
+	std::optional<std::size_t> GetSemanticRule() const;
 
-	/**
-	 * set the semantic rule index
-	 */
-	void SetSemanticRule(std::optional<std::size_t> semantic=std::nullopt)
-	{ m_semantic = semantic; }
+	// set the semantic rule index
+	void SetSemanticRule(std::optional<std::size_t> semantic = std::nullopt);
 
-	virtual void print(std::ostream& ostr, bool bnf=false) const override;
+	virtual void print(std::ostream& ostr, bool bnf = false) const override;
 	virtual std::size_t hash() const override;
 
-	void SetPrecedence(std::size_t prec) { m_precedence = prec; }
-	void SetAssociativity(char assoc) { m_associativity = assoc; }
-	void SetPrecedence(std::size_t prec, char assoc)
-	{
-		SetPrecedence(prec);
-		SetAssociativity(assoc);
-	}
+	void SetPrecedence(std::size_t prec);
+	void SetAssociativity(char assoc);
+	void SetPrecedence(std::size_t prec, char assoc);
 
-	std::optional<std::size_t> GetPrecedence() const { return m_precedence; }
-	std::optional<char> GetAssociativity() const { return m_associativity; }
+	std::optional<std::size_t> GetPrecedence() const;
+	std::optional<char> GetAssociativity() const;
 
 
 public:
-	//using t_terminalset = std::set<TerminalPtr, Symbol::CompareSymbolsLess>;
 	using t_terminalset = std::unordered_set<TerminalPtr,
 		Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
 
@@ -144,7 +127,22 @@ private:
 	// operator precedence and associativity
 	std::optional<std::size_t> m_precedence{};
 	std::optional<char> m_associativity{};     // 'l' or 'r'
+
+	// cached hash value
+	mutable std::optional<std::size_t> m_hash{ std::nullopt };
 };
+
+
+
+using t_map_first = std::unordered_map<
+	SymbolPtr, Terminal::t_terminalset,
+	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
+using t_map_first_perrule = std::unordered_map<
+	SymbolPtr, std::vector<Terminal::t_terminalset>,
+	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
+using t_map_follow = std::unordered_map<
+	SymbolPtr, Terminal::t_terminalset,
+	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
 
 
 
@@ -154,78 +152,65 @@ private:
 class NonTerminal : public Symbol
 {
 public:
-	NonTerminal(std::size_t id, const std::string& strid="")
-		: Symbol{id, strid}, m_rules{}, m_semantics{} {}
+	NonTerminal(std::size_t id, const std::string& strid);
 	NonTerminal() = delete;
 	virtual ~NonTerminal() = default;
 
 	virtual bool IsTerminal() const override { return false; }
 
-	/**
-	 * add multiple alternative production rules
-	 */
+	// adds multiple alternative production rules
+	void AddRule(const WordPtr& rule,
+		std::optional<std::size_t> semanticruleidx = std::nullopt);
+
+	// adds multiple alternative production rules
 	void AddRule(const Word& rule,
-		std::optional<std::size_t> semanticruleidx = std::nullopt)
-	{
-		m_rules.push_back(rule);
-		m_semantics.push_back(semanticruleidx);
-	}
+		std::optional<std::size_t> semanticruleidx = std::nullopt);
 
-	/**
-	 * add multiple alternative production rules
-	 */
-	void AddRule(const Word& rule, const std::size_t* semanticruleidx)
-	{
-		if(semanticruleidx)
-			AddRule(rule, *semanticruleidx);
-		else
-			AddRule(rule);
-	}
+	// adds multiple alternative production rules
+	void AddRule(const Word& rule, const std::size_t* semanticruleidx);
 
-	/**
-	 * number of rules
-	 */
-	std::size_t NumRules() const { return m_rules.size(); }
+	// number of rules
+	std::size_t NumRules() const;
 
-	/**
-	 * get a production rule
-	 */
-	const Word& GetRule(std::size_t i) const { return m_rules[i]; }
+	// gets a production rule
+	const WordPtr& GetRule(std::size_t i) const;
 
-	/**
-	 * clear rules
-	 */
-	void ClearRules() { m_rules.clear(); }
+	// clears rules
+	void ClearRules();
 
-	/**
-	 * get a semantic rule index for a given rule number
-	 */
-	std::optional<std::size_t> GetSemanticRule(std::size_t i) const
-	{ return m_semantics[i]; }
+	// gets a semantic rule index for a given rule number
+	std::optional<std::size_t> GetSemanticRule(std::size_t i) const;
 
-	/**
-	 * does this non-terminal have a rule which produces epsilon?
-	 */
+	// does this non-terminal have a rule which produces epsilon?
 	bool HasEpsRule() const;
 
-	/**
-	 * remove left recursion (for future ll(1) support)
-	 * returns possibly added non-terminal
-	 */
+	// removes left recursion
 	NonTerminalPtr RemoveLeftRecursion(
 		std::size_t newIdBegin = 1000, const std::string& primerule = "'",
 		std::size_t* semanticruleidx = nullptr);
 
-	virtual void print(std::ostream& ostr, bool bnf=false) const override;
+	virtual void print(std::ostream& ostr, bool bnf = false) const override;
 	virtual std::size_t hash() const override;
+
+	// calculates the first set of a nonterminal
+	t_map_first CalcFirst(t_map_first_perrule* first_perrule = nullptr) const;
+	void CalcFirst(t_map_first& map_first, t_map_first_perrule* first_perrule = nullptr) const;
+
+	// calculates the follow set of a nonterminal
+	void CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
+		const NonTerminalPtr& start,
+		const t_map_first& _first, t_map_follow& _follow) const;
 
 
 private:
 	// production syntactic rules
-	std::vector<Word> m_rules{};
+	std::vector<WordPtr> m_rules{};
 
 	// production semantic rule indices
 	std::vector<std::optional<std::size_t>> m_semantics{};
+
+	// cached hash value
+	mutable std::optional<std::size_t> m_hash{ std::nullopt };
 };
 
 
@@ -233,44 +218,29 @@ private:
 /**
  * a collection of terminals and non-terminals
  */
-class Word
+class Word : protected std::enable_shared_from_this<Word>
 {
 public:
-	Word(const std::initializer_list<SymbolPtr> init) : m_syms{init} {}
-	Word(const Word& other) : m_syms{other.m_syms} {}
-	Word() : m_syms{} {}
+	Word(const std::initializer_list<SymbolPtr>& init);
+	Word(const Word& other);
+	Word();
+	virtual ~Word() = default;
 
-	/**
-	 * add a symbol to the word
-	 */
-	void AddSymbol(SymbolPtr sym)
-	{
-		m_syms.push_back(sym);
-	}
+	// adds a symbol to the word
+	void AddSymbol(const SymbolPtr& sym);
 
-	/**
-	 * remove a symbol from the word
-	 */
-	void RemoveSymbol(std::size_t idx)
-	{
-		m_syms.erase(std::next(m_syms.begin(), idx));
-	}
+	// removes a symbol from the word
+	void RemoveSymbol(std::size_t idx);
 
-	/**
-	 * number of symbols in the word
-	 */
+	// number of symbols in the word
 	std::size_t NumSymbols(bool count_eps = true) const;
-	std::size_t size() const { return NumSymbols(); }
+	std::size_t size() const;
 
-	/**
-	 * get a symbol in the word
-	 */
-	const SymbolPtr GetSymbol(const std::size_t i) const { return m_syms[i]; }
-	const SymbolPtr operator[](const std::size_t i) const { return GetSymbol(i); }
+	// gets a symbol in the word
+	const SymbolPtr& GetSymbol(const std::size_t i) const;
+	const SymbolPtr& operator[](const std::size_t i) const;
 
-	/**
-	 * test for equality
-	 */
+	// tests for equality
 	bool operator==(const Word& other) const;
 	bool operator!=(const Word& other) const { return !operator==(other); }
 
@@ -280,7 +250,11 @@ public:
 
 
 private:
+	// string of symbols
 	std::vector<SymbolPtr> m_syms{};
+
+	// cached hash value
+	mutable std::optional<std::size_t> m_hash{ std::nullopt };
 };
 
 
@@ -295,41 +269,6 @@ extern const TerminalPtr g_eps, g_end;
 
 
 // ----------------------------------------------------------------------------
-
-
-/*
-using t_map_first = std::map<
-	SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbolsLess>;
-using t_map_first_perrule = std::map<
-	SymbolPtr, std::vector<Terminal::t_terminalset>, Symbol::CompareSymbolsLess>;
-using t_map_follow = std::map<
-	SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbolsLess>;
-*/
-
-using t_map_first = std::unordered_map<
-	SymbolPtr, Terminal::t_terminalset,
-	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
-using t_map_first_perrule = std::unordered_map<
-	SymbolPtr, std::vector<Terminal::t_terminalset>,
-	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
-using t_map_follow = std::unordered_map<
-	SymbolPtr, Terminal::t_terminalset,
-	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
-
-
-/**
- * calculates the first set of a nonterminal
- */
-extern void calc_first(const NonTerminalPtr nonterm,
-	t_map_first& _first, t_map_first_perrule* _first_per_rule=nullptr);
-
-
-/**
- * calculates the follow set of a nonterminal
- */
-extern void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
-	const NonTerminalPtr& start, const NonTerminalPtr nonterm,
-	const t_map_first&  _first, t_map_follow& _follow);
 
 
 #endif
