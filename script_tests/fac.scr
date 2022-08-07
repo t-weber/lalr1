@@ -1,0 +1,54 @@
+extern func input_int, print;
+
+#
+# factorials
+#
+func fac(arg1)
+{
+	if(arg1 <= 1)
+	{
+		return 1;
+	}
+	else
+	{
+		a = arg1;
+		b = fac(arg1-1);
+		return a * b;
+	}
+}
+
+
+#
+# fibonacci numbers
+#
+func fibo(arg1)
+{
+	if(arg1 <= 1)
+	{
+		return 1;
+	}
+	else
+	{
+		a = fibo(arg1-1);
+		b = fibo(arg1-2);
+		return a + b;
+	}
+}
+
+
+
+loop(1 == 1)
+{
+	print("\nn = ");
+	n = input_int();
+	if(n < 0)
+	{
+		break;
+	}
+
+	a = fac(n);
+	b = fibo(n);
+
+	print(n + "! = " + a + "\n");
+	print("fibo(" + n + ") = " + b + "\n");
+}

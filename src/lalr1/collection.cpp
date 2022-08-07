@@ -213,24 +213,18 @@ void Collection::Simplify()
 /**
  * creates the lalr(1) parse tables
  */
-std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx, t_vecIdx>
-Collection::CreateParseTables(bool stopOnConflicts) const
+bool Collection::CreateParseTables(bool stopOnConflicts)
 {
+	bool ok = true;
 	const std::size_t numStates = m_collection.size();
 	const std::size_t errorVal = ERROR_VAL;
 	const std::size_t acceptVal = ACCEPT_VAL;
-
-	// number of symbols on rhs of a production rule
-	std::vector<std::size_t> numRhsSymsPerRule;
 
 	// lr tables
 	std::vector<std::vector<std::size_t>> _action_shift, _action_reduce, _jump;
 	_action_shift.resize(numStates);
 	_action_reduce.resize(numStates);
 	_jump.resize(numStates);
-
-	// maps the ids to table indices for the non-terminals and the terminals
-	t_mapIdIdx mapNonTermIdx, mapTermIdx;
 
 	// current counters
 	std::size_t curNonTermIdx = 0, curTermIdx = 0;
@@ -240,17 +234,17 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 
 
 	// translate symbol id to table index
-	auto get_idx = [&mapNonTermIdx, &mapTermIdx, &curNonTermIdx, &curTermIdx]
-	(std::size_t id, bool is_term) -> std::size_t
-	{
-		std::size_t* curIdx = is_term ? &curTermIdx : &curNonTermIdx;
-		t_mapIdIdx* map = is_term ? &mapTermIdx : &mapNonTermIdx;
+	auto get_idx = [this, &curNonTermIdx, &curTermIdx]
+		(std::size_t id, bool is_term) -> std::size_t
+		{
+			std::size_t* curIdx = is_term ? &curTermIdx : &curNonTermIdx;
+			t_mapIdIdx* map = is_term ? &m_mapTermIdx : &m_mapNonTermIdx;
 
-		auto iter = map->find(id);
-		if(iter == map->end())
-			iter = map->emplace(std::make_pair(id, (*curIdx)++)).first;
-		return iter->second;
-	};
+			auto iter = map->find(id);
+			if(iter == map->end())
+				iter = map->emplace(std::make_pair(id, (*curIdx)++)).first;
+			return iter->second;
+		};
 
 
 	for(const t_transition& tup : m_transitions)
@@ -265,8 +259,7 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 		if(symIsEps)
 			continue;
 
-		std::vector<std::vector<std::size_t>>* tab =
-			symIsTerm ? &_action_shift : &_jump;
+		std::vector<std::vector<std::size_t>>* tab = symIsTerm ? &_action_shift : &_jump;
 
 		std::size_t symIdx = get_idx(symTrans->GetId(), symIsTerm);
 		if(symIsTerm)
@@ -294,9 +287,9 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 				continue;
 			std::size_t rule = *rulenr;
 
-			if(numRhsSymsPerRule.size() <= rule)
-				numRhsSymsPerRule.resize(rule+1);
-			numRhsSymsPerRule[rule] = elem->GetRhs()->NumSymbols(false);
+			if(m_numRhsSymsPerRule.size() <= rule)
+				m_numRhsSymsPerRule.resize(rule+1);
+			m_numRhsSymsPerRule[rule] = elem->GetRhs()->NumSymbols(false);
 
 			auto& _action_row = _action_reduce[closure->GetId()];
 
@@ -316,11 +309,9 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 	}
 
 
-	auto tables = std::make_tuple(
-		t_table{_action_shift, errorVal, acceptVal, numStates, curTermIdx},
-		t_table{_action_reduce, errorVal, acceptVal, numStates, curTermIdx},
-		t_table{_jump, errorVal, acceptVal, numStates, curNonTermIdx},
-		mapTermIdx, mapNonTermIdx, numRhsSymsPerRule);
+	m_tabActionShift = t_table{_action_shift, errorVal, acceptVal, numStates, curTermIdx};
+	m_tabActionReduce = t_table{_action_reduce, errorVal, acceptVal, numStates, curTermIdx};
+	m_tabJump = t_table{_jump, errorVal, acceptVal, numStates, curNonTermIdx};
 
 	// check for and try to resolve shift/reduce conflicts
 	std::size_t state = 0;
@@ -330,8 +321,8 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 
 		for(std::size_t termidx=0; termidx<curTermIdx; ++termidx)
 		{
-			std::size_t& shiftEntry = std::get<0>(tables)(state, termidx);
-			std::size_t& reduceEntry = std::get<1>(tables)(state, termidx);
+			std::size_t& shiftEntry = m_tabActionShift(state, termidx);
+			std::size_t& reduceEntry = m_tabActionReduce(state, termidx);
 
 			std::optional<std::string> termid;
 			ElementPtr conflictelem = nullptr;
@@ -409,6 +400,8 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 
 				if(!solution_found)
 				{
+					ok = false;
+
 					std::ostringstream ostrErr;
 					ostrErr << "Shift/reduce conflict detected"
 						<< " for state " << state;
@@ -443,15 +436,14 @@ Collection::CreateParseTables(bool stopOnConflicts) const
 		++state;
 	}
 
-	return tables;
+	return ok;
 }
 
 
 /**
  * export lalr(1) tables to C++ code
  */
-bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
-	t_mapIdIdx, t_mapIdIdx, t_vecIdx>& tabs, const std::string& file)
+bool Collection::SaveParseTables(const std::string& file) const
 {
 	std::ofstream ofstr{file};
 	if(!ofstr)
@@ -469,13 +461,13 @@ bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 	ofstr << "\tconst std::size_t end = " << END_IDENT << ";\n";
 	ofstr << "\n";
 
-	std::get<0>(tabs).SaveCXXDefinition(ofstr, "tab_action_shift");
-	std::get<1>(tabs).SaveCXXDefinition(ofstr, "tab_action_reduce");
-	std::get<2>(tabs).SaveCXXDefinition(ofstr, "tab_jump");
+	m_tabActionShift.SaveCXXDefinition(ofstr, "tab_action_shift");
+	m_tabActionReduce.SaveCXXDefinition(ofstr, "tab_action_reduce");
+	m_tabJump.SaveCXXDefinition(ofstr, "tab_jump");
 
 	// terminal symbol indices
 	ofstr << "const t_mapIdIdx map_term_idx{{\n";
-	for(const auto& [id, idx] : std::get<3>(tabs))
+	for(const auto& [id, idx] : m_mapTermIdx)
 	{
 		ofstr << "\t{";
 		if(id == EPS_IDENT)
@@ -490,12 +482,12 @@ bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 
 	// non-terminal symbol indices
 	ofstr << "const t_mapIdIdx map_nonterm_idx{{\n";
-	for(const auto& [id, idx] : std::get<4>(tabs))
+	for(const auto& [id, idx] : m_mapNonTermIdx)
 		ofstr << "\t{" << id << ", " << idx << "},\n";
 	ofstr << "}};\n\n";
 
 	ofstr << "const t_vecIdx vec_num_rhs_syms{{ ";
-	for(const auto& val : std::get<5>(tabs))
+	for(const auto& val : m_numRhsSymsPerRule)
 		ofstr << val << ", ";
 	ofstr << "}};\n\n";
 
@@ -518,7 +510,7 @@ bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 /**
  * write out the transitions graph
  */
-bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
+bool Collection::SaveGraph(const std::string& file, bool write_full_coll) const
 {
 	std::string outfile_graph = file + ".graph";
 	std::string outfile_svg = file + ".svg";

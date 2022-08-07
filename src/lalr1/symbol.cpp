@@ -35,6 +35,11 @@ Symbol::Symbol(std::size_t id, const std::string& strid, bool bEps, bool bEnd)
 }
 
 
+Symbol::~Symbol()
+{
+}
+
+
 bool Symbol::operator==(const Symbol& other) const
 {
 	return this->hash() == other.hash();
@@ -63,6 +68,11 @@ bool Symbol::CompareSymbolsEqual::operator()(
 Terminal::Terminal(std::size_t id, const std::string& strid, bool bEps, bool bEnd)
 	: Symbol{id, strid, bEps, bEnd}
 {}
+
+
+Terminal::~Terminal()
+{
+}
 
 
 /**
@@ -148,11 +158,15 @@ NonTerminal::NonTerminal(std::size_t id, const std::string& strid)
 {}
 
 
+NonTerminal::~NonTerminal()
+{
+}
+
+
 /**
  * adds multiple alternative production rules
  */
-void NonTerminal::AddRule(const WordPtr& rule,
-	std::optional<std::size_t> semanticruleidx)
+void NonTerminal::AddRule(const WordPtr& rule, std::optional<std::size_t> semanticruleidx)
 {
 	m_rules.emplace_back(rule);
 	m_semantics.push_back(semanticruleidx);
@@ -162,8 +176,7 @@ void NonTerminal::AddRule(const WordPtr& rule,
 /**
  * adds multiple alternative production rules
  */
-void NonTerminal::AddRule(const Word& _rule,
-	std::optional<std::size_t> semanticruleidx)
+void NonTerminal::AddRule(const Word& _rule, std::optional<std::size_t> semanticruleidx)
 {
 	WordPtr rule = std::make_shared<Word>(_rule);
 	AddRule(rule, semanticruleidx);
@@ -342,6 +355,8 @@ void NonTerminal::CalcFirst(t_map_first& _first, t_map_first_perrule* _first_per
 		std::dynamic_pointer_cast<NonTerminal>(
 			std::const_pointer_cast<Symbol>(
 				shared_from_this()));
+	if(!nonterm)
+		return;
 
 	// set already calculated?
 	if(_first.find(nonterm) != _first.end())
@@ -425,6 +440,8 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 		std::dynamic_pointer_cast<NonTerminal>(
 			std::const_pointer_cast<Symbol>(
 				shared_from_this()));
+	if(!nonterm)
+		return;
 
 	// set already calculated?
 	if(_follow.find(nonterm) != _follow.end())

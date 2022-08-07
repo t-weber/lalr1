@@ -65,14 +65,10 @@ public:
 
 	void DoTransitions();
 
-	std::tuple<t_table, t_table, t_table,
-		t_mapIdIdx, t_mapIdIdx, t_vecIdx> CreateParseTables(
-			bool stopOnConflicts = true) const;
+	bool CreateParseTables(bool stopOnConflicts = true);
+	bool SaveParseTables(const std::string& file) const;
 
-	static bool SaveParseTables(const std::tuple<t_table, t_table, t_table,
-		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& tabs, const std::string& file);
-
-	bool WriteGraph(const std::string& file, bool write_full_coll=1) const;
+	bool SaveGraph(const std::string& file, bool write_full_coll=1) const;
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
@@ -88,9 +84,17 @@ protected:
 
 
 private:
-	std::list<ClosurePtr> m_collection{};    // collection of LR(1) closures
-	t_transitions m_transitions{};           // transitions between collection, [from, to, transition symbol]
-	t_closurecache m_closure_cache{};        // seen closures
+	std::list<ClosurePtr> m_collection{};           // collection of LR(1) closures
+	t_transitions m_transitions{};                  // transitions between collection, [from, to, transition symbol]
+	t_closurecache m_closure_cache{};               // seen closures
+
+	// lalr(1) tables
+	t_table m_tabActionShift{};
+	t_table m_tabActionReduce{};
+	t_table m_tabJump{};
+	t_mapIdIdx m_mapNonTermIdx{}, m_mapTermIdx{};   // maps the ids to table indices
+	std::vector<std::size_t> m_numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
+
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

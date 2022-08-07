@@ -442,11 +442,11 @@ static void lr1_create_parser()
 #endif
 
 #if DEBUG_WRITEGRAPH != 0
-		collsLALR.WriteGraph("expr", 1);
+		collsLALR.SaveGraph("expr", 1);
 #endif
 
-		auto parsetables = collsLALR.CreateParseTables();
-		collsLALR.SaveParseTables(parsetables, "expr.tab");
+		if(collsLALR.CreateParseTables())
+			collsLALR.SaveParseTables("expr.tab");
 	}
 	catch(const std::exception& err)
 	{

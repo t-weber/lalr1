@@ -1129,11 +1129,11 @@ static bool lr1_create_parser()
 #endif
 
 #if DEBUG_WRITEGRAPH != 0
-		collsLALR.WriteGraph("script_lalr", 1);
+		collsLALR.SaveGraph("script_lalr", 1);
 #endif
 
-		auto parsetables = collsLALR.CreateParseTables();
-		collsLALR.SaveParseTables(parsetables, "script.tab");
+		if(collsLALR.CreateParseTables())
+			collsLALR.SaveParseTables("script.tab");
 	}
 	catch(const std::exception& err)
 	{

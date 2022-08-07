@@ -34,13 +34,14 @@ using WordPtr = std::shared_ptr<Word>;
 /**
  * symbol base class
  */
-class Symbol : protected std::enable_shared_from_this<Symbol>
+class Symbol : public std::enable_shared_from_this<Symbol>
 {
 public:
 	Symbol(std::size_t id, const std::string& strid = "",
 		bool bEps = false, bool bEnd = false);
 	Symbol() = delete;
-	virtual ~Symbol() = default;
+
+	virtual ~Symbol();
 
 	virtual bool IsTerminal() const = 0;
 
@@ -94,7 +95,7 @@ public:
 	Terminal(std::size_t id, const std::string& strid = "",
 		bool bEps = false, bool bEnd = false);
 	Terminal() = delete;
-	virtual ~Terminal() = default;
+	virtual ~Terminal();
 
 	virtual bool IsTerminal() const override { return true; }
 
@@ -154,7 +155,7 @@ class NonTerminal : public Symbol
 public:
 	NonTerminal(std::size_t id, const std::string& strid);
 	NonTerminal() = delete;
-	virtual ~NonTerminal() = default;
+	virtual ~NonTerminal();
 
 	virtual bool IsTerminal() const override { return false; }
 
@@ -224,7 +225,6 @@ public:
 	Word(const std::initializer_list<SymbolPtr>& init);
 	Word(const Word& other);
 	Word();
-	virtual ~Word() = default;
 
 	// adds a symbol to the word
 	void AddSymbol(const SymbolPtr& sym);
