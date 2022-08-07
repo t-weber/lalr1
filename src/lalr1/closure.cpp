@@ -451,7 +451,7 @@ void Closure::PrintComefroms(std::ostream& ostr) const
 		ostr << "Coming from:\n";
 		for(const auto& comefrom : m_comefrom_transitions)
 		{
-			ostr << "\tstate " << std::get<1>(comefrom)->GetId()
+			ostr << "\tclosure " << std::get<1>(comefrom)->GetId()
 				<< " via " << std::get<0>(comefrom)->GetStrId()
 				<< ".\n";
 		}
@@ -464,7 +464,7 @@ void Closure::PrintComefroms(std::ostream& ostr) const
  */
 std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
 {
-	ostr << "Closure/State " << closure.GetId() << ":\n";
+	ostr << "Closure " << closure.GetId() << ":\n";
 
 	// write elements of the closure
 	for(std::size_t i=0; i<closure.NumElements(); ++i)

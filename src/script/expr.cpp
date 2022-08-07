@@ -445,8 +445,8 @@ static void lr1_create_parser()
 		collsLALR.SaveGraph("expr", 1);
 #endif
 
-		if(collsLALR.CreateParseTables())
-			collsLALR.SaveParseTables("expr.tab");
+		collsLALR.SaveParseTables("expr.tab");
+		collsLALR.SaveParser("expr_parser.cpp");
 	}
 	catch(const std::exception& err)
 	{
