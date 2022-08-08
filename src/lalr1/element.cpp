@@ -261,7 +261,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	for(std::size_t i=0; i<rhs->size(); ++i)
 	{
 		if(elem.GetCursor() == i)
-			ostr << ".";
+			ostr << "\xe2\x80\xa2";
 
 		const SymbolPtr& sym = (*rhs)[i];
 
@@ -270,9 +270,9 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	}
 
 	if(elem.IsCursorAtEnd())
-		ostr << ".";
+		ostr << "\xe2\x80\xa2";
 
-	ostr << ", ";
+	ostr << "\xef\xbd\x9c ";
 
 	for(const auto& la : elem.GetLookaheads())
 		ostr << la->GetStrId() << " ";

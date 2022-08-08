@@ -99,6 +99,71 @@ void Collection::ReportProgress(const std::string& msg, bool finished)
 }
 
 
+std::vector<TerminalPtr> Collection::GetLookbackTerminals(
+	const ClosurePtr& closure) const
+{
+	m_seen_closures = std::make_shared<std::unordered_set<std::size_t>>();
+	return _GetLookbackTerminals(closure);
+}
+
+
+std::vector<TerminalPtr> Collection::_GetLookbackTerminals(
+	const ClosurePtr& closure) const
+{
+	std::vector<TerminalPtr> terms;
+
+	for(const t_transition& transition : m_transitions)
+	{
+		const ClosurePtr& closure_from = std::get<0>(transition);
+		const ClosurePtr& closure_to = std::get<1>(transition);
+		const SymbolPtr& sym = std::get<2>(transition);
+
+		// only consider transitions to given closure
+		if(closure_to->hash() != closure->hash())
+			continue;
+
+		if(sym->IsTerminal())
+		{
+			const TerminalPtr& term =
+				std::dynamic_pointer_cast<Terminal>(sym);
+			terms.emplace_back(std::move(term));
+		}
+		else if(closure_from)
+		{
+			// closure not yet seen?
+			std::size_t hash = closure_from->hash();
+			if(m_seen_closures->find(hash) == m_seen_closures->end())
+			{
+				m_seen_closures->insert(hash);
+
+				// get terminals from previous closure
+				std::vector<TerminalPtr> _terms =
+					_GetLookbackTerminals(closure_from);
+				terms.insert(terms.end(), _terms.begin(), _terms.end());
+			}
+		}
+	}
+
+	// remove duplicates
+	std::stable_sort(terms.begin(), terms.end(),
+		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
+		{
+			return term1->hash() < term2->hash();
+		});
+
+	if(auto end = std::unique(terms.begin(), terms.end(),
+		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
+		{
+			return *term1 == *term2;
+		}); end != terms.end())
+	{
+		terms.resize(end - terms.begin());
+	}
+
+	return terms;
+}
+
+
 /**
  * perform all possible lalr(1) transitions from all collections
  */
@@ -150,13 +215,6 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 			// add the transition from the closure
 			m_transitions.emplace(std::make_tuple(
 				closure_from, closure_to_existing, trans_sym));
-
-			// unite lookbacks
-			closure_to_existing->AddComefroms(closure_to->GetComefroms());
-
-			// also add the comefrom symbol to the closure
-			closure_to_existing->AddComefrom(
-				std::make_tuple(trans_sym, closure_from));
 
 			// if a lookahead of an old closure has changed,
 			// the transitions of that closure need to be redone
@@ -321,7 +379,7 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 	std::size_t state = 0;
 	for(const ClosurePtr& closureState : m_collection)
 	{
-		std::vector<TerminalPtr> comefromTerms = closureState->GetComefromTerminals();
+		std::optional<std::vector<TerminalPtr>> lookbacks;
 
 		for(std::size_t termidx=0; termidx<curTermIdx; ++termidx)
 		{
@@ -345,6 +403,8 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 			// both have an entry?
 			if(shiftEntry!=errorVal && reduceEntry!=errorVal)
 			{
+				if(!lookbacks)
+					lookbacks = GetLookbackTerminals(closureState);
 				bool solution_found = false;
 
 				// try to resolve conflict using operator precedences/associativities
@@ -353,9 +413,9 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 					const TerminalPtr& term_at_cursor =
 						std::dynamic_pointer_cast<Terminal>(sym_at_cursor);
 
-					for(const TerminalPtr& comefromTerm : comefromTerms)
+					for(const TerminalPtr& lookback : *lookbacks)
 					{
-						auto prec_lhs = comefromTerm->GetPrecedence();
+						auto prec_lhs = lookback->GetPrecedence();
 						auto prec_rhs = term_at_cursor->GetPrecedence();
 
 						// both terminals have a precedence
@@ -377,11 +437,12 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 
 						if(!solution_found)
 						{
-							auto assoc_lhs = comefromTerm->GetAssociativity();
+							auto assoc_lhs = lookback->GetAssociativity();
 							auto assoc_rhs = term_at_cursor->GetAssociativity();
 
 							// both terminals have an associativity
-							if(assoc_lhs && assoc_rhs && *assoc_lhs == *assoc_rhs)
+							if(assoc_lhs && assoc_rhs &&
+								*assoc_lhs == *assoc_rhs)
 							{
 								if(*assoc_lhs == 'r')      // shift
 								{
@@ -411,13 +472,13 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 						<< " for closure " << state;
 					if(conflictelem)
 						ostrErr << ":\n\t" << *conflictelem << "\n";
-					if(comefromTerms.size())
+					if(lookbacks->size())
 					{
 						ostrErr << " with look-back terminal(s): ";
-						for(std::size_t i=0; i<comefromTerms.size(); ++i)
+						for(std::size_t i=0; i<lookbacks->size(); ++i)
 						{
-							ostrErr << comefromTerms[i]->GetStrId();
-							if(i < comefromTerms.size()-1)
+							ostrErr << (*lookbacks)[i]->GetStrId();
+							if(i < lookbacks->size()-1)
 								ostrErr << ", ";
 						}
 					}
@@ -520,7 +581,14 @@ bool Collection::SaveParser(const std::string& file) const
 	for(const ClosurePtr& closure : m_collection)
 	{
 		ofstr << "/*\n" << *closure;
-		closure->PrintComefroms(ofstr);
+		if(std::vector<TerminalPtr> lookbacks = GetLookbackTerminals(closure);
+			lookbacks.size())
+		{
+			ofstr << "Lookback terminals: ";
+			for(const TerminalPtr& lookback : lookbacks)
+				ofstr << lookback->GetStrId() << " ";
+			ofstr << "\n";
+		}
 		ofstr << "*/\n";
 		ofstr << "void closure_" << closure->GetId() << "()\n";
 		ofstr << "{\n";
@@ -586,7 +654,12 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	for(const ClosurePtr& closure : coll.m_collection)
 	{
 		ostr << *closure;
-		closure->PrintComefroms(ostr);
+
+		std::vector<TerminalPtr> lookbacks = coll.GetLookbackTerminals(closure);
+		if(lookbacks.size())
+			ostr << "Lookback terminals: ";
+		for(const TerminalPtr& lookback : lookbacks)
+			ostr << lookback->GetStrId() << " ";
 		ostr << "\n";
 	}
 	ostr << "\n";

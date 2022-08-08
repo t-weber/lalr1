@@ -58,12 +58,15 @@ public:
 
 	using t_transitions = std::unordered_set<t_transition, HashTransition, CompareTransitionsEqual>;
 	using t_closurecache = std::shared_ptr<std::unordered_map<std::size_t, ClosurePtr>>;
+	using t_seen_closures = std::shared_ptr<std::unordered_set<std::size_t>>;
 
 
 public:
 	Collection(const ClosurePtr& closure);
 
 	void DoTransitions();
+
+	std::vector<TerminalPtr> GetLookbackTerminals(const ClosurePtr& closure) const;
 
 	bool SaveParseTables(const std::string& file, bool stopOnConflicts = true) const;
 	bool SaveParser(const std::string& file) const;
@@ -76,6 +79,8 @@ public:
 protected:
 	Collection();
 
+	std::vector<TerminalPtr> _GetLookbackTerminals(const ClosurePtr& closure) const;
+
 	void DoTransitions(const ClosurePtr& closure);
 	void Simplify();
 
@@ -83,9 +88,10 @@ protected:
 
 
 private:
-	std::list<ClosurePtr> m_collection{};  // collection of LR(1) closures
-	t_transitions m_transitions{};         // transitions between collection, [from, to, transition symbol]
-	t_closurecache m_closure_cache{};      // seen closures
+	std::list<ClosurePtr> m_collection{};      // collection of LR(1) closures
+	t_transitions m_transitions{};             // transitions between collection, [from, to, transition symbol]
+	t_closurecache m_closure_cache{};          // seen closures
+	mutable t_seen_closures m_seen_closures{}; // set of seen closures
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

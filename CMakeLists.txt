@@ -18,7 +18,7 @@ add_definitions(-Wall -Wextra -Weffc++)
 option(BUILD_EXAMPLES "build example compilers" TRUE)
 
 
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS program_options)
 add_definitions(${Boost_CXX_FLAGS})
 
 find_package(Threads REQUIRED)

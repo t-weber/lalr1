@@ -21,31 +21,6 @@
 #include <boost/functional/hash.hpp>
 
 
-// ----------------------------------------------------------------------------
-/**
- * hash a transition element
- */
-std::size_t Closure::HashTransition::operator()(const t_transition& trans) const
-{
-	std::size_t hashSym = std::get<0>(trans)->hash();
-	std::size_t hashFrom = std::get<1>(trans)->hash(true);
-
-	boost::hash_combine(hashFrom, hashSym);
-	return hashFrom;
-}
-
-
-/**
- * compare two transition elements for equality
- */
-bool Closure::CompareTransitionsEqual::operator()(
-	const t_transition& tr1, const t_transition& tr2) const
-{
-	return HashTransition{}(tr1) == HashTransition{}(tr2);
-}
-// ----------------------------------------------------------------------------
-
-
 // global closure id counter
 std::size_t Closure::g_id = 0;
 
@@ -65,7 +40,6 @@ Closure::Closure(const Closure& closure)
 const Closure& Closure::operator=(const Closure& closure)
 {
 	this->m_id = closure.m_id;
-	this->m_comefrom_transitions = closure.m_comefrom_transitions;
 
 	for(const ElementPtr& elem : closure.m_elems)
 		this->m_elems.emplace_back(std::make_shared<Element>(*elem));
@@ -273,25 +247,6 @@ bool Closure::AddLookaheads(const ClosurePtr& closure)
 }
 
 
-void Closure::AddComefrom(Closure::t_comefrom_transition&& comefrom)
-{
-	m_comefrom_transitions.emplace(comefrom);
-}
-
-
-void Closure::AddComefroms(const Closure::t_comefrom_transitions& comefroms)
-{
-	for(const t_comefrom_transition& comefrom : comefroms)
-		m_comefrom_transitions.insert(comefrom);
-}
-
-
-const Closure::t_comefrom_transitions& Closure::GetComefroms() const
-{
-	return m_comefrom_transitions;
-}
-
-
 /**
  * perform a transition and get the corresponding lalr(1) closure
  */
@@ -309,13 +264,7 @@ ClosurePtr Closure::DoTransition(const SymbolPtr& transsym) const
 		// copy element and perform transition
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
 		newelem->AdvanceCursor();
-
-		const ClosurePtr& this_closure =
-			std::const_pointer_cast<Closure>(
-				shared_from_this());
 		newclosure->AddElement(newelem);
-		newclosure->m_comefrom_transitions.emplace(
-			std::make_tuple(transsym, this_closure));
 	}
 
 	return newclosure;
@@ -373,89 +322,6 @@ std::size_t Closure::hash(bool only_core) const
 	else
 		m_hash = fullhash;;
 	return fullhash;
-}
-
-
-/**
- * get all terminal symbols that lead to this closure
- */
-std::vector<TerminalPtr> Closure::GetComefromTerminals() const
-{
-	m_seen_closures = std::make_shared<std::unordered_set<std::size_t>>();
-	return _GetComefromTerminals();
-}
-
-
-/**
- * get all terminal symbols that lead to this closure (internal function)
- */
-std::vector<TerminalPtr> Closure::_GetComefromTerminals() const
-{
-	std::vector<TerminalPtr> terms;
-	terms.reserve(m_comefrom_transitions.size());
-
-	for(const t_comefrom_transition& comefrom : m_comefrom_transitions)
-	{
-		const SymbolPtr& sym = std::get<0>(comefrom);
-		const ClosurePtr& closure = std::get<1>(comefrom);
-
-		if(sym->IsTerminal())
-		{
-			const TerminalPtr& term =
-				std::dynamic_pointer_cast<Terminal>(sym);
-			terms.emplace_back(std::move(term));
-		}
-		else if(closure)
-		{
-			// closure not yet seen?
-			std::size_t hash = closure->hash();
-			if(m_seen_closures->find(hash) == m_seen_closures->end())
-			{
-				m_seen_closures->insert(hash);
-
-				// get terminals from comefrom closure
-				std::vector<TerminalPtr> _terms =
-					closure->_GetComefromTerminals();
-				terms.insert(terms.end(), _terms.begin(), _terms.end());
-			}
-		}
-	}
-
-	// remove duplicates
-	std::stable_sort(terms.begin(), terms.end(),
-		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
-		{
-			return term1->hash() < term2->hash();
-		});
-
-	if(auto end = std::unique(terms.begin(), terms.end(),
-		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
-		{
-			return *term1 == *term2;
-		}); end != terms.end())
-	{
-		terms.resize(end - terms.begin());
-	}
-
-	return terms;
-}
-
-
-/**
- * write the closures where we can come from
- */
-void Closure::PrintComefroms(std::ostream& ostr) const
-{
-	if(m_comefrom_transitions.size())
-	{
-		ostr << "Coming from:\n";
-		for(const auto& comefrom : m_comefrom_transitions)
-		{
-			ostr << "\tclosure " << std::get<1>(comefrom)->GetId()
-				<< " via " << std::get<0>(comefrom)->GetStrId()
-				<< ".\n";
-		}
-	}
 }
 
 

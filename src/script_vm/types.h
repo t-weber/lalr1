@@ -26,19 +26,6 @@ constexpr const t_vm_addr g_vm_longest_size = 64;
 
 
 
-/**
- * get a string representation of a type name
- * (static version)
- */
-/*template<class t_val> std::string vm_type_name = "unknown";
-template<> inline std::string vm_type_name<t_vm_byte> = "byte";
-template<> inline std::string vm_type_name<t_vm_addr> = "address";
-template<> inline std::string vm_type_name<t_vm_real> = "real";
-template<> inline std::string vm_type_name<t_vm_int> = "integer";
-template<> inline std::string vm_type_name<t_vm_str> = "string";*/
-
-
-
 enum class VMType : t_vm_byte
 {
 	UNKNOWN     = 0x00,

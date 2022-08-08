@@ -1086,7 +1086,7 @@ static bool lr1_create_parser()
 		{
 			std::cout << pair.first->GetStrId() << ": ";
 			for(const auto& _first : pair.second)
-				std::cout << _first->GetStrId() << ", ";
+				std::cout << _first->GetStrId() << " ";
 			std::cout << "\n";
 		}
 		std::cout << std::endl;
@@ -1101,7 +1101,7 @@ static bool lr1_create_parser()
 		{
 			std::cout << pair.first->GetStrId() << ": ";
 			for(const auto& _first : pair.second)
-				std::cout << _first->GetStrId() << ", ";
+				std::cout << _first->GetStrId() << " ";
 			std::cout << "\n";
 		}
 		std::cout << std::endl;
