@@ -49,7 +49,7 @@ private:
 	// symbol id (from symbol.h)
 	std::size_t m_id{};
 
-	// index used in parse tables (from lr1.h)
+	// index used in parse tables
 	std::optional<std::size_t> m_tableidx{};
 
 	// line number range

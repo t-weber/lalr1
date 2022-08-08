@@ -66,7 +66,11 @@ public:
 
 	void DoTransitions();
 
+	// get terminals leading to the given closure
 	std::vector<TerminalPtr> GetLookbackTerminals(const ClosurePtr& closure) const;
+
+	// get terminal or non-terminal transitions originating from the given closure
+	t_transitions GetTransitions(const ClosurePtr& closure, bool term = true) const;
 
 	bool SaveParseTables(const std::string& file, bool stopOnConflicts = true) const;
 	bool SaveParser(const std::string& file) const;

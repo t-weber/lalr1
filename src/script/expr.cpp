@@ -486,6 +486,7 @@ static void lalr1_run_parser()
 
 
 		Parser parser{parsetables, rules};
+		//parser.SetDebug(true);
 
 		while(1)
 		{
@@ -494,7 +495,9 @@ static void lalr1_run_parser()
 			std::getline(std::cin, exprstr);
 			std::istringstream istr{exprstr};
 
-			auto tokens = get_all_tokens(istr, mapTermIdx);
+			Lexer lexer(&istr);
+			lexer.SetTermIdxMap(mapTermIdx);
+			auto tokens = lexer.GetAllTokens();
 
 #if DEBUG_CODEGEN != 0
 			std::cout << "\nTokens: ";

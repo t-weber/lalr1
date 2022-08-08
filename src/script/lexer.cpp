@@ -22,14 +22,22 @@ constexpr void constexpr_loop(const std::index_sequence<seq...>&, const t_params
 }
 
 
+
+Lexer::Lexer(std::istream* istr) : m_istr{istr}
+{
+}
+
+
+
 /**
  * find all matching tokens for input string
  */
 std::vector<t_lexer_match>
-get_lexer_matching_tokens(const std::string& str, std::size_t line)
+Lexer::GetMatchingTokens(const std::string& str, std::size_t line)
 {
 	std::vector<t_lexer_match> matches;
 
+	if(!m_ignore_int)
 	{	// int
 		std::regex regex{"(0[xb])?([0-9]+)"};
 		std::smatch smatch;
@@ -215,8 +223,7 @@ static void replace_escapes(std::string& str)
 /**
  * get next token and attribute
  */
-t_lexer_match
-get_next_token(std::istream& istr, bool end_on_newline, std::size_t* _line)
+t_lexer_match Lexer::GetNextToken(std::size_t* _line)
 {
 	std::string input;
 	std::vector<t_lexer_match> longest_lexer_matching;
@@ -229,9 +236,9 @@ get_next_token(std::istream& istr, bool end_on_newline, std::size_t* _line)
 	if(!line) line = &dummy_line;
 
 	// find longest matching token
-	while(!(eof = istr.eof()))
+	while(!(eof = m_istr->eof()))
 	{
-		int c = istr.get();
+		int c = m_istr->get();
 		if(c == std::char_traits<char>::eof())
 		{
 			eof = true;
@@ -275,7 +282,7 @@ get_next_token(std::istream& istr, bool end_on_newline, std::size_t* _line)
 			// ... end on new line
 			else if(c=='\n')
 			{
-				if(end_on_newline)
+				if(m_end_on_newline)
 				{
 					return std::make_tuple(
 						static_cast<t_tok>(Token::END), std::nullopt, *line);
@@ -293,12 +300,12 @@ get_next_token(std::istream& istr, bool end_on_newline, std::size_t* _line)
 		if(in_string)
 			continue;
 
-		auto matching = get_lexer_matching_tokens(input, *line);
+		auto matching = GetMatchingTokens(input, *line);
 		if(matching.size())
 		{
 			longest_lexer_matching = matching;
 
-			if(istr.peek() == std::char_traits<char>::eof())
+			if(m_istr->peek() == std::char_traits<char>::eof())
 			{
 				eof = true;
 				break;
@@ -307,7 +314,7 @@ get_next_token(std::istream& istr, bool end_on_newline, std::size_t* _line)
 		else
 		{
 			// no more matches
-			istr.putback(c);
+			m_istr->putback(c);
 			break;
 		}
 	}
@@ -356,26 +363,24 @@ template<std::size_t IDX> struct _Lval_LoopFunc
 /**
  * get all tokens and attributes
  */
-std::vector<t_toknode> get_all_tokens(
-	std::istream& istr, const t_mapIdIdx* mapTermIdx,
-	bool end_on_newline)
+std::vector<t_toknode> Lexer::GetAllTokens()
 {
 	std::vector<t_toknode> vec;
 	std::size_t line = 1;
 
 	while(1)
 	{
-		auto tup = get_next_token(istr, end_on_newline, &line);
+		auto tup = GetNextToken(&line);
 		std::size_t id = std::get<0>(tup);
 		const t_lval& lval = std::get<1>(tup);
 		std::size_t line = std::get<2>(tup);
 
 		// get index into parse tables
 		std::size_t tableidx = 0;
-		if(mapTermIdx)
+		if(m_mapTermIdx)
 		{
-			auto iter = mapTermIdx->find(id);
-			if(iter != mapTermIdx->end())
+			auto iter = m_mapTermIdx->find(id);
+			if(iter != m_mapTermIdx->end())
 				tableidx = iter->second;
 		}
 

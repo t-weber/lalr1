@@ -30,6 +30,7 @@ public:
 
 	Parser() = delete;
 
+	void SetDebug(bool b) { m_debug = b; }
 	const t_mapIdIdx& GetTermIndexMap() const { return m_mapTermIdx; }
 
 	t_lalrastbaseptr Parse(const std::vector<t_toknode>& input) const;
@@ -50,6 +51,9 @@ private:
 
 	// semantic rules
 	std::vector<t_semanticrule> m_semantics{};
+
+	// debug output
+	bool m_debug{false};
 };
 
 

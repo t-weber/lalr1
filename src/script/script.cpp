@@ -1182,6 +1182,7 @@ lalr1_run_parser(const char* script_file = nullptr)
 
 
 		Parser parser{parsetables, rules};
+		//parser.SetDebug(true);
 
 		bool loop_input = true;
 		while(loop_input)
@@ -1213,8 +1214,10 @@ lalr1_run_parser(const char* script_file = nullptr)
 			}
 
 			// tokenise script
-			bool end_on_newline = (script_file == nullptr);
-			auto tokens = get_all_tokens(*istr, mapTermIdx, end_on_newline);
+			Lexer lexer(istr.get());
+			lexer.SetEndOnNewline(script_file == nullptr);
+			lexer.SetTermIdxMap(mapTermIdx);
+			auto tokens = lexer.GetAllTokens();
 
 #if DEBUG_CODEGEN != 0
 			std::cout << "\nTokens: ";

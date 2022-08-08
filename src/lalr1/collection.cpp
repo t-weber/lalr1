@@ -99,6 +99,37 @@ void Collection::ReportProgress(const std::string& msg, bool finished)
 }
 
 
+/**
+ * get terminal or non-terminal transitions originating from the given closure
+ */
+Collection::t_transitions Collection::GetTransitions(
+	const ClosurePtr& closure, bool term) const
+{
+	t_transitions transitions;
+
+	for(const t_transition& transition : m_transitions)
+	{
+		const ClosurePtr& closure_from = std::get<0>(transition);
+		const SymbolPtr& sym = std::get<2>(transition);
+
+		if(sym->IsEps())
+			continue;
+
+		// only consider transitions from the given closure
+		if(closure_from->hash() != closure->hash())
+			continue;
+
+		if(sym->IsTerminal() == term)
+			transitions.insert(transition);
+	}
+
+	return transitions;
+}
+
+
+/**
+ * get terminals leading to the given closure
+ */
 std::vector<TerminalPtr> Collection::GetLookbackTerminals(
 	const ClosurePtr& closure) const
 {
@@ -118,7 +149,7 @@ std::vector<TerminalPtr> Collection::_GetLookbackTerminals(
 		const ClosurePtr& closure_to = std::get<1>(transition);
 		const SymbolPtr& sym = std::get<2>(transition);
 
-		// only consider transitions to given closure
+		// only consider transitions to the given closure
 		if(closure_to->hash() != closure->hash())
 			continue;
 
@@ -321,7 +352,10 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 		if(symIsEps)
 			continue;
 
-		std::vector<std::vector<std::size_t>>* tab = symIsTerm ? &_action_shift : &_jump;
+		// terminal transitions -> shift table
+		// nonterminal transition -> jump table
+		std::vector<std::vector<std::size_t>>* tab =
+			symIsTerm ? &_action_shift : &_jump;
 
 		std::size_t symIdx = get_idx(symTrans->GetId(), symIsTerm);
 		if(symIsTerm)
@@ -363,6 +397,7 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 				if(rule == 0)
 					rule = acceptVal;
 
+				// semantic rule number -> reduce table
 				if(_action_row.size() <= laIdx)
 					_action_row.resize(laIdx+1, errorVal);
 				_action_row[laIdx] = rule;
@@ -581,6 +616,7 @@ bool Collection::SaveParser(const std::string& file) const
 	for(const ClosurePtr& closure : m_collection)
 	{
 		ofstr << "/*\n" << *closure;
+
 		if(std::vector<TerminalPtr> lookbacks = GetLookbackTerminals(closure);
 			lookbacks.size())
 		{
@@ -589,7 +625,41 @@ bool Collection::SaveParser(const std::string& file) const
 				ofstr << lookback->GetStrId() << " ";
 			ofstr << "\n";
 		}
+
+		if(t_transitions terminal_transitions = GetTransitions(closure, true);
+			terminal_transitions.size())
+		{
+			ofstr << "Terminal transitions:\n";
+
+			for(const t_transition& transition : terminal_transitions)
+			{
+				const ClosurePtr& closure_to = std::get<1>(transition);
+				const SymbolPtr& symTrans = std::get<2>(transition);
+
+				ofstr << "\t- to closure " << closure_to->GetId()
+					<< " via symbol " << symTrans->GetStrId()
+					<< "\n";
+			}
+		}
+
+		if(t_transitions nonterminal_transitions = GetTransitions(closure, false);
+			nonterminal_transitions.size())
+		{
+			ofstr << "Non-Terminal transitions:\n";
+
+			for(const t_transition& transition : nonterminal_transitions)
+			{
+				const ClosurePtr& closure_to = std::get<1>(transition);
+				const SymbolPtr& symTrans = std::get<2>(transition);
+
+				ofstr << "\t- to closure " << closure_to->GetId()
+					<< " via symbol " << symTrans->GetStrId()
+					<< "\n";
+			}
+		}
+
 		ofstr << "*/\n";
+
 		ofstr << "void closure_" << closure->GetId() << "()\n";
 		ofstr << "{\n";
 		ofstr << "}\n\n\n";
@@ -660,6 +730,8 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 			ostr << "Lookback terminals: ";
 		for(const TerminalPtr& lookback : lookbacks)
 			ostr << lookback->GetStrId() << " ";
+		if(lookbacks.size())
+			ostr << "\n";
 		ostr << "\n";
 	}
 	ostr << "\n";
@@ -670,8 +742,8 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	ostr << "--------------------------------------------------------------------------------\n";
 	for(const Collection::t_transition& tup : coll.m_transitions)
 	{
-		ostr << std::get<0>(tup)->GetId()
-			<< " -> " << std::get<1>(tup)->GetId()
+		ostr << "closure " << std::get<0>(tup)->GetId()
+			<< " -> closure " << std::get<1>(tup)->GetId()
 			<< " via " << std::get<2>(tup)->GetStrId()
 			<< "\n";
 	}

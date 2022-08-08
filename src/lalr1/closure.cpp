@@ -96,25 +96,27 @@ void Closure::AddElement(const ElementPtr& elem)
 
 		// get non-terminal at cursor
 		const NonTerminalPtr& nonterm =
-			std::dynamic_pointer_cast<NonTerminal>(
-				(*rhs)[cursor]);
+			std::dynamic_pointer_cast<NonTerminal>((*rhs)[cursor]);
+
+		// temporary symbols
+		WordPtr _ruleaftercursor = std::make_shared<Word>(*ruleaftercursor);
+		NonTerminalPtr _ruleaftercursorNT = std::make_shared<NonTerminal>(0, "tmp_ruleaftercursor");
+		_ruleaftercursorNT->AddRule(_ruleaftercursor);
 
 		// iterate all rules of the non-terminal
 		for(std::size_t nonterm_rhsidx=0; nonterm_rhsidx<nonterm->NumRules(); ++nonterm_rhsidx)
 		{
+			ElementPtr elem = std::make_shared<Element>(nonterm, nonterm_rhsidx, 0);
+
 			// iterate lookaheads
+			Terminal::t_terminalset first_la;
 			for(const TerminalPtr& la : nonterm_la)
 			{
 				// copy ruleaftercursor and add lookahead
-				WordPtr _ruleaftercursor = std::make_shared<Word>(*ruleaftercursor);
-				_ruleaftercursor->AddSymbol(la);
+				std::size_t sym_idx = _ruleaftercursor->AddSymbol(la);
+				t_map_first tmp_first = _ruleaftercursorNT->CalcFirst();
+				_ruleaftercursor->RemoveSymbol(sym_idx);
 
-				NonTerminalPtr tmpNT = std::make_shared<NonTerminal>(0, "tmp");
-				tmpNT->AddRule(_ruleaftercursor);
-
-				t_map_first tmp_first = tmpNT->CalcFirst();
-
-				Terminal::t_terminalset first_la;
 				for(const auto& set_first_pair : tmp_first)
 				{
 					const Terminal::t_terminalset& set_first
@@ -125,10 +127,10 @@ void Closure::AddElement(const ElementPtr& elem)
 							first_la.insert(la);
 					}
 				}
-
-				AddElement(std::make_shared<Element>(
-					nonterm, nonterm_rhsidx, 0, first_la));
 			}
+
+			elem->SetLookaheads(first_la);
+			AddElement(elem);
 		}
 	}
 

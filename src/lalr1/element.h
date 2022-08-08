@@ -37,7 +37,7 @@ class Element : public std::enable_shared_from_this<Element>
 public:
 	Element(const NonTerminalPtr& lhs, std::size_t rhsidx,
 		std::size_t cursor, const Terminal::t_terminalset& la);
-
+	Element(const NonTerminalPtr& lhs, std::size_t rhsidx, std::size_t cursor);
 	Element(const Element& elem);
 	const Element& operator=(const Element& elem);
 

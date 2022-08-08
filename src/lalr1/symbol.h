@@ -227,7 +227,7 @@ public:
 	Word();
 
 	// adds a symbol to the word
-	void AddSymbol(const SymbolPtr& sym);
+	std::size_t AddSymbol(const SymbolPtr& sym);
 
 	// removes a symbol from the word
 	void RemoveSymbol(std::size_t idx);

@@ -566,10 +566,13 @@ Word::Word() : std::enable_shared_from_this<Word>{}
 /**
  * adds a symbol to the word
  */
-void Word::AddSymbol(const SymbolPtr& sym)
+std::size_t Word::AddSymbol(const SymbolPtr& sym)
 {
 	m_syms.push_back(sym);
 	m_hash = std::nullopt;
+
+	// return index
+	return m_syms.size() - 1;
 }
 
 

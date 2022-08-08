@@ -4,6 +4,15 @@
 # @license see 'LICENSE' file
 #
 
+#
+# profiling:
+#   mkdir build && cd build
+#   cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-pg ..
+#   make -j8
+#   valgrind --tool=callgrind --callgrind-out-file=expr.callgrind ./expr_create
+#   qcachegrind expr.callgrind
+#
+
 cmake_minimum_required(VERSION 3.12)
 
 project(lalr1)
@@ -106,5 +115,15 @@ if(BUILD_EXAMPLES)
 	add_executable(expr_run src/script/expr.cpp)
 	target_compile_definitions(expr_run PUBLIC -DRUN_PARSER)
 	target_link_libraries(expr_run script lalr1-parser script-vm)
+
+
+	# simple expression compiler
+	add_executable(expr_simple_create src/script/expr_simple.cpp)
+	target_compile_definitions(expr_simple_create PUBLIC -DCREATE_PARSER)
+	target_link_libraries(expr_simple_create lalr1)
+
+	add_executable(expr_simple_run src/script/expr_simple.cpp)
+	target_compile_definitions(expr_simple_run PUBLIC -DRUN_PARSER)
+	target_link_libraries(expr_simple_run script lalr1-parser script-vm)
 endif()
 # -----------------------------------------------------------------------------

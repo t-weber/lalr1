@@ -75,10 +75,36 @@ std::string get_line_numbers(const t_toknode& node)
 
 t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 {
-	constexpr bool debug = false;
-
 	std::stack<std::size_t> states;
 	std::stack<t_lalrastbaseptr> symbols;
+
+	// debug output of the stacks
+	auto print_stacks = [&states, &symbols](std::ostream& ostr)
+	{
+		ostr << "\tState stack: ";
+		auto _states = states;
+		while(!_states.empty())
+		{
+			ostr << _states.top();
+			_states.pop();
+
+			if(_states.size() > 0)
+				ostr << ", ";
+		}
+		ostr << "." << std::endl;
+
+		ostr << "\tSymbol stack: ";
+		auto _symbols = symbols;
+		while(!_symbols.empty())
+		{
+			ostr << _symbols.top()->GetTableIdx();
+			_symbols.pop();
+
+			if(_symbols.size() > 0)
+				ostr << ", ";
+		}
+		ostr << "." << std::endl;
+	};
 
 	// starting state
 	states.push(0);
@@ -87,20 +113,37 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 	t_toknode curtok = input[inputidx++];
 	std::size_t curtokidx = curtok->GetTableIdx();
 
+	// debug output of current token
+	auto print_input_token = [&inputidx, &curtok, &curtokidx](std::ostream& ostr)
+	{
+		ostr << "\tCurrent token [" << inputidx-1 << "]"
+			<< ": " << curtok->GetId()
+			<< " (table index " << curtokidx << ")."
+			<< std::endl;
+	};
+
 	while(true)
 	{
 		std::size_t topstate = states.top();
 		std::size_t newstate = m_tabActionShift(topstate, curtokidx);
 		std::size_t newrule = m_tabActionReduce(topstate, curtokidx);
 
+		if(m_debug)
+		{
+			std::cout << "\n";
+			std::cout << "State " << topstate << " active." << std::endl;
+			print_input_token(std::cout);
+			print_stacks(std::cout);
+		}
+
 		if(newstate == ERROR_VAL && newrule == ERROR_VAL)
 		{
 			std::ostringstream ostrErr;
 			ostrErr << "Undefined shift and reduce entries"
-				<< " from state " << topstate << ".";
-			ostrErr << " Current token id is " << curtok->GetId();
-			ostrErr << get_line_numbers(curtok);
-			ostrErr << ".";
+				<< " from state " << topstate << "."
+				<< " Current token id is " << curtok->GetId()
+				<< get_line_numbers(curtok)
+				<< ".";
 
 			throw std::runtime_error(ostrErr.str());
 		}
@@ -109,10 +152,10 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			std::ostringstream ostrErr;
 			ostrErr << "Shift/reduce conflict between shift"
 				<< " from state " << topstate << " to state " << newstate
-				<< " and reduce using rule " << newrule << ".";
-			ostrErr << " Current token id is " << curtok->GetId();
-			ostrErr << get_line_numbers(curtok);
-			ostrErr << ".";
+				<< " and reduce using rule " << newrule << "."
+				<< " Current token id is " << curtok->GetId()
+				<< get_line_numbers(curtok)
+				<< ".";
 
 			throw std::runtime_error(ostrErr.str());
 		}
@@ -120,16 +163,22 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		// accept
 		else if(newrule == ACCEPT_VAL)
 		{
-			if constexpr(debug)
-				std::cout << "accepting" << std::endl;
+			if(m_debug)
+			{
+				std::cout << "\tAccepting." << std::endl;
+			}
 			return symbols.top();
 		}
 
 		// shift
 		else if(newstate != ERROR_VAL)
 		{
-			if constexpr(debug)
-				std::cout << "shifting state " << newstate << std::endl;
+			if(m_debug)
+			{
+				std::cout << "\tShifting state " << newstate
+					<< " (pushing to state stack)"
+					<< "." << std::endl;
+			}
 
 			states.push(newstate);
 			symbols.push(curtok);
@@ -137,9 +186,9 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			if(inputidx >= input.size())
 			{
 				std::ostringstream ostrErr;
-				ostrErr << "Input buffer underflow";
-				ostrErr << get_line_numbers(curtok);
-				ostrErr << ".";
+				ostrErr << "Input buffer underflow"
+					<< get_line_numbers(curtok)
+					<< ".";
 				throw std::runtime_error(ostrErr.str());
 			}
 
@@ -151,12 +200,13 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		else if(newrule != ERROR_VAL)
 		{
 			std::size_t numSyms = m_numRhsSymsPerRule[newrule];
-			if constexpr(debug)
+			if(m_debug)
 			{
-				std::cout << "reducing " << numSyms
+				std::cout << "\tReducing " << numSyms
 					<< " symbol(s) via rule " << newrule
-					<< ", top state: " << topstate
-					<< std::endl;
+					<< " (popping " << numSyms << " element(s) from stacks,"
+					<< " pushing result to symbol stack)"
+					<< "." << std::endl;
 			}
 
 			// take the symbols from the stack and create an
@@ -177,15 +227,26 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			t_lalrastbaseptr reducedSym = m_semantics[newrule](args);
 			symbols.push(reducedSym);
 
+
 			topstate = states.top();
+
+			if(m_debug)
+			{
+				std::cout << "\n";
+				std::cout << "State " << topstate << " active." << std::endl;
+				print_input_token(std::cout);
+				print_stacks(std::cout);
+			}
+
 			std::size_t jumpstate = m_tabJump(topstate, reducedSym->GetTableIdx());
 			states.push(jumpstate);
 
-			if constexpr(debug)
+			if(m_debug)
 			{
-				std::cout << "jumping from state " << topstate
+				std::cout << "\tJumping from state " << topstate
 					<< " to state " << jumpstate
-					<< std::endl;
+					<< " (pushing jump state " << jumpstate << ")"
+					<< "." << std::endl;
 			}
 		}
 	}

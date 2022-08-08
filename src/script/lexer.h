@@ -62,27 +62,35 @@ enum class Token : t_tok
 };
 
 
-/**
- * find all matching tokens for input string
- */
-extern std::vector<t_lexer_match>
-	get_matching_tokens(const std::string& str, std::size_t line);
+class Lexer
+{
+public:
+	Lexer(std::istream* = &std::cin);
+
+	// get all tokens and attributes
+	std::vector<t_toknode> GetAllTokens();
+
+	void SetEndOnNewline(bool b) { m_end_on_newline = b; }
+	void SetIgnoreInt(bool b) { m_ignore_int = b; }
+	void SetTermIdxMap(const t_mapIdIdx* map) { m_mapTermIdx = map; }
 
 
-/**
- * get next token and attribute
- */
-extern t_lexer_match
-	get_next_token(std::istream& istr = std::cin,
-		bool end_on_newline = true, std::size_t* line = nullptr);
+protected:
+	// get next token and attribute
+	t_lexer_match GetNextToken(std::size_t* line = nullptr);
+
+	// find all matching tokens for input string
+	std::vector<t_lexer_match> GetMatchingTokens(
+		const std::string& str, std::size_t line);
 
 
-/**
- * get all tokens and attributes
- */
-extern std::vector<t_toknode> get_all_tokens(
-	std::istream& istr = std::cin, const t_mapIdIdx* mapTermIdx = nullptr,
-	bool end_on_newline = true);
+private:
+	bool m_end_on_newline{true};
+	bool m_ignore_int{false};
+
+	std::istream* m_istr{nullptr};
+	const t_mapIdIdx* m_mapTermIdx{nullptr};
+};
 
 
 #endif
