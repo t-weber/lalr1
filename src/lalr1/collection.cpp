@@ -11,6 +11,7 @@
  *	- https://www.cs.ecu.edu/karl/5220/spr16/Notes/Bottom-up/slr1table.html
  *	- https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  *	- https://en.wikipedia.org/wiki/LR_parser
+ *	- https://doi.org/10.1016/0020-0190(88)90061-0
  */
 
 #include "collection.h"
@@ -308,6 +309,7 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 	bool ok = true;
 	t_mapIdIdx mapNonTermIdx{}, mapTermIdx{};     // maps the ids to table indices
 	std::vector<std::size_t> numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
+	std::vector<std::size_t> vecRuleLhsIdx{};     // nonterminal index of the rule's result type
 
 	const std::size_t numStates = m_collection.size();
 	const std::size_t errorVal = ERROR_VAL;
@@ -385,7 +387,10 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 
 			if(numRhsSymsPerRule.size() <= rule)
 				numRhsSymsPerRule.resize(rule+1);
+			if(vecRuleLhsIdx.size() <= rule)
+				vecRuleLhsIdx.resize(rule+1);
 			numRhsSymsPerRule[rule] = elem->GetRhs()->NumSymbols(false);
+			vecRuleLhsIdx[rule] = get_idx(elem->GetLhs()->GetId(), false);
 
 			auto& _action_row = _action_reduce[closure->GetId()];
 
@@ -582,19 +587,28 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 		ofstr << "\t{" << id << ", " << idx << "},\n";
 	ofstr << "}};\n\n";
 
+	// number of symbols on right-hand side of rule
 	ofstr << "const t_vecIdx vec_num_rhs_syms{{ ";
 	for(const auto& val : numRhsSymsPerRule)
+		ofstr << val << ", ";
+	ofstr << "}};\n\n";
+
+	// index of lhs nonterminal in rule
+	ofstr << "const t_vecIdx vec_lhs_idx{{ ";
+	for(const auto& val : vecRuleLhsIdx)
 		ofstr << val << ", ";
 	ofstr << "}};\n\n";
 
 	ofstr << "}\n\n\n";
 
 
-	ofstr << "static std::tuple<const t_table*, const t_table*, const t_table*, const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>\n";
+	ofstr << "static std::tuple<const t_table*, const t_table*, const t_table*,\n"
+		<< "\tconst t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*, const t_vecIdx*>\n";
 	ofstr << "get_lalr1_tables()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n"
 		<< "\t\t&_lr1_tables::tab_action_shift, &_lr1_tables::tab_action_reduce, &_lr1_tables::tab_jump,\n"
-		<< "\t\t&_lr1_tables::map_term_idx, &_lr1_tables::map_nonterm_idx, &_lr1_tables::vec_num_rhs_syms);\n";
+		<< "\t\t&_lr1_tables::map_term_idx, &_lr1_tables::map_nonterm_idx, &_lr1_tables::vec_num_rhs_syms,\n"
+		<< "\t\t&_lr1_tables::vec_lhs_idx);\n";
 	ofstr << "}\n\n";
 
 
@@ -605,6 +619,7 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 
 /**
  * export an explicit recursive ascent parser
+ * @see https://doi.org/10.1016/0020-0190(88)90061-0
  * @see https://en.wikipedia.org/wiki/Recursive_ascent_parser
  */
 bool Collection::SaveParser(const std::string& file) const

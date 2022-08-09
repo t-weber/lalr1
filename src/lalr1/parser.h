@@ -18,39 +18,38 @@
 class Parser
 {
 public:
-	// directly takes the input from Collection::CreateParseTables
-	Parser(const std::tuple<
-		t_table, t_table, t_table,
-		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& init,
-		const std::vector<t_semanticrule>& rules);
+	Parser() = default;
+	~Parser() = default;
 
-	Parser(const std::tuple<const t_table*, const t_table*, const t_table*,
-		   const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>& init,
-		   const std::vector<t_semanticrule>& rules);
+	Parser(const Parser& parser);
+	Parser& operator=(const Parser& parser);
 
-	Parser() = delete;
+	void SetShiftTable(const t_table* tab) { m_tabActionShift = tab; }
+	void SetReduceTable(const t_table* tab) { m_tabActionReduce = tab; }
+	void SetJumpTable(const t_table* tab) { m_tabJump = tab; }
+	void SetNumRhsSymsPerRule(const t_vecIdx* vec) { m_numRhsSymsPerRule = vec; }
+	void SetLhsIndices(const t_vecIdx* vec) { m_vecLhsIndices = vec; }
+	void SetSemanticRules(const std::vector<t_semanticrule>* rules) { m_semantics = rules; }
 
 	void SetDebug(bool b) { m_debug = b; }
-	const t_mapIdIdx& GetTermIndexMap() const { return m_mapTermIdx; }
 
 	t_lalrastbaseptr Parse(const std::vector<t_toknode>& input) const;
 
 
 private:
 	// parse tables
-	t_table m_tabActionShift{};
-	t_table m_tabActionReduce{};
-	t_table m_tabJump{};
-
-	// mappings from symbol id to table index
-	t_mapIdIdx m_mapTermIdx{};
-	t_mapIdIdx m_mapNonTermIdx{};
+	const t_table *m_tabActionShift{nullptr};
+	const t_table *m_tabActionReduce{nullptr};
+	const t_table *m_tabJump{nullptr};
 
 	// number of symbols on right hand side of a rule
-	t_vecIdx m_numRhsSymsPerRule{};
+	const t_vecIdx *m_numRhsSymsPerRule{nullptr};
+
+	// index of nonterminal on left-hand side of rule
+	const t_vecIdx *m_vecLhsIndices{nullptr};
 
 	// semantic rules
-	std::vector<t_semanticrule> m_semantics{};
+	const std::vector<t_semanticrule> *m_semantics{nullptr};
 
 	// debug output
 	bool m_debug{false};

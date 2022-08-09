@@ -15,42 +15,24 @@
 #include <sstream>
 
 
-Parser::Parser(
-	const std::tuple<
-		t_table,                 // 0: shift table
-		t_table,                 // 1: reduce table
-		t_table,                 // 2: jump table
-		t_mapIdIdx,              // 3: terminal indices
-		t_mapIdIdx,              // 4: nonterminal indices
-		t_vecIdx>& init,         // 5: semantic rule indices
-	const std::vector<t_semanticrule>& rules)
-	: m_tabActionShift{std::get<0>(init)},
-		m_tabActionReduce{std::get<1>(init)},
-		m_tabJump{std::get<2>(init)},
-		m_mapTermIdx{std::get<3>(init)},
-		m_mapNonTermIdx{std::get<4>(init)},
-		m_numRhsSymsPerRule{std::get<5>(init)},
-		m_semantics{rules}
-{}
+Parser::Parser(const Parser& parser)
+{
+	this->operator=(parser);
+}
 
 
-Parser::Parser(
-	const std::tuple<
-		const t_table*,          // 0: shift table
-		const t_table*,          // 1: reduce table
-		const t_table*,          // 2: jump table
-		const t_mapIdIdx*,       // 3: terminal indices
-		const t_mapIdIdx*,       // 4: nonterminal indices
-		const t_vecIdx*>& init,  // 5: semantic rule indices
-	const std::vector<t_semanticrule>& rules)
-	: m_tabActionShift{*std::get<0>(init)},
-		m_tabActionReduce{*std::get<1>(init)},
-		m_tabJump{*std::get<2>(init)},
-		m_mapTermIdx{*std::get<3>(init)},
-		m_mapNonTermIdx{*std::get<4>(init)},
-		m_numRhsSymsPerRule{*std::get<5>(init)},
-		m_semantics{rules}
-{}
+Parser& Parser::operator=(const Parser& parser)
+{
+	m_tabActionShift = parser.m_tabActionShift;
+	m_tabActionReduce = parser.m_tabActionReduce;
+	m_tabJump = parser.m_tabJump;
+	m_numRhsSymsPerRule = parser.m_numRhsSymsPerRule;
+	m_vecLhsIndices = parser.m_vecLhsIndices;
+	m_semantics = parser.m_semantics;
+	m_debug = parser.m_debug;
+
+	return *this;
+}
 
 
 template<class t_toknode>
@@ -125,8 +107,8 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 	while(true)
 	{
 		std::size_t topstate = states.top();
-		std::size_t newstate = m_tabActionShift(topstate, curtokidx);
-		std::size_t newrule = m_tabActionReduce(topstate, curtokidx);
+		std::size_t newstate = (*m_tabActionShift)(topstate, curtokidx);
+		std::size_t newrule = (*m_tabActionReduce)(topstate, curtokidx);
 
 		if(m_debug)
 		{
@@ -199,7 +181,7 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		// reduce
 		else if(newrule != ERROR_VAL)
 		{
-			std::size_t numSyms = m_numRhsSymsPerRule[newrule];
+			std::size_t numSyms = (*m_numRhsSymsPerRule)[newrule];
 			if(m_debug)
 			{
 				std::cout << "\tReducing " << numSyms
@@ -224,7 +206,8 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 				std::reverse(args.begin(), args.end());
 
 			// execute semantic rule
-			t_lalrastbaseptr reducedSym = m_semantics[newrule](args);
+			t_lalrastbaseptr reducedSym = (*m_semantics)[newrule](args);
+			reducedSym->SetTableIdx((*m_vecLhsIndices)[newrule]);
 			symbols.push(reducedSym);
 
 
@@ -238,7 +221,7 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 				print_stacks(std::cout);
 			}
 
-			std::size_t jumpstate = m_tabJump(topstate, reducedSym->GetTableIdx());
+			std::size_t jumpstate = (*m_tabJump)(topstate, reducedSym->GetTableIdx());
 			states.push(jumpstate);
 
 			if(m_debug)

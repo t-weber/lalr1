@@ -44,9 +44,6 @@ static TerminalPtr sym_real, sym_int, ident;
 // semantic rules
 static std::vector<t_semanticrule> rules;
 
-// indices from parse tables
-static const t_mapIdIdx* mapNonTermIdx = nullptr;
-
 
 static void create_grammar(bool add_semantics = true)
 {
@@ -96,12 +93,9 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
-			return std::make_shared<ASTBinary>(id, tableidx, arg1, arg2, op_plus->GetId());
+			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_plus->GetId());
 		});
 	}
 
@@ -113,12 +107,9 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
-			return std::make_shared<ASTBinary>(id, tableidx, arg1, arg2, op_minus->GetId());
+			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_minus->GetId());
 		});
 	}
 
@@ -130,12 +121,9 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
-			return std::make_shared<ASTBinary>(id, tableidx, arg1, arg2, op_mult->GetId());
+			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mult->GetId());
 		});
 	}
 
@@ -147,12 +135,9 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
-			return std::make_shared<ASTBinary>(id, tableidx, arg1, arg2, op_div->GetId());
+			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_div->GetId());
 		});
 	}
 
@@ -164,12 +149,9 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
-			return std::make_shared<ASTBinary>(id, tableidx, arg1, arg2, op_mod->GetId());
+			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mod->GetId());
 		});
 	}
 
@@ -181,13 +163,10 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(
-				id, tableidx, arg1, arg2, op_pow->GetId());
+				expr->GetId(), 0, arg1, arg2, op_pow->GetId());
 		});
 	}
 
@@ -216,13 +195,9 @@ static void create_grammar(bool add_semantics = true)
 			funcname->SetIdent(true);
 			const std::string& ident = funcname->GetLexerValue();
 
-			std::size_t args_id = expr->GetId();
-			std::size_t args_tableidx = mapNonTermIdx->find(args_id)->second;
-			auto funcargs = std::make_shared<ASTList>(args_id, args_tableidx);
+			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-			return std::make_shared<ASTFuncCall>(id, tableidx, ident, funcargs);
+			return std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
 		});
 	}
 
@@ -238,16 +213,11 @@ static void create_grammar(bool add_semantics = true)
 			funcname->SetIdent(true);
 			const std::string& ident = funcname->GetLexerValue();
 
-			std::size_t args_id = expr->GetId();
-			std::size_t args_tableidx = mapNonTermIdx->find(args_id)->second;
-			auto funcargs = std::make_shared<ASTList>(args_id, args_tableidx);
-
+			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 			t_astbaseptr funcarg = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			funcargs->AddChild(funcarg, false);
 
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-			return std::make_shared<ASTFuncCall>(id, tableidx, ident, funcargs);
+			return std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
 		});
 	}
 
@@ -263,18 +233,13 @@ static void create_grammar(bool add_semantics = true)
 			funcname->SetIdent(true);
 			const std::string& ident = funcname->GetLexerValue();
 
-			std::size_t args_id = expr->GetId();
-			std::size_t args_tableidx = mapNonTermIdx->find(args_id)->second;
-
 			t_astbaseptr funcarg1 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			t_astbaseptr funcarg2 = std::dynamic_pointer_cast<ASTBase>(args[4]);
-			auto funcargs = std::make_shared<ASTList>(args_id, args_tableidx);
+			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 			funcargs->AddChild(funcarg2, false);
 			funcargs->AddChild(funcarg1, false);
 
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-			return std::make_shared<ASTFuncCall>(id, tableidx, ident, funcargs);
+			return std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
 		});
 	}
 
@@ -286,14 +251,9 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::REAL);
-			sym->SetId(id);
-			sym->SetTableIdx(tableidx);
-
+			sym->SetId(expr->GetId());
 			return sym;
 		});
 	}
@@ -306,14 +266,9 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::INT);
-			sym->SetId(id);
-			sym->SetTableIdx(tableidx);
-
+			sym->SetId(expr->GetId());
 			return sym;
 		});
 	}
@@ -326,14 +281,9 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr ident = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			ident->SetDataType(VMType::INT);
-			ident->SetId(id);
-			ident->SetTableIdx(tableidx);
-
+			ident->SetId(expr->GetId());
 			return ident;
 		});
 	}
@@ -346,11 +296,8 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[1]);
-			return std::make_shared<ASTUnary>(id, tableidx, arg, op_minus->GetId());
+			return std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_minus->GetId());
 		});
 	}
 
@@ -362,11 +309,8 @@ static void create_grammar(bool add_semantics = true)
 		rules.emplace_back(
 		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
-			std::size_t tableidx = mapNonTermIdx->find(id)->second;
-
 			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[1]);
-			return std::make_shared<ASTUnary>(id, tableidx, arg, op_plus->GetId());
+			return std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_plus->GetId());
 		});
 	}
 }
@@ -479,13 +423,16 @@ static void lalr1_run_parser()
 	try
 	{
 		// get created parsing tables
-		auto parsetables = get_lalr1_tables();
+		auto [shift_tab, reduce_tab, jump_tab, term_idx, nonterm_idx, num_rhs, lhs_idx]
+			= get_lalr1_tables();
 
-		const t_mapIdIdx* mapTermIdx = std::get<3>(parsetables);
-		mapNonTermIdx = std::get<4>(parsetables);
-
-
-		Parser parser{parsetables, rules};
+		Parser parser;
+		parser.SetShiftTable(shift_tab);
+		parser.SetReduceTable(reduce_tab);
+		parser.SetJumpTable(jump_tab);
+		parser.SetNumRhsSymsPerRule(num_rhs);
+		parser.SetLhsIndices(lhs_idx);
+		parser.SetSemanticRules(&rules);
 		//parser.SetDebug(true);
 
 		while(1)
@@ -496,7 +443,7 @@ static void lalr1_run_parser()
 			std::istringstream istr{exprstr};
 
 			Lexer lexer(&istr);
-			lexer.SetTermIdxMap(mapTermIdx);
+			lexer.SetTermIdxMap(term_idx);
 			auto tokens = lexer.GetAllTokens();
 
 #if DEBUG_CODEGEN != 0
