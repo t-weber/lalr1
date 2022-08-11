@@ -48,6 +48,7 @@ add_library(lalr1 STATIC
 	src/lalr1/element.cpp src/lalr1/element.h
 	src/lalr1/closure.cpp src/lalr1/closure.h
 	src/lalr1/collection.cpp src/lalr1/collection.h
+	src/lalr1/parsergen.cpp
 	src/lalr1/table.h src/lalr1/common.h
 )
 

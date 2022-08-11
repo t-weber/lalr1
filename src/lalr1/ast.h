@@ -37,6 +37,8 @@ public:
 	std::size_t GetTableIdx() const { return *m_tableidx; }
 	void SetTableIdx(std::size_t tableidx) { m_tableidx = tableidx; }
 
+	virtual bool IsTerminal() const { return false; };
+
 	virtual const std::optional<t_line_range>& GetLineRange() const
 	{ return m_line_range; }
 	virtual void SetLineRange(const t_line_range& lines)

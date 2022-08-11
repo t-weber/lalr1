@@ -262,6 +262,7 @@ void Collection::DoTransitions()
 	m_closure_cache = nullptr;
 	DoTransitions(*m_collection.begin());
 	Simplify();
+	CreateTableIndices();
 
 	ReportProgress("All transitions done.", true);
 }
@@ -301,46 +302,13 @@ void Collection::Simplify()
 
 
 /**
- * export lalr(1) tables to C++ code
+ * creates indices for the parse tables from the symbol ids
  */
-bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) const
+void Collection::CreateTableIndices()
 {
-	// create lalr(1) tables
-	bool ok = true;
-	t_mapIdIdx mapNonTermIdx{}, mapTermIdx{};     // maps the ids to table indices
-	std::vector<std::size_t> numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
-	std::vector<std::size_t> vecRuleLhsIdx{};     // nonterminal index of the rule's result type
-
-	const std::size_t numStates = m_collection.size();
-	const std::size_t errorVal = ERROR_VAL;
-	const std::size_t acceptVal = ACCEPT_VAL;
-
-	// lalr(1) tables
-	std::vector<std::vector<std::size_t>> _action_shift, _action_reduce, _jump;
-	_action_shift.resize(numStates);
-	_action_reduce.resize(numStates);
-	_jump.resize(numStates);
-
-	// current counters
-	std::size_t curNonTermIdx = 0, curTermIdx = 0;
-
-	// map terminal table index to terminal symbol
-	std::unordered_map<std::size_t, TerminalPtr> seen_terminals{};
-
-
-	// translate symbol id to table index
-	auto get_idx = [&mapTermIdx, &mapNonTermIdx, &curNonTermIdx, &curTermIdx]
-		(std::size_t id, bool is_term) -> std::size_t
-		{
-			std::size_t* curIdx = is_term ? &curTermIdx : &curNonTermIdx;
-			t_mapIdIdx* map = is_term ? &mapTermIdx : &mapNonTermIdx;
-
-			auto iter = map->find(id);
-			if(iter == map->end())
-				iter = map->emplace(std::make_pair(id, (*curIdx)++)).first;
-			return iter->second;
-		};
-
+	// generate table indices for terminals
+	m_mapTermIdx.clear();
+	std::size_t curTermIdx = 0;
 
 	for(const t_transition& tup : m_transitions)
 	{
@@ -348,29 +316,23 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 		const ClosurePtr& stateTo = std::get<1>(tup);
 		const SymbolPtr& symTrans = std::get<2>(tup);
 
-		bool symIsTerm = symTrans->IsTerminal();
-		bool symIsEps = symTrans->IsEps();
-
-		if(symIsEps)
+		if(symTrans->IsEps() || !symTrans->IsTerminal())
 			continue;
 
-		// terminal transitions -> shift table
-		// nonterminal transition -> jump table
-		std::vector<std::vector<std::size_t>>* tab =
-			symIsTerm ? &_action_shift : &_jump;
-
-		std::size_t symIdx = get_idx(symTrans->GetId(), symIsTerm);
-		if(symIsTerm)
-		{
-			seen_terminals.emplace(std::make_pair(
-				symIdx, std::dynamic_pointer_cast<Terminal>(symTrans)));
-		}
-
-		auto& _tab_row = (*tab)[stateFrom->GetId()];
-		if(_tab_row.size() <= symIdx)
-			_tab_row.resize(symIdx+1, errorVal);
-		_tab_row[symIdx] = stateTo->GetId();
+		std::size_t sym_id = symTrans->GetId();
+		if(m_mapTermIdx.find(sym_id) == m_mapTermIdx.end())
+			m_mapTermIdx.emplace(std::make_pair(sym_id, curTermIdx++)).first;
 	}
+
+	// add end symbol
+	std::size_t end_id = g_end->GetId();
+	if(m_mapTermIdx.find(end_id) == m_mapTermIdx.end())
+		m_mapTermIdx.emplace(std::make_pair(end_id, curTermIdx++)).first;
+
+
+	// generate able indices for non-terminals
+	m_mapNonTermIdx.clear();
+	std::size_t curNonTermIdx = 0;
 
 	for(const ClosurePtr& closure : m_collection)
 	{
@@ -380,307 +342,107 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 			if(!elem->IsCursorAtEnd())
 				continue;
 
-			std::optional<std::size_t> rulenr = *elem->GetSemanticRule();
-			if(!rulenr)		// no semantic rule assigned
-				continue;
-			std::size_t rule = *rulenr;
-
-			if(numRhsSymsPerRule.size() <= rule)
-				numRhsSymsPerRule.resize(rule+1);
-			if(vecRuleLhsIdx.size() <= rule)
-				vecRuleLhsIdx.resize(rule+1);
-			numRhsSymsPerRule[rule] = elem->GetRhs()->NumSymbols(false);
-			vecRuleLhsIdx[rule] = get_idx(elem->GetLhs()->GetId(), false);
-
-			auto& _action_row = _action_reduce[closure->GetId()];
-
-			for(const auto& la : elem->GetLookaheads())
-			{
-				std::size_t laIdx = get_idx(la->GetId(), true);
-
-				// in extended grammar, first production (rule 0) is of the form start -> ...
-				if(rule == 0)
-					rule = acceptVal;
-
-				// semantic rule number -> reduce table
-				if(_action_row.size() <= laIdx)
-					_action_row.resize(laIdx+1, errorVal);
-				_action_row[laIdx] = rule;
-			}
+			std::size_t sym_id = elem->GetLhs()->GetId();
+			if(m_mapNonTermIdx.find(sym_id) == m_mapNonTermIdx.end())
+				m_mapNonTermIdx.emplace(std::make_pair(sym_id, curNonTermIdx++)).first;
 		}
 	}
-
-
-	t_table tabActionShift = t_table{_action_shift, errorVal, acceptVal, numStates, curTermIdx};
-	t_table tabActionReduce = t_table{_action_reduce, errorVal, acceptVal, numStates, curTermIdx};
-	t_table tabJump = t_table{_jump, errorVal, acceptVal, numStates, curNonTermIdx};
-
-	// check for and try to resolve shift/reduce conflicts
-	std::size_t state = 0;
-	for(const ClosurePtr& closureState : m_collection)
-	{
-		std::optional<std::vector<TerminalPtr>> lookbacks;
-
-		for(std::size_t termidx=0; termidx<curTermIdx; ++termidx)
-		{
-			std::size_t& shiftEntry = tabActionShift(state, termidx);
-			std::size_t& reduceEntry = tabActionReduce(state, termidx);
-
-			std::optional<std::string> termid;
-			ElementPtr conflictelem = nullptr;
-			SymbolPtr sym_at_cursor = nullptr;
-
-			if(auto termiter = seen_terminals.find(termidx);
-				termiter != seen_terminals.end())
-			{
-				termid = termiter->second->GetStrId();
-				conflictelem = closureState->
-					GetElementWithCursorAtSymbol(termiter->second);
-				if(conflictelem)
-					sym_at_cursor = conflictelem->GetSymbolAtCursor();
-			}
-
-			// both have an entry?
-			if(shiftEntry!=errorVal && reduceEntry!=errorVal)
-			{
-				if(!lookbacks)
-					lookbacks = GetLookbackTerminals(closureState);
-				bool solution_found = false;
-
-				// try to resolve conflict using operator precedences/associativities
-				if(sym_at_cursor && sym_at_cursor->IsTerminal())
-				{
-					const TerminalPtr& term_at_cursor =
-						std::dynamic_pointer_cast<Terminal>(sym_at_cursor);
-
-					for(const TerminalPtr& lookback : *lookbacks)
-					{
-						auto prec_lhs = lookback->GetPrecedence();
-						auto prec_rhs = term_at_cursor->GetPrecedence();
-
-						// both terminals have a precedence
-						if(prec_lhs && prec_rhs)
-						{
-							if(*prec_lhs < *prec_rhs)       // shift
-							{
-								reduceEntry = errorVal;
-								solution_found = true;
-							}
-							else if(*prec_lhs > *prec_rhs)  // reduce
-							{
-								shiftEntry = errorVal;
-								solution_found = true;
-							}
-
-							// same precedence -> use associativity
-						}
-
-						if(!solution_found)
-						{
-							auto assoc_lhs = lookback->GetAssociativity();
-							auto assoc_rhs = term_at_cursor->GetAssociativity();
-
-							// both terminals have an associativity
-							if(assoc_lhs && assoc_rhs &&
-								*assoc_lhs == *assoc_rhs)
-							{
-								if(*assoc_lhs == 'r')      // shift
-								{
-									reduceEntry = errorVal;
-									solution_found = true;
-								}
-								else if(*assoc_lhs == 'l') // reduce
-								{
-									shiftEntry = errorVal;
-									solution_found = true;
-								}
-							}
-						}
-
-						if(solution_found)
-							break;
-					}
-				}
-
-
-				if(!solution_found)
-				{
-					ok = false;
-
-					std::ostringstream ostrErr;
-					ostrErr << "Shift/reduce conflict detected"
-						<< " for closure " << state;
-					if(conflictelem)
-						ostrErr << ":\n\t" << *conflictelem << "\n";
-					if(lookbacks->size())
-					{
-						ostrErr << " with look-back terminal(s): ";
-						for(std::size_t i=0; i<lookbacks->size(); ++i)
-						{
-							ostrErr << (*lookbacks)[i]->GetStrId();
-							if(i < lookbacks->size()-1)
-								ostrErr << ", ";
-						}
-					}
-					if(termid)
-						ostrErr << " and look-ahead terminal " << (*termid);
-					else
-						ostrErr << "and terminal index " << termidx;
-					ostrErr << " (can either shift to closure " << shiftEntry
-						<< " or reduce using rule " << reduceEntry
-						<< ")." << std::endl;
-
-					if(stopOnConflicts)
-						throw std::runtime_error(ostrErr.str());
-					else
-						std::cerr << ostrErr.str() << std::endl;
-				}
-			}
-		}
-
-		++state;
-	}
-
-	if(!ok)
-		return false;
-
-
-	// save lalr(1) tables
-	std::ofstream ofstr{file};
-	if(!ofstr)
-		return false;
-
-	ofstr << "#ifndef __LALR1_TABLES__\n";
-	ofstr << "#define __LALR1_TABLES__\n\n";
-
-	ofstr <<"namespace _lr1_tables {\n\n";
-
-	// save constants
-	ofstr << "\tconst std::size_t err = " << ERROR_VAL << ";\n";
-	ofstr << "\tconst std::size_t acc = " << ACCEPT_VAL << ";\n";
-	ofstr << "\tconst std::size_t eps = " << EPS_IDENT << ";\n";
-	ofstr << "\tconst std::size_t end = " << END_IDENT << ";\n";
-	ofstr << "\n";
-
-	tabActionShift.SaveCXXDefinition(ofstr, "tab_action_shift");
-	tabActionReduce.SaveCXXDefinition(ofstr, "tab_action_reduce");
-	tabJump.SaveCXXDefinition(ofstr, "tab_jump");
-
-	// terminal symbol indices
-	ofstr << "const t_mapIdIdx map_term_idx{{\n";
-	for(const auto& [id, idx] : mapTermIdx)
-	{
-		ofstr << "\t{";
-		if(id == EPS_IDENT)
-			ofstr << "eps";
-		else if(id == END_IDENT)
-			ofstr << "end";
-		else
-			ofstr << id;
-		ofstr << ", " << idx << "},\n";
-	}
-	ofstr << "}};\n\n";
-
-	// non-terminal symbol indices
-	ofstr << "const t_mapIdIdx map_nonterm_idx{{\n";
-	for(const auto& [id, idx] : mapNonTermIdx)
-		ofstr << "\t{" << id << ", " << idx << "},\n";
-	ofstr << "}};\n\n";
-
-	// number of symbols on right-hand side of rule
-	ofstr << "const t_vecIdx vec_num_rhs_syms{{ ";
-	for(const auto& val : numRhsSymsPerRule)
-		ofstr << val << ", ";
-	ofstr << "}};\n\n";
-
-	// index of lhs nonterminal in rule
-	ofstr << "const t_vecIdx vec_lhs_idx{{ ";
-	for(const auto& val : vecRuleLhsIdx)
-		ofstr << val << ", ";
-	ofstr << "}};\n\n";
-
-	ofstr << "}\n\n\n";
-
-
-	ofstr << "static std::tuple<const t_table*, const t_table*, const t_table*,\n"
-		<< "\tconst t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*, const t_vecIdx*>\n";
-	ofstr << "get_lalr1_tables()\n{\n";
-	ofstr << "\treturn std::make_tuple(\n"
-		<< "\t\t&_lr1_tables::tab_action_shift, &_lr1_tables::tab_action_reduce, &_lr1_tables::tab_jump,\n"
-		<< "\t\t&_lr1_tables::map_term_idx, &_lr1_tables::map_nonterm_idx, &_lr1_tables::vec_num_rhs_syms,\n"
-		<< "\t\t&_lr1_tables::vec_lhs_idx);\n";
-	ofstr << "}\n\n";
-
-
-	ofstr << "\n#endif" << std::endl;
-	return true;
 }
 
 
 /**
- * export an explicit recursive ascent parser
- * @see https://doi.org/10.1016/0020-0190(88)90061-0
- * @see https://en.wikipedia.org/wiki/Recursive_ascent_parser
+ * translates symbol id to table index
  */
-bool Collection::SaveParser(const std::string& file) const
+std::size_t Collection::GetTableIndex(std::size_t id, bool is_term) const
 {
-	std::ofstream ofstr{file};
-	if(!ofstr)
-		return false;
+	const t_mapIdIdx* map = is_term ? &m_mapTermIdx : &m_mapNonTermIdx;
 
-	for(const ClosurePtr& closure : m_collection)
+	auto iter = map->find(id);
+	if(iter == map->end())
 	{
-		ofstr << "/*\n" << *closure;
-
-		if(std::vector<TerminalPtr> lookbacks = GetLookbackTerminals(closure);
-			lookbacks.size())
-		{
-			ofstr << "Lookback terminals: ";
-			for(const TerminalPtr& lookback : lookbacks)
-				ofstr << lookback->GetStrId() << " ";
-			ofstr << "\n";
-		}
-
-		if(t_transitions terminal_transitions = GetTransitions(closure, true);
-			terminal_transitions.size())
-		{
-			ofstr << "Terminal transitions:\n";
-
-			for(const t_transition& transition : terminal_transitions)
-			{
-				const ClosurePtr& closure_to = std::get<1>(transition);
-				const SymbolPtr& symTrans = std::get<2>(transition);
-
-				ofstr << "\t- to closure " << closure_to->GetId()
-					<< " via symbol " << symTrans->GetStrId()
-					<< "\n";
-			}
-		}
-
-		if(t_transitions nonterminal_transitions = GetTransitions(closure, false);
-			nonterminal_transitions.size())
-		{
-			ofstr << "Non-Terminal transitions:\n";
-
-			for(const t_transition& transition : nonterminal_transitions)
-			{
-				const ClosurePtr& closure_to = std::get<1>(transition);
-				const SymbolPtr& symTrans = std::get<2>(transition);
-
-				ofstr << "\t- to closure " << closure_to->GetId()
-					<< " via symbol " << symTrans->GetStrId()
-					<< "\n";
-			}
-		}
-
-		ofstr << "*/\n";
-
-		ofstr << "void closure_" << closure->GetId() << "()\n";
-		ofstr << "{\n";
-		ofstr << "}\n\n\n";
+		std::ostringstream ostrErr;
+		ostrErr << "No table index is available for ";
+		if(is_term)
+			ostrErr << "terminal";
+		else
+			ostrErr << "non-terminal";
+		ostrErr << " with id " << id << ".";
+		throw std::runtime_error(ostrErr.str());
 	}
 
-	return true;
+	return iter->second;
+}
+
+
+/**
+ * try to solve a shift/reduce conflict
+ */
+bool Collection::SolveConflict(
+	const SymbolPtr& sym_at_cursor, const std::vector<TerminalPtr>& lookbacks,
+	std::size_t* shiftEntry, std::size_t *reduceEntry) const
+{
+	// no conflict?
+	if(*shiftEntry==ERROR_VAL || *reduceEntry==ERROR_VAL)
+		return true;
+
+	bool solution_found = false;
+
+	// try to resolve conflict using operator precedences/associativities
+	if(sym_at_cursor && sym_at_cursor->IsTerminal())
+	{
+		const TerminalPtr& term_at_cursor =
+			std::dynamic_pointer_cast<Terminal>(sym_at_cursor);
+
+		for(const TerminalPtr& lookback : lookbacks)
+		{
+			auto prec_lhs = lookback->GetPrecedence();
+			auto prec_rhs = term_at_cursor->GetPrecedence();
+
+			// both terminals have a precedence
+			if(prec_lhs && prec_rhs)
+			{
+				if(*prec_lhs < *prec_rhs)       // shift
+				{
+					*reduceEntry = ERROR_VAL;
+					solution_found = true;
+				}
+				else if(*prec_lhs > *prec_rhs)  // reduce
+				{
+					*shiftEntry = ERROR_VAL;
+					solution_found = true;
+				}
+
+				// same precedence -> use associativity
+			}
+
+			if(!solution_found)
+			{
+				auto assoc_lhs = lookback->GetAssociativity();
+				auto assoc_rhs = term_at_cursor->GetAssociativity();
+
+				// both terminals have an associativity
+				if(assoc_lhs && assoc_rhs &&
+					*assoc_lhs == *assoc_rhs)
+				{
+					if(*assoc_lhs == 'r')      // shift
+					{
+						*reduceEntry = ERROR_VAL;
+						solution_found = true;
+					}
+					else if(*assoc_lhs == 'l') // reduce
+					{
+						*shiftEntry = ERROR_VAL;
+						solution_found = true;
+					}
+				}
+			}
+
+			if(solution_found)
+				break;
+		}
+	}
+
+	return solution_found;
 }
 
 

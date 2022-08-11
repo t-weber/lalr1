@@ -123,7 +123,7 @@ public:
 
 	virtual ~ASTBase() = default;
 
-	virtual bool IsTerminal() const { return false; };
+	virtual bool IsTerminal() const override { return false; };
 	virtual ASTType GetType() const = 0;
 
 	virtual VMType GetDataType() const { return m_datatype; }

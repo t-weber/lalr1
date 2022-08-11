@@ -88,14 +88,24 @@ protected:
 	void DoTransitions(const ClosurePtr& closure);
 	void Simplify();
 
+	bool SolveConflict(
+		const SymbolPtr& sym_at_cursor, const std::vector<TerminalPtr>& lookbacks,
+		std::size_t* shiftEntry, std::size_t *reduceEntry) const;
+
+	void CreateTableIndices();
+	std::size_t GetTableIndex(std::size_t id, bool is_term) const;
+
 	static std::size_t hash_transition(const t_transition& trans);
 
 
 private:
-	std::list<ClosurePtr> m_collection{};      // collection of LR(1) closures
-	t_transitions m_transitions{};             // transitions between collection, [from, to, transition symbol]
-	t_closurecache m_closure_cache{};          // seen closures
-	mutable t_seen_closures m_seen_closures{}; // set of seen closures
+	std::list<ClosurePtr> m_collection{};       // collection of LR(1) closures
+	t_transitions m_transitions{};              // transitions between collection, [from, to, transition symbol]
+
+	t_mapIdIdx m_mapTermIdx{};                  // maps the terminal ids to table indices
+	t_mapIdIdx m_mapNonTermIdx{};               // maps the non-terminal ids to table indices
+	t_closurecache m_closure_cache{};           // seen closures
+	mutable t_seen_closures m_seen_closures{};  // set of seen closures
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 
