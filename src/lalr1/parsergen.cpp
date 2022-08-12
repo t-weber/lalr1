@@ -253,12 +253,17 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 
 
 	ofstr << "static std::tuple<const t_table*, const t_table*, const t_table*,\n"
-		<< "\tconst t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*, const t_vecIdx*>\n";
+		<< "\tconst t_vecIdx*, const t_vecIdx*>\n";
 	ofstr << "get_lalr1_tables()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n"
 		<< "\t\t&_lr1_tables::tab_action_shift, &_lr1_tables::tab_action_reduce, &_lr1_tables::tab_jump,\n"
-		<< "\t\t&_lr1_tables::map_term_idx, &_lr1_tables::map_nonterm_idx, &_lr1_tables::vec_num_rhs_syms,\n"
-		<< "\t\t&_lr1_tables::vec_lhs_idx);\n";
+		<< "\t\t&_lr1_tables::vec_num_rhs_syms, &_lr1_tables::vec_lhs_idx);\n";
+	ofstr << "}\n\n";
+
+	ofstr << "static std::tuple<const t_mapIdIdx*, const t_mapIdIdx*>\n";
+	ofstr << "get_lalr1_table_indices()\n{\n";
+	ofstr << "\treturn std::make_tuple(\n"
+		<< "\t\t&_lr1_tables::map_term_idx, &_lr1_tables::map_nonterm_idx);\n";
 	ofstr << "}\n\n";
 
 
@@ -287,12 +292,15 @@ bool Collection::SaveParser(const std::string& filename_cpp) const
 class ParserRecAsc
 {
 public:
-	ParserRecAsc(const std::vector<t_semanticrule>* rules);
-	ParserRecAsc() = delete;
+	ParserRecAsc() = default;
+	~ParserRecAsc() = default;
 	ParserRecAsc(const ParserRecAsc&) = delete;
 	ParserRecAsc& operator=(const ParserRecAsc&) = delete;
 
-	t_lalrastbaseptr Parse(const std::vector<t_toknode>* input);
+	void SetDebug(bool b) { m_debug = b; }
+
+	void SetSemanticRules(const std::vector<t_semanticrule>* rules);
+	t_lalrastbaseptr Parse(const std::vector<t_toknode>& input);
 
 protected:
 	void PrintSymbols() const;
@@ -301,29 +309,21 @@ protected:
 %%DECLARE_CLOSURES%%
 
 private:
-	// semantic rules
-	const std::vector<t_semanticrule>* m_semantics{nullptr};
+	const std::vector<t_semanticrule>* m_semantics{};  // semantic rules
 
-	// input tokens
-	const std::vector<t_toknode>* m_input{nullptr};
+	const std::vector<t_toknode>* m_input{};   // input tokens
 
-	// lookahead token
-	t_toknode m_lookahead{nullptr};
+	t_toknode m_lookahead{nullptr};            // lookahead token
+	std::size_t m_lookahead_id{0};             // lookahead identifier
+	int m_lookahead_idx{-1};                   // index into input token array
 
-	// lookahead identifier
-	std::size_t m_lookahead_id{0};
+	std::stack<t_lalrastbaseptr> m_symbols{};  // currently active symbols
 
-	// index into input token array
-	int m_lookahead_idx{-1};
-
-	// currently active symbols
-	std::stack<t_lalrastbaseptr> m_symbols{};
+	bool m_debug{false};                       // output debug infos
+	bool m_accepted{false};                    // input was accepted
 
 	// number of function returns between reduction and performing jump / non-terminal transition
 	std::size_t m_dist_to_jump{0};
-
-	// input was accepted
-	bool m_accepted{false};
 };
 
 #endif
@@ -334,16 +334,11 @@ private:
 	std::string outfile_cpp = R"raw(
 %%INCLUDE_HEADER%%
 
-ParserRecAsc::ParserRecAsc(const std::vector<t_semanticrule>* rules)
-	: m_semantics{rules}
-{}
-
 void ParserRecAsc::PrintSymbols() const
 {
 	std::stack<t_lalrastbaseptr> symbols = m_symbols;
 
 	std::cout << symbols.size() << " symbols: ";
-
 	while(symbols.size())
 	{
 		t_lalrastbaseptr sym = symbols.top();
@@ -369,9 +364,14 @@ void ParserRecAsc::GetNextLookahead()
 	}
 }
 
-t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>* input)
+void ParserRecAsc::SetSemanticRules(const std::vector<t_semanticrule>* rules)
 {
-	m_input = input;
+	m_semantics = rules;
+}
+
+t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
+{
+	m_input = &input;
 	m_lookahead_idx = -1;
 	m_lookahead_id = 0;
 	m_lookahead = nullptr;
@@ -465,6 +465,18 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>* input)
 		ostr_cpp << "void ParserRecAsc::closure_" << closure->GetId() << "()\n";
 		ostr_cpp << "{\n";
 
+
+		// debug infos
+		ostr_cpp << "\tif(m_debug)\n";
+		ostr_cpp << "\t{\n";
+		ostr_cpp << "\t\tstd::cout << \"\\nRunning \" << __PRETTY_FUNCTION__ << \"...\" << std::endl;\n";
+		ostr_cpp << "\t\tif(m_lookahead)\n";
+		ostr_cpp << "\t\t\tstd::cout << \"Lookahead [\"  << m_lookahead_idx << \"]: \""
+			" << m_lookahead->GetId() << std::endl;\n";
+		ostr_cpp << "\t\tPrintSymbols();\n";
+		ostr_cpp << "\t}\n";  // end if
+
+
 		// shift actions
 		ostr_cpp << "\tswitch(m_lookahead_id)\n";
 		ostr_cpp << "\t{\n";
@@ -489,10 +501,67 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>* input)
 		ostr_cpp << "\t}\n";        // end switch
 
 
-		// TODO: reduce actions
+		// reduce actions
+		ostr_cpp << "\tswitch(m_lookahead_id)\n";
+		ostr_cpp << "\t{\n";
+		for(std::size_t elemidx=0; elemidx < closure->NumElements(); ++elemidx)
+		{
+			const ElementPtr& elem = closure->GetElement(elemidx);
+			if(!elem->IsCursorAtEnd())
+				continue;
+
+			std::optional<std::size_t> rulenr = *elem->GetSemanticRule();
+			if(!rulenr)
+				continue;
+
+			const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
+			if(lookaheads.size())
+			{
+				for(const auto& la : lookaheads)
+					ostr_cpp << "\t\tcase " << la->GetId() << ":\n";
+				ostr_cpp << "\t\t{\n";
+
+				// in extended grammar, first production (rule 0) is of the form start -> ...
+				if(*rulenr == 0)
+				{
+					ostr_cpp << "\t\t\tm_accepted = true;\n";
+					ostr_cpp << "\t\t\tbreak;\n";
+				}
+				else
+				{
+					std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
+					ostr_cpp << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
+
+					// debug infos
+					ostr_cpp << "\t\t\tif(m_debug)\n";
+					ostr_cpp << "\t\t\t{\n";
+					ostr_cpp << "\t\t\t\tstd::cout << \"Reducing " << num_rhs
+						<< " symbol(s) using rule " << *rulenr << ".\" << std::endl;\n";
+					ostr_cpp << "\t\t\t}\n";  // end if
 
 
-		// jump to new closurel
+					// take the symbols from the stack and create an argument vector for the semantic rule
+					ostr_cpp << "\t\t\tstd::vector<t_lalrastbaseptr> args;\n";
+					ostr_cpp << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
+					ostr_cpp << "\t\t\t{\n";
+					ostr_cpp << "\t\t\t\targs.insert(args.begin(), m_symbols.top());\n";
+					ostr_cpp << "\t\t\t\tm_symbols.pop();\n";
+					ostr_cpp << "\t\t\t}\n";  // end for
+
+					// execute semantic rule
+					ostr_cpp << "\t\t\tt_lalrastbaseptr reducedSym = (*m_semantics)[" << *rulenr << "](args);\n";
+					ostr_cpp << "\t\t\tm_symbols.push(reducedSym);\n";
+					ostr_cpp << "\t\t\tbreak;\n";
+				}
+
+				ostr_cpp << "\t\t}\n";  // end case
+			}
+		}
+		// TODO: default: error
+		ostr_cpp << "\t}\n";      // end switch
+
+
+		// jump to new closure
 		std::ostringstream ostr_cpp_while;
 		ostr_cpp_while << "\twhile(!m_dist_to_jump && m_symbols.size() && !m_accepted)\n";
 		ostr_cpp_while << "\t{\n";
@@ -529,6 +598,12 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>* input)
 		// return from closure -> decrement distance counter
 		ostr_cpp << "\tif(m_dist_to_jump > 0)\n\t\t--m_dist_to_jump;\n";
 
+		// debug infos
+		ostr_cpp << "\tif(m_debug)\n";
+		ostr_cpp << "\t{\n";
+		ostr_cpp << "\t\tstd::cout << \"Returning from closure, distance to jump: \" "
+			<< "<< m_dist_to_jump << \".\" << std::endl;\n";
+		ostr_cpp << "\t}\n";  // end if
 
 		// end closure function
 		ostr_cpp << "}\n\n\n";

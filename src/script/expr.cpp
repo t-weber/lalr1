@@ -24,6 +24,7 @@
 #define DEBUG_WRITEGRAPH  0
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
+#define USE_RECASC        0
 
 
 enum : std::size_t
@@ -254,6 +255,7 @@ static void create_grammar(bool add_semantics = true)
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::REAL);
 			sym->SetId(expr->GetId());
+			sym->SetTerminalOverride(false);  // expression, no terminal any more
 			return sym;
 		});
 	}
@@ -269,6 +271,7 @@ static void create_grammar(bool add_semantics = true)
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::INT);
 			sym->SetId(expr->GetId());
+			sym->SetTerminalOverride(false);  // expression, no terminal any more
 			return sym;
 		});
 	}
@@ -284,6 +287,7 @@ static void create_grammar(bool add_semantics = true)
 			t_astbaseptr ident = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			ident->SetDataType(VMType::INT);
 			ident->SetId(expr->GetId());
+			ident->SetTerminalOverride(false);  // expression, no terminal any more
 			return ident;
 		});
 	}
@@ -389,8 +393,11 @@ static void lr1_create_parser()
 		collsLALR.SaveGraph("expr", 1);
 #endif
 
-		collsLALR.SaveParseTables("expr.tab");
-		collsLALR.SaveParser("expr_parser.cpp");
+#if USE_RECASC != 0
+	collsLALR.SaveParser("expr_parser.cpp");
+#else
+	collsLALR.SaveParseTables("expr.tab");
+#endif
 	}
 	catch(const std::exception& err)
 	{
@@ -398,33 +405,40 @@ static void lr1_create_parser()
 	}
 }
 
-#endif
+#endif  // CREATE_PARSER
 
 
 
 #ifdef RUN_PARSER
 
-#if !__has_include("expr.tab")
+#if USE_RECASC != 0
+	#if __has_include("expr_parser.h")
+		#include "expr_parser.h"
+		#include "expr_parser.cpp"
 
-static void lalr1_run_parser()
-{
-	std::cerr
-		<< "No parsing tables available, please run ./expr_create first and rebuild."
-		<< std::endl;
-}
-
+		#define __LALR1_CANRUN_PARSER
+	#endif
 #else
+	#include "lalr1/parser.h"
+	#if __has_include("expr.tab")
+		#include "expr.tab"
 
-#include "lalr1/parser.h"
-#include "expr.tab"
+		#define __LALR1_CANRUN_PARSER
+	#endif
+#endif
+
+
+#ifdef __LALR1_CANRUN_PARSER
 
 static void lalr1_run_parser()
 {
 	try
 	{
+#if USE_RECASC != 0
+		ParserRecAsc parser;
+#else
 		// get created parsing tables
-		auto [shift_tab, reduce_tab, jump_tab, term_idx, nonterm_idx, num_rhs, lhs_idx]
-			= get_lalr1_tables();
+		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);
@@ -432,8 +446,9 @@ static void lalr1_run_parser()
 		parser.SetJumpTable(jump_tab);
 		parser.SetNumRhsSymsPerRule(num_rhs);
 		parser.SetLhsIndices(lhs_idx);
+#endif
 		parser.SetSemanticRules(&rules);
-		//parser.SetDebug(true);
+		parser.SetDebug(true);
 
 		while(1)
 		{
@@ -443,7 +458,10 @@ static void lalr1_run_parser()
 			std::istringstream istr{exprstr};
 
 			Lexer lexer(&istr);
+#if USE_RECASC == 0
+			auto [term_idx, nonterm_idx] = get_lalr1_table_indices();
 			lexer.SetTermIdxMap(term_idx);
+#endif
 			auto tokens = lexer.GetAllTokens();
 
 #if DEBUG_CODEGEN != 0
@@ -539,8 +557,16 @@ static void lalr1_run_parser()
 	}
 }
 
+#else
+
+static void lalr1_run_parser()
+{
+	std::cerr << "No parsing tables available, please run ./expr_create first and rebuild."
+		<< std::endl;
+}
+
 #endif
-#endif
+#endif  // RUN_PARSER
 
 
 

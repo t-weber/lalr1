@@ -243,7 +243,14 @@ public:
 
 	virtual ~ASTToken() = default;
 
-	virtual bool IsTerminal() const override { return true; }
+	virtual bool IsTerminal() const override
+	{
+		std::optional<bool> term_override = ASTLALR1Base::GetTerminalOverride();
+		if(term_override)
+			return *term_override;
+		return true;
+	}
+
 	virtual ASTType GetType() const override { return ASTType::TOKEN; }
 
 	/**
@@ -261,8 +268,8 @@ public:
 
 private:
 	std::optional<t_lval> m_lexval{};  // lexer value
-	bool m_islval{false};  // names an l-value variable (on lhs of assignment)
-	bool m_isident{false}; // is this token a variable identifier (or a literal)?
+	bool m_islval{false};    // names an l-value variable (on lhs of assignment)
+	bool m_isident{false};   // is this token a variable identifier (or a literal)?
 };
 
 

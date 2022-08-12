@@ -324,6 +324,7 @@ static void create_grammar(bool add_semantics = true)
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::REAL);
 			sym->SetId(expr->GetId());
+			sym->SetTerminalOverride(false);  // expression, no terminal any more
 			return sym;
 		});
 	}
@@ -338,6 +339,7 @@ static void create_grammar(bool add_semantics = true)
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::INT);
 			sym->SetId(expr->GetId());
+			sym->SetTerminalOverride(false);  // expression, no terminal any more
 			return sym;
 		});
 	}
@@ -352,6 +354,7 @@ static void create_grammar(bool add_semantics = true)
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::STR);
 			sym->SetId(expr->GetId());
+			sym->SetTerminalOverride(false);  // expression, no terminal any more
 			return sym;
 		});
 	}
@@ -366,6 +369,7 @@ static void create_grammar(bool add_semantics = true)
 			auto rhsident = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
 			rhsident->SetIdent(true);
 			rhsident->SetId(expr->GetId());
+			rhsident->SetTerminalOverride(false);  // expression, no terminal any more
 			return rhsident;
 		});
 	}

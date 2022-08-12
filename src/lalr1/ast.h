@@ -37,7 +37,15 @@ public:
 	std::size_t GetTableIdx() const { return *m_tableidx; }
 	void SetTableIdx(std::size_t tableidx) { m_tableidx = tableidx; }
 
-	virtual bool IsTerminal() const { return false; };
+	virtual bool IsTerminal() const
+	{
+		if(m_isterminal)
+			return *m_isterminal;
+		return false;
+	};
+
+	std::optional<bool> GetTerminalOverride() const { return m_isterminal; }
+	void SetTerminalOverride(bool b) { m_isterminal = b; }
 
 	virtual const std::optional<t_line_range>& GetLineRange() const
 	{ return m_line_range; }
@@ -56,6 +64,9 @@ private:
 
 	// line number range
 	std::optional<t_line_range> m_line_range{std::nullopt};
+
+	// override terminal info
+	std::optional<bool> m_isterminal{std::nullopt};
 };
 
 
