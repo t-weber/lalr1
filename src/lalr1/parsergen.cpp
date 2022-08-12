@@ -19,6 +19,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <unordered_map>
 
 #include <boost/functional/hash.hpp>
 #include <boost/algorithm/string.hpp>
@@ -27,7 +28,7 @@
 /**
  * export lalr(1) tables to C++ code
  */
-bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) const
+bool Collection::SaveParseTables(const std::string& file) const
 {
 	// create lalr(1) tables
 	bool ok = true;
@@ -180,7 +181,7 @@ bool Collection::SaveParseTables(const std::string& file, bool stopOnConflicts) 
 						<< " or reduce using rule " << reduceEntry
 						<< ")." << std::endl;
 
-					if(stopOnConflicts)
+					if(m_stopOnConflicts)
 						throw std::runtime_error(ostrErr.str());
 					else
 						std::cerr << ostrErr.str() << std::endl;
@@ -333,6 +334,7 @@ private:
 	// output cpp file stub
 	std::string outfile_cpp = R"raw(
 %%INCLUDE_HEADER%%
+#include <exception>
 
 void ParserRecAsc::PrintSymbols() const
 {
@@ -412,6 +414,8 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 
 	for(const ClosurePtr& closure : m_collection)
 	{
+		std::optional<std::vector<TerminalPtr>> lookbacks;
+
 		// write comment
 		ostr_cpp << "/*\n" << *closure;
 
@@ -478,8 +482,7 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 
 
 		// shift actions
-		ostr_cpp << "\tswitch(m_lookahead_id)\n";
-		ostr_cpp << "\t{\n";
+		std::unordered_map<std::size_t, std::string> shifts;
 
 		for(const t_transition& transition : GetTransitions(closure, true))
 		{
@@ -488,22 +491,23 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 			if(symTrans->IsEps() || !symTrans->IsTerminal())
 				continue;
 
-			ostr_cpp << "\t\tcase " << symTrans->GetId() << ":\n";
-			ostr_cpp << "\t\t{\n";
-			ostr_cpp << "\t\t\tm_symbols.push(m_lookahead);\n";
-			ostr_cpp << "\t\t\tGetNextLookahead();\n";
-			ostr_cpp << "\t\t\tclosure_" << closure_to->GetId() << "();\n";
-			ostr_cpp << "\t\t\tbreak;\n";
-			ostr_cpp << "\t\t}\n";  // end case
-		}
+			std::ostringstream ostr_shift;
+			ostr_shift << "\t\tcase " << symTrans->GetId() << ":\n";
+			ostr_shift << "\t\t{\n";
+			ostr_shift << "\t\t\tm_symbols.push(m_lookahead);\n";
+			ostr_shift << "\t\t\tGetNextLookahead();\n";
+			ostr_shift << "\t\t\tclosure_" << closure_to->GetId() << "();\n";
+			ostr_shift << "\t\t\tbreak;\n";
+			ostr_shift << "\t\t}\n";  // end case
 
-		// TODO: default: error
-		ostr_cpp << "\t}\n";        // end switch
+			shifts.emplace(std::make_pair(symTrans->GetId(), ostr_shift.str()));
+		}
 
 
 		// reduce actions
-		ostr_cpp << "\tswitch(m_lookahead_id)\n";
-		ostr_cpp << "\t{\n";
+		std::vector<std::unordered_set<SymbolPtr>> reduces_lookaheads;
+		std::vector<std::string> reduces;
+
 		for(std::size_t elemidx=0; elemidx < closure->NumElements(); ++elemidx)
 		{
 			const ElementPtr& elem = closure->GetElement(elemidx);
@@ -517,48 +521,163 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 			const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
 			if(lookaheads.size())
 			{
+				std::ostringstream ostr_reduce;
+
+				std::unordered_set<SymbolPtr> reduce_lookaheads;
 				for(const auto& la : lookaheads)
-					ostr_cpp << "\t\tcase " << la->GetId() << ":\n";
-				ostr_cpp << "\t\t{\n";
+				{
+					//ostr_reduce << "\t\tcase " << la->GetId() << ":\n";
+					reduce_lookaheads.insert(la);
+				}
+				reduces_lookaheads.emplace_back(std::move(reduce_lookaheads));
+				ostr_reduce << "\t\t{\n";
 
 				// in extended grammar, first production (rule 0) is of the form start -> ...
 				if(*rulenr == 0)
 				{
-					ostr_cpp << "\t\t\tm_accepted = true;\n";
-					ostr_cpp << "\t\t\tbreak;\n";
+					ostr_reduce << "\t\t\tm_accepted = true;\n";
+					ostr_reduce << "\t\t\tbreak;\n";
 				}
 				else
 				{
 					std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
-					ostr_cpp << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
+					ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
 
 					// debug infos
-					ostr_cpp << "\t\t\tif(m_debug)\n";
-					ostr_cpp << "\t\t\t{\n";
-					ostr_cpp << "\t\t\t\tstd::cout << \"Reducing " << num_rhs
+					ostr_reduce << "\t\t\tif(m_debug)\n";
+					ostr_reduce << "\t\t\t{\n";
+					ostr_reduce << "\t\t\t\tstd::cout << \"Reducing " << num_rhs
 						<< " symbol(s) using rule " << *rulenr << ".\" << std::endl;\n";
-					ostr_cpp << "\t\t\t}\n";  // end if
+					ostr_reduce << "\t\t\t}\n";  // end if
 
 
 					// take the symbols from the stack and create an argument vector for the semantic rule
-					ostr_cpp << "\t\t\tstd::vector<t_lalrastbaseptr> args;\n";
-					ostr_cpp << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
-					ostr_cpp << "\t\t\t{\n";
-					ostr_cpp << "\t\t\t\targs.insert(args.begin(), m_symbols.top());\n";
-					ostr_cpp << "\t\t\t\tm_symbols.pop();\n";
-					ostr_cpp << "\t\t\t}\n";  // end for
+					ostr_reduce << "\t\t\tstd::vector<t_lalrastbaseptr> args;\n";
+					ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
+					ostr_reduce << "\t\t\t{\n";
+					ostr_reduce << "\t\t\t\targs.insert(args.begin(), m_symbols.top());\n";
+					ostr_reduce << "\t\t\t\tm_symbols.pop();\n";
+					ostr_reduce << "\t\t\t}\n";  // end for
 
 					// execute semantic rule
-					ostr_cpp << "\t\t\tt_lalrastbaseptr reducedSym = (*m_semantics)[" << *rulenr << "](args);\n";
-					ostr_cpp << "\t\t\tm_symbols.push(reducedSym);\n";
-					ostr_cpp << "\t\t\tbreak;\n";
+					ostr_reduce << "\t\t\tt_lalrastbaseptr reducedSym = (*m_semantics)[" << *rulenr << "](args);\n";
+					ostr_reduce << "\t\t\tm_symbols.push(reducedSym);\n";
+					ostr_reduce << "\t\t\tbreak;\n";
 				}
 
-				ostr_cpp << "\t\t}\n";  // end case
+				ostr_reduce << "\t\t}\n";  // end case
+
+				reduces.emplace_back(ostr_reduce.str());
 			}
 		}
-		// TODO: default: error
-		ostr_cpp << "\t}\n";      // end switch
+
+
+		// try to solve shift/reduce conflicts
+		for(std::size_t reduce_idx = 0; reduce_idx < reduces_lookaheads.size(); ++reduce_idx)
+		{
+			auto& reduce_lookaheads = reduces_lookaheads[reduce_idx];
+
+			for(auto iter_la = reduce_lookaheads.begin(); iter_la != reduce_lookaheads.end();)
+			{
+				const SymbolPtr& la = *iter_la;
+
+				// does the same token also exist in the shifts?
+				auto iter_shift = shifts.find(la->GetId());
+				if(iter_shift == shifts.end())
+				{
+					++iter_la;
+					continue;
+				}
+
+				// shift-reduce conflict found
+				//std::cout << "Shift/reduce conflict for closure " << closure->GetId()
+				//	<< " and lookahead " << la->GetId() << "." << std::endl;
+
+				SymbolPtr sym_at_cursor = nullptr;
+				ElementPtr conflictelem = closure-> GetElementWithCursorAtSymbol(la);
+				if(conflictelem)
+					sym_at_cursor = conflictelem->GetSymbolAtCursor();
+
+				if(!lookbacks)
+					lookbacks = GetLookbackTerminals(closure);
+
+				bool already_incremented_la = false;
+				std::size_t shift_val = 0, reduce_val = 0;  // dummy values (only need to check for ERROR_VAL)
+				if(SolveConflict(sym_at_cursor, *lookbacks, &shift_val, &reduce_val))
+				{
+					if(shift_val == ERROR_VAL && reduce_val != ERROR_VAL)
+					{
+						// keep reduce, remove shift
+						iter_shift = shifts.erase(iter_shift);
+					}
+					else if(shift_val != ERROR_VAL && reduce_val == ERROR_VAL)
+					{
+						// keep shift, remove reduce
+						iter_la = reduce_lookaheads.erase(iter_la);
+						already_incremented_la = true;
+					}
+				}
+				else
+				{
+					std::ostringstream ostrErr;
+					ostrErr << "Shift/reduce conflict detected"
+						<< " for closure " << closure->GetId();
+					if(conflictelem)
+						ostrErr << ":\n\t" << *conflictelem << "\n";
+					if(lookbacks->size())
+					{
+						ostrErr << " with look-back terminal(s): ";
+						for(std::size_t i=0; i<lookbacks->size(); ++i)
+						{
+							ostrErr << (*lookbacks)[i]->GetStrId();
+							if(i < lookbacks->size()-1)
+								ostrErr << ", ";
+						}
+					}
+					ostrErr << " and look-ahead terminal " << la->GetId();
+					ostrErr << ".";
+
+					if(m_stopOnConflicts)
+						throw std::runtime_error(ostrErr.str());
+					else
+						std::cerr << ostrErr.str() << std::endl;
+				}
+
+				if(!already_incremented_la)
+					++iter_la;
+			}
+		}
+
+
+		// write shift and reduce codes
+		ostr_cpp << "\tswitch(m_lookahead_id)\n";
+		ostr_cpp << "\t{\n";
+
+		for(const auto& shift : shifts)
+			ostr_cpp << shift.second;
+
+		for(std::size_t reduce_idx = 0; reduce_idx < reduces_lookaheads.size(); ++reduce_idx)
+		{
+			const auto& reduce_lookaheads = reduces_lookaheads[reduce_idx];
+			const auto& reduce = reduces[reduce_idx];
+
+			if(!reduce_lookaheads.size())
+				continue;
+
+			for(const SymbolPtr& la : reduce_lookaheads)
+				ostr_cpp << "\t\tcase " << la->GetId() << ":\n";
+			ostr_cpp << reduce;
+		}
+
+		// default: error
+		ostr_cpp << "\t\tdefault:\n";
+		ostr_cpp << "\t\t{\n";
+		ostr_cpp << "\t\t\tthrow std::runtime_error(\"No transition from closure "
+			<< closure->GetId() << ".\");\n";
+		ostr_cpp << "\t\t\tbreak;\n";
+		ostr_cpp << "\t\t}\n";
+
+		ostr_cpp << "\t}\n";        // end switch
 
 
 		// jump to new closure

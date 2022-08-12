@@ -72,9 +72,11 @@ public:
 	// get terminal or non-terminal transitions originating from the given closure
 	t_transitions GetTransitions(const ClosurePtr& closure, bool term = true) const;
 
-	bool SaveParseTables(const std::string& file, bool stopOnConflicts = true) const;
+	bool SaveParseTables(const std::string& file) const;
 	bool SaveParser(const std::string& file) const;
 	bool SaveGraph(const std::string& file, bool write_full_coll=1) const;
+
+	void SetStopOnConflicts(bool b = true);
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
@@ -90,7 +92,7 @@ protected:
 
 	bool SolveConflict(
 		const SymbolPtr& sym_at_cursor, const std::vector<TerminalPtr>& lookbacks,
-		std::size_t* shiftEntry, std::size_t *reduceEntry) const;
+		std::size_t* shiftEntry, std::size_t* reduceEntry) const;
 
 	void CreateTableIndices();
 	std::size_t GetTableIndex(std::size_t id, bool is_term) const;
@@ -106,6 +108,8 @@ private:
 	t_mapIdIdx m_mapNonTermIdx{};               // maps the non-terminal ids to table indices
 	t_closurecache m_closure_cache{};           // seen closures
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures
+
+	bool m_stopOnConflicts{true};               // stop table/code generation on shift/reduce conflicts
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

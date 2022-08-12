@@ -24,7 +24,7 @@
 #define DEBUG_WRITEGRAPH  0
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
-#define USE_RECASC        0
+#define USE_RECASC        1
 
 
 enum : std::size_t
@@ -448,7 +448,7 @@ static void lalr1_run_parser()
 		parser.SetLhsIndices(lhs_idx);
 #endif
 		parser.SetSemanticRules(&rules);
-		parser.SetDebug(true);
+		//parser.SetDebug(true);
 
 		while(1)
 		{

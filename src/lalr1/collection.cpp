@@ -312,8 +312,6 @@ void Collection::CreateTableIndices()
 
 	for(const t_transition& tup : m_transitions)
 	{
-		const ClosurePtr& stateFrom = std::get<0>(tup);
-		const ClosurePtr& stateTo = std::get<1>(tup);
 		const SymbolPtr& symTrans = std::get<2>(tup);
 
 		if(symTrans->IsEps() || !symTrans->IsTerminal())
@@ -321,13 +319,13 @@ void Collection::CreateTableIndices()
 
 		std::size_t sym_id = symTrans->GetId();
 		if(m_mapTermIdx.find(sym_id) == m_mapTermIdx.end())
-			m_mapTermIdx.emplace(std::make_pair(sym_id, curTermIdx++)).first;
+			m_mapTermIdx.emplace(std::make_pair(sym_id, curTermIdx++));
 	}
 
 	// add end symbol
 	std::size_t end_id = g_end->GetId();
 	if(m_mapTermIdx.find(end_id) == m_mapTermIdx.end())
-		m_mapTermIdx.emplace(std::make_pair(end_id, curTermIdx++)).first;
+		m_mapTermIdx.emplace(std::make_pair(end_id, curTermIdx++));
 
 
 	// generate able indices for non-terminals
@@ -344,7 +342,7 @@ void Collection::CreateTableIndices()
 
 			std::size_t sym_id = elem->GetLhs()->GetId();
 			if(m_mapNonTermIdx.find(sym_id) == m_mapNonTermIdx.end())
-				m_mapNonTermIdx.emplace(std::make_pair(sym_id, curNonTermIdx++)).first;
+				m_mapNonTermIdx.emplace(std::make_pair(sym_id, curNonTermIdx++));
 		}
 	}
 }
@@ -375,11 +373,20 @@ std::size_t Collection::GetTableIndex(std::size_t id, bool is_term) const
 
 
 /**
+ * stop table/code generation on shift/reduce conflicts
+ */
+void Collection::SetStopOnConflicts(bool b)
+{
+	m_stopOnConflicts = b;
+}
+
+
+/**
  * try to solve a shift/reduce conflict
  */
 bool Collection::SolveConflict(
 	const SymbolPtr& sym_at_cursor, const std::vector<TerminalPtr>& lookbacks,
-	std::size_t* shiftEntry, std::size_t *reduceEntry) const
+	std::size_t* shiftEntry, std::size_t* reduceEntry) const
 {
 	// no conflict?
 	if(*shiftEntry==ERROR_VAL || *reduceEntry==ERROR_VAL)
