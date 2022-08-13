@@ -53,8 +53,7 @@ public:
 	ParserRecAsc(const ParserRecAsc&) = delete;
 	ParserRecAsc& operator=(const ParserRecAsc&) = delete;
 
-	void SetDebug(bool b) { m_debug = b; }
-
+	void SetDebug(bool b);
 	void SetSemanticRules(const std::vector<t_semanticrule>* rules);
 	t_lalrastbaseptr Parse(const std::vector<t_toknode>& input);
 
@@ -65,25 +64,26 @@ protected:
 %%DECLARE_CLOSURES%%
 
 private:
-	const std::vector<t_semanticrule>* m_semantics{};  // semantic rules
-
+	// semantic rules
+	const std::vector<t_semanticrule>* m_semantics{};
 	const std::vector<t_toknode>* m_input{};   // input tokens
+	std::stack<t_lalrastbaseptr> m_symbols{};  // currently active symbols
 
 	t_toknode m_lookahead{nullptr};            // lookahead token
 	std::size_t m_lookahead_id{0};             // lookahead identifier
 	int m_lookahead_idx{-1};                   // index into input token array
-
-	std::stack<t_lalrastbaseptr> m_symbols{};  // currently active symbols
 
 	bool m_debug{false};                       // output debug infos
 	bool m_accepted{false};                    // input was accepted
 
 	// number of function returns between reduction and performing jump / non-terminal transition
 	std::size_t m_dist_to_jump{0};
+
+	// end symbol id
+	static constexpr const std::size_t s_end_id{%%END_ID%%};
 };
 
-#endif
-)raw";
+#endif)raw";
 
 
 	// output cpp file stub
@@ -93,6 +93,8 @@ private:
  */
 %%INCLUDE_HEADER%%
 #include <exception>
+#include <string>
+#include <iostream>
 
 void ParserRecAsc::PrintSymbols() const
 {
@@ -122,6 +124,11 @@ void ParserRecAsc::GetNextLookahead()
 		m_lookahead = (*m_input)[m_lookahead_idx];
 		m_lookahead_id = m_lookahead->GetId();
 	}
+}
+
+void ParserRecAsc::SetDebug(bool b)
+{
+	m_debug = b;
 }
 
 void ParserRecAsc::SetSemanticRules(const std::vector<t_semanticrule>* rules)
@@ -249,7 +256,15 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 				continue;
 
 			std::ostringstream ostr_shift;
-			ostr_shift << "\t\tcase " << symTrans->GetId() << ":\n";
+			if(symTrans->GetId() == g_end->GetId())
+			{
+				ostr_shift << "\t\tcase s_end_id:\n";
+			}
+			else
+			{
+				ostr_shift << "\t\tcase " << symTrans->GetId() << ": // "
+					<< symTrans->GetStrId() << "\n";
+			}
 			ostr_shift << "\t\t{\n";
 			ostr_shift << "\t\t\tm_symbols.push(m_lookahead);\n";
 			ostr_shift << "\t\t\tGetNextLookahead();\n";
@@ -282,10 +297,7 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 
 				std::unordered_set<SymbolPtr> reduce_lookaheads;
 				for(const auto& la : lookaheads)
-				{
-					//ostr_reduce << "\t\tcase " << la->GetId() << ":\n";
 					reduce_lookaheads.insert(la);
-				}
 				reduces_lookaheads.emplace_back(std::move(reduce_lookaheads));
 				ostr_reduce << "\t\t{\n";
 
@@ -303,18 +315,21 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 					// debug infos
 					ostr_reduce << "\t\t\tif(m_debug)\n";
 					ostr_reduce << "\t\t\t{\n";
-					ostr_reduce << "\t\t\t\tstd::cout << \"Reducing " << num_rhs
-						<< " symbol(s) using rule " << *rulenr << ".\" << std::endl;\n";
+					ostr_reduce << "\t\t\t\tstd::cout << \"Reducing \" << " << num_rhs
+						<< " << \" symbol(s) using rule \" << " << *rulenr << " << \".\" << std::endl;\n";
 					ostr_reduce << "\t\t\t}\n";  // end if
 
 
 					// take the symbols from the stack and create an argument vector for the semantic rule
-					ostr_reduce << "\t\t\tstd::vector<t_lalrastbaseptr> args;\n";
-					ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
-					ostr_reduce << "\t\t\t{\n";
-					ostr_reduce << "\t\t\t\targs.insert(args.begin(), m_symbols.top());\n";
-					ostr_reduce << "\t\t\t\tm_symbols.pop();\n";
-					ostr_reduce << "\t\t\t}\n";  // end for
+					ostr_reduce << "\t\t\tstd::vector<t_lalrastbaseptr> args(" << num_rhs << ");\n";
+					if(num_rhs)
+					{
+						ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
+						ostr_reduce << "\t\t\t{\n";
+						ostr_reduce << "\t\t\t\targs[" << num_rhs << "-arg-1] = m_symbols.top();\n";
+						ostr_reduce << "\t\t\t\tm_symbols.pop();\n";
+						ostr_reduce << "\t\t\t}\n";  // end for
+					}
 
 					// execute semantic rule
 					ostr_reduce << "\t\t\tt_lalrastbaseptr reducedSym = (*m_semantics)[" << *rulenr << "](args);\n";
@@ -422,15 +437,26 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 				continue;
 
 			for(const SymbolPtr& la : reduce_lookaheads)
-				ostr_cpp << "\t\tcase " << la->GetId() << ":\n";
+			{
+				if(la->GetId() == g_end->GetId())
+				{
+					ostr_cpp << "\t\tcase s_end_id:\n";
+				}
+				else
+				{
+					ostr_cpp << "\t\tcase " << la->GetId() << ": // "
+						<< la->GetStrId() << "\n";
+				}
+			}
 			ostr_cpp << reduce;
 		}
 
 		// default: error
 		ostr_cpp << "\t\tdefault:\n";
 		ostr_cpp << "\t\t{\n";
-		ostr_cpp << "\t\t\tthrow std::runtime_error(\"No transition from closure "
-			<< closure->GetId() << ".\");\n";
+		// don't write the full string directly so the compiler can optimise duplicate string parts
+		ostr_cpp << "\t\t\tthrow std::runtime_error(\"No transition from closure \""
+			<< " + std::to_string(" << closure->GetId() << ") + \".\");\n";
 		ostr_cpp << "\t\t\tbreak;\n";
 		ostr_cpp << "\t\t}\n";
 
@@ -477,12 +503,12 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 		// debug infos
 		ostr_cpp << "\tif(m_debug)\n";
 		ostr_cpp << "\t{\n";
-		ostr_cpp << "\t\tstd::cout << \"Returning from closure, distance to jump: \" "
-			<< "<< m_dist_to_jump << \".\" << std::endl;\n";
+		ostr_cpp << "\t\tstd::cout << \"Returning from closure \" << " << closure->GetId()
+			<< " << \", distance to jump: \" " << "<< m_dist_to_jump << \".\" << std::endl;\n";
 		ostr_cpp << "\t}\n";  // end if
 
 		// end closure function
-		ostr_cpp << "}\n\n\n";
+		ostr_cpp << "}\n\n";
 
 		ostr_h << "\tvoid closure_" << closure->GetId() << "();\n";
 	}
@@ -493,6 +519,7 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 	boost::replace_all(outfile_cpp, "%%INCLUDE_HEADER%%", incl);
 	boost::replace_all(outfile_cpp, "%%DEFINE_CLOSURES%%", ostr_cpp.str());
 	boost::replace_all(outfile_h, "%%DECLARE_CLOSURES%%", ostr_h.str());
+	boost::replace_all(outfile_h, "%%END_ID%%", std::to_string(g_end->GetId()));
 
 	file_cpp << outfile_cpp << std::endl;
 	file_h << outfile_h << std::endl;
