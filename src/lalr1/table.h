@@ -15,7 +15,7 @@
 
 
 template<
-	class T=std::size_t, template<class...>
+	class T = std::size_t, template<class...>
 		class t_cont = std::vector>
 class Table
 {

@@ -9,7 +9,7 @@
 #   mkdir build && cd build
 #   cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-pg ..
 #   make -j8
-#   valgrind --tool=callgrind --callgrind-out-file=expr.callgrind ./expr_create
+#   valgrind --tool=callgrind --callgrind-out-file=expr.callgrind ./expr_parsergen
 #   qcachegrind expr.callgrind
 #
 
@@ -48,7 +48,7 @@ add_library(lalr1 STATIC
 	src/lalr1/element.cpp src/lalr1/element.h
 	src/lalr1/closure.cpp src/lalr1/closure.h
 	src/lalr1/collection.cpp src/lalr1/collection.h
-	src/lalr1/parsergen.cpp
+	src/lalr1/tablegen.cpp src/lalr1/parsergen.cpp
 	src/lalr1/table.h src/lalr1/common.h
 )
 
@@ -98,33 +98,40 @@ if(BUILD_EXAMPLES)
 	target_link_libraries(script_vm script-vm)
 
 
+	# script compiler generator
+	add_executable(script_parsergen
+		src/script/script_parsergen.cpp
+		src/script/script_grammar.cpp src/script/script_grammar.h
+	)
+	target_link_libraries(script_parsergen lalr1)
+
 	# script compiler
-	add_executable(script_create src/script/script.cpp)
-	target_compile_definitions(script_create PUBLIC -DCREATE_PARSER)
-	target_link_libraries(script_create lalr1)
+	add_executable(script_compiler
+		src/script/script.cpp
+		src/script/script_grammar.cpp src/script/script_grammar.h
+	)
+	target_link_libraries(script_compiler script lalr1-parser script-vm)
 
-	add_executable(script_run src/script/script.cpp)
-	target_compile_definitions(script_run PUBLIC -DRUN_PARSER)
-	target_link_libraries(script_run script lalr1-parser script-vm)
 
+	# expression compiler generator
+	add_executable(expr_parsergen src/script/expr.cpp)
+	target_compile_definitions(expr_parsergen PUBLIC -DCREATE_PARSER)
+	target_link_libraries(expr_parsergen lalr1)
 
 	# expression compiler
-	add_executable(expr_create src/script/expr.cpp)
-	target_compile_definitions(expr_create PUBLIC -DCREATE_PARSER)
-	target_link_libraries(expr_create lalr1)
+	add_executable(expr_compiler src/script/expr.cpp)
+	target_compile_definitions(expr_compiler PUBLIC -DRUN_PARSER)
+	target_link_libraries(expr_compiler script lalr1-parser script-vm)
 
-	add_executable(expr_run src/script/expr.cpp)
-	target_compile_definitions(expr_run PUBLIC -DRUN_PARSER)
-	target_link_libraries(expr_run script lalr1-parser script-vm)
 
+	# simple expression compiler generator
+	add_executable(expr_simple_parsergen src/script/expr_simple.cpp)
+	target_compile_definitions(expr_simple_parsergen PUBLIC -DCREATE_PARSER)
+	target_link_libraries(expr_simple_parsergen lalr1)
 
 	# simple expression compiler
-	add_executable(expr_simple_create src/script/expr_simple.cpp)
-	target_compile_definitions(expr_simple_create PUBLIC -DCREATE_PARSER)
-	target_link_libraries(expr_simple_create lalr1)
-
-	add_executable(expr_simple_run src/script/expr_simple.cpp)
-	target_compile_definitions(expr_simple_run PUBLIC -DRUN_PARSER)
-	target_link_libraries(expr_simple_run script lalr1-parser script-vm)
+	add_executable(expr_simple_compiler src/script/expr_simple.cpp)
+	target_compile_definitions(expr_simple_compiler PUBLIC -DRUN_PARSER)
+	target_link_libraries(expr_simple_compiler script lalr1-parser script-vm)
 endif()
 # -----------------------------------------------------------------------------

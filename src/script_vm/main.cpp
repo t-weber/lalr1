@@ -86,7 +86,7 @@ static bool run_vm(const fs::path& prog, const VMOptions& opts)
 
 
 
-int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
+int main(int argc, char** argv)
 {
 	try
 	{
@@ -136,12 +136,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 
 		if(progs.size() == 0)
 		{
-			std::cout << "Script virtual machinm"
+			std::cout << "Script virtual machine"
 				<< " by Tobias Weber <tobias.weber@tum.de>, 2022."
 				<< std::endl;
 			std::cout << "Internal data type lengths:"
 				<< " real: " << sizeof(t_vm_real)*8 << " bits,"
-				<< " int: " << sizeof(t_vm_int)*8 << " bits."
+				<< " int: " << sizeof(t_vm_int)*8 << " bits,"
 				<< " address: " << sizeof(t_vm_addr)*8 << " bits."
 				<< std::endl;
 

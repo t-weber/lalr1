@@ -1,5 +1,5 @@
 /**
- * expression test with operator precedences/associativities
+ * expression parser example
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date 06-jun-2022
  * @license see 'LICENSE' file
@@ -46,11 +46,13 @@ static TerminalPtr sym_real, sym_int, ident;
 static std::vector<t_semanticrule> rules;
 
 
-static void create_grammar(bool add_semantics = true)
+static void create_grammar(bool add_rules = true, bool add_semantics = true)
 {
+	// non-terminals
 	start = std::make_shared<NonTerminal>(START, "start");
 	expr = std::make_shared<NonTerminal>(EXPR, "expr");
 
+	// terminals
 	op_plus = std::make_shared<Terminal>('+', "+");
 	op_minus = std::make_shared<Terminal>('-', "-");
 	op_mult = std::make_shared<Terminal>('*', "*");
@@ -77,7 +79,10 @@ static void create_grammar(bool add_semantics = true)
 	std::size_t semanticindex = 0;
 
 	// rule 0: start -> expr
-	start->AddRule({ expr }, semanticindex++);
+	if(add_rules)
+	{
+		start->AddRule({ expr }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -88,7 +93,10 @@ static void create_grammar(bool add_semantics = true)
 	}
 
 	// rule 1: expr -> expr + expr
-	expr->AddRule({ expr, op_plus, expr }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ expr, op_plus, expr }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -102,7 +110,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 2: expr -> expr - expr
-	expr->AddRule({ expr, op_minus, expr }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ expr, op_minus, expr }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -116,7 +127,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 3: expr -> expr * expr
-	expr->AddRule({ expr, op_mult, expr }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ expr, op_mult, expr }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -130,7 +144,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 4: expr -> expr / expr
-	expr->AddRule({ expr, op_div, expr }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ expr, op_div, expr }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -144,7 +161,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 5: expr -> expr % expr
-	expr->AddRule({ expr, op_mod, expr }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ expr, op_mod, expr }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -158,7 +178,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 6: expr -> expr ^ expr
-	expr->AddRule({ expr, op_pow, expr }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ expr, op_pow, expr }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -173,7 +196,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 7: expr -> ( expr )
-	expr->AddRule({ bracket_open, expr, bracket_close }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ bracket_open, expr, bracket_close }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -186,7 +212,10 @@ static void create_grammar(bool add_semantics = true)
 
 	// function calls
 	// rule 8: expr -> ident()
-	expr->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -204,7 +233,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 9: expr -> ident(expr)
-	expr->AddRule({ ident, bracket_open, expr, bracket_close }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ ident, bracket_open, expr, bracket_close }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -224,7 +256,11 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 10: expr -> ident(expr, expr)
-	expr->AddRule({ ident, bracket_open, expr, comma, expr, bracket_close }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ ident, bracket_open, expr, comma, expr, bracket_close },
+			semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -246,7 +282,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 11: expr -> real symbol
-	expr->AddRule({ sym_real }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ sym_real }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -262,7 +301,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 12: expr -> int symbol
-	expr->AddRule({ sym_int }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ sym_int }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -278,7 +320,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 13: expr -> ident
-	expr->AddRule({ ident }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ ident }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -294,7 +339,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 14, unary-: expr -> -expr
-	expr->AddRule({ op_minus, expr }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ op_minus, expr }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -307,7 +355,10 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule 15, unary+: expr -> +expr
-	expr->AddRule({ op_plus, expr }, semanticindex++);
+	if(add_rules)
+	{
+		expr->AddRule({ op_plus, expr }, semanticindex++);
+	}
 	if(add_semantics)
 	{
 		rules.emplace_back(
@@ -439,6 +490,7 @@ static void lalr1_run_parser()
 #else
 		// get created parsing tables
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
+		auto [term_idx, nonterm_idx] = get_lalr1_table_indices();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);
@@ -459,7 +511,6 @@ static void lalr1_run_parser()
 
 			Lexer lexer(&istr);
 #if USE_RECASC == 0
-			auto [term_idx, nonterm_idx] = get_lalr1_table_indices();
 			lexer.SetTermIdxMap(term_idx);
 #endif
 			auto tokens = lexer.GetAllTokens();
@@ -561,7 +612,7 @@ static void lalr1_run_parser()
 
 static void lalr1_run_parser()
 {
-	std::cerr << "No parsing tables available, please run ./expr_create first and rebuild."
+	std::cerr << "No parsing tables available, please run ./expr_parsergen first and rebuild."
 		<< std::endl;
 }
 
@@ -575,12 +626,12 @@ int main()
 	std::ios_base::sync_with_stdio(false);
 
 #ifdef CREATE_PARSER
-	create_grammar(false);
+	create_grammar(true, false);
 	lr1_create_parser();
 #endif
 
 #ifdef RUN_PARSER
-	create_grammar(true);
+	create_grammar(false, true);
 	lalr1_run_parser();
 #endif
 

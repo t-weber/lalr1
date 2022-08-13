@@ -208,7 +208,7 @@ static void lr1_create_parser()
 static void lalr1_run_parser()
 {
 	std::cerr
-		<< "No parsing tables available, please run ./expr_simple_create first and rebuild."
+		<< "No parsing tables available, please run ./expr_simple_parsergen first and rebuild."
 		<< std::endl;
 }
 
