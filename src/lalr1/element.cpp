@@ -21,16 +21,6 @@
 #include <boost/functional/hash.hpp>
 
 
-/*Element::Element(const NonTerminalPtr& lhs, std::size_t rhsidx, std::size_t cursor,
-	const Terminal::t_terminalset& la)
-	: std::enable_shared_from_this<Element>{},
-		m_lhs{lhs}, m_rhs{lhs->GetRule(rhsidx)},
-		m_semanticrule{lhs->GetSemanticRule(rhsidx)},
-		m_rhsidx{rhsidx}, m_cursor{cursor}, m_lookaheads{la}
-{
-}*/
-
-
 Element::Element(const NonTerminalPtr& lhs, std::size_t rhsidx, std::size_t cursor,
 	const Terminal::t_terminalset& la)
 	: Element{lhs, rhsidx, cursor}
@@ -62,6 +52,8 @@ const Element& Element::operator=(const Element& elem)
 	this->m_rhsidx = elem.m_rhsidx;
 	this->m_cursor = elem.m_cursor;
 	this->m_lookaheads = elem.m_lookaheads;
+	this->m_lookahead_dependencies = elem.m_lookahead_dependencies;
+	this->m_transition_symbol = elem.m_transition_symbol;
 	this->m_hash = elem.m_hash;
 	this->m_hash_core = elem.m_hash_core;
 
@@ -95,7 +87,9 @@ std::size_t Element::GetCursor() const
 
 const Terminal::t_terminalset& Element::GetLookaheads() const
 {
-	return m_lookaheads;
+	if(!m_lookaheads)
+		throw std::runtime_error("Lookaheads have not been resolved.");
+	return *m_lookaheads;
 }
 
 
@@ -162,17 +156,6 @@ std::size_t Element::hash(bool only_core) const
 }
 
 
-WordPtr Element::GetRhsAfterCursor() const
-{
-	WordPtr rule = std::make_shared<Word>();
-
-	for(std::size_t i=GetCursor()+1; i<GetRhs()->size(); ++i)
-		rule->AddSymbol(GetRhs()->GetSymbol(i));
-
-	return rule;
-}
-
-
 SymbolPtr Element::GetSymbolAtCursor() const
 {
 	const WordPtr& rhs = GetRhs();
@@ -187,46 +170,105 @@ SymbolPtr Element::GetSymbolAtCursor() const
 }
 
 
-bool Element::AddLookahead(const TerminalPtr& term)
+const Element::t_dependencies& Element::GetLookaheadDependencies() const
 {
-	m_hash = m_hash_core = std::nullopt;
-	return m_lookaheads.insert(term).second;
+	return m_lookahead_dependencies;
 }
 
 
-bool Element::AddLookaheads(const Terminal::t_terminalset& las)
+void Element::AddLookaheadDependencies(const Element::t_dependencies& deps)
 {
-	bool lookaheads_added = false;
+	for(const t_dependency& dep : deps)
+		AddLookaheadDependency(dep);
+}
 
-	for(const TerminalPtr& la : las)
+
+void Element::AddLookaheadDependency(const Element::t_dependency& dep)
+{
+	m_lookahead_dependencies.push_back(dep);
+}
+
+
+void Element::AddLookaheadDependency(const ElementPtr& elem, bool calc_first)
+{
+	m_lookahead_dependencies.push_back(std::make_pair(elem, calc_first));
+	this->m_lookaheads = std::nullopt;
+	this->m_hash = std::nullopt;
+}
+
+
+void Element::ResolveLookaheads()
+{
+	// already resolved
+	if(m_lookaheads)
+		return;
+
+	// copy lookaheads from other closure element
+	for(auto& [elem, calc_first] : m_lookahead_dependencies)
 	{
-		if(AddLookahead(la))
-			lookaheads_added = true;
+		if(calc_first)
+			continue;
+
+		elem->ResolveLookaheads();
+		if(!m_lookaheads)
+			m_lookaheads = Terminal::t_terminalset{};
+
+		for(const TerminalPtr& la : elem->GetLookaheads())
+			m_lookaheads->insert(la);
 	}
 
-	m_hash = m_hash_core = std::nullopt;
-	return lookaheads_added;
-}
+	// calculate first sets
+	for(auto& [elem, calc_first] : m_lookahead_dependencies)
+	{
+		if(!calc_first)
+			continue;
 
+		elem->ResolveLookaheads();
+		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
+		const WordPtr& rhs = elem->GetRhs();
+		const std::size_t cursor = elem->GetCursor();
 
-void Element::SetLookaheads(const Terminal::t_terminalset& las)
-{
-	m_hash = m_hash_core = std::nullopt;
-	m_lookaheads = las;
+		// iterate lookaheads
+		for(const TerminalPtr& la : nonterm_la)
+		{
+			// iterate all terminals in first set
+			for(const TerminalPtr& first_elem : rhs->CalcFirst(la, cursor+1))
+			{
+				if(!first_elem->IsEps())
+				{
+					if(!m_lookaheads)
+						m_lookaheads = Terminal::t_terminalset{};
+					m_lookaheads->insert(first_elem);
+				}
+			}
+		}
+	}
 }
 
 
 /**
  * get possible transition symbol
  */
-SymbolPtr Element::GetPossibleTransitionSymbol() const
+const SymbolPtr& Element::GetPossibleTransitionSymbol() const
 {
+	// transition symbol already cached?
+	std::size_t hashval = hash(true);
+	auto iter = m_transition_symbol.find(hashval);
+	if(iter != m_transition_symbol.end())
+		return iter->second;
+
 	std::size_t skip_eps = 0;
 
 	while(true)
 	{
+		// at the end of the rule?
 		if(m_cursor + skip_eps >= m_rhs->size())
-			return nullptr;
+		{
+			std::tie(iter, std::ignore) =
+				m_transition_symbol.emplace(
+					std::make_pair(hashval, nullptr));
+			break;
+		}
 
 		const SymbolPtr& sym = (*m_rhs)[m_cursor + skip_eps];
 		if(sym->IsEps())
@@ -235,8 +277,14 @@ SymbolPtr Element::GetPossibleTransitionSymbol() const
 			continue;
 		}
 
-		return sym;
+		// cache and return found symbol
+		std::tie(iter, std::ignore) =
+			m_transition_symbol.emplace(
+				std::make_pair(hashval, sym));
+		break;
 	}
+
+	return iter->second;
 }
 
 
@@ -295,5 +343,6 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		ostr << la->GetStrId() << " ";
 
 	ostr << "]";
+
 	return ostr;
 }

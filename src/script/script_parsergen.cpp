@@ -85,7 +85,7 @@ static bool lr1_create_parser(
 			std::cout << "\r\x1b[K" << msg;
 			if(done)
 				std::cout << "\n";
-			std::cout.flush();
+			std::cout << std::flush;
 		};
 
 		Collection collsLALR{ closure };

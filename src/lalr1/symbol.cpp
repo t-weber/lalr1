@@ -641,7 +641,7 @@ std::size_t Word::NumSymbols(bool count_eps) const
  * calculates the first set of a symbol string
  * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
-Terminal::t_terminalset Word::CalcFirst(TerminalPtr additional_sym) const
+Terminal::t_terminalset Word::CalcFirst(TerminalPtr additional_sym, std::size_t offs) const
 {
 	Terminal::t_terminalset first;
 
@@ -655,7 +655,7 @@ Terminal::t_terminalset Word::CalcFirst(TerminalPtr additional_sym) const
 
 	t_map_first first_nonterms;
 
-	for(std::size_t sym_idx=0; sym_idx<num_all_symbols; ++sym_idx)
+	for(std::size_t sym_idx=offs; sym_idx<num_all_symbols; ++sym_idx)
 	{
 		const SymbolPtr& sym = sym_idx < num_rule_symbols ? (*this)[sym_idx] : additional_sym;
 

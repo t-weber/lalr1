@@ -70,15 +70,12 @@ void Closure::SetId(std::size_t id)
  */
 void Closure::AddElement(const ElementPtr& elem)
 {
-	// full element already in closure?
-	if(FindElement(elem, false) != m_elems.end())
-		return;
-
 	// core element already in closure?
 	if(auto core_iter = FindElement(elem, true); core_iter != m_elems.end())
 	{
-		// add new lookaheads
-		(*core_iter)->AddLookaheads(elem->GetLookaheads());
+		// add new lookahead dependencies
+		(*core_iter)->AddLookaheadDependencies(elem->GetLookaheadDependencies());
+		return;
 	}
 
 	// new element
@@ -93,32 +90,14 @@ void Closure::AddElement(const ElementPtr& elem)
 	const std::size_t cursor = elem->GetCursor();
 	if(cursor < rhs->size() && !(*rhs)[cursor]->IsTerminal())
 	{
-		// get rest of the rule after the cursor and lookaheads
-		WordPtr ruleaftercursor = elem->GetRhsAfterCursor();
-		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
-
 		// get non-terminal at cursor
-		const NonTerminalPtr& nonterm =
-			std::dynamic_pointer_cast<NonTerminal>((*rhs)[cursor]);
+		const NonTerminalPtr& nonterm = std::dynamic_pointer_cast<NonTerminal>((*rhs)[cursor]);
 
 		// iterate all rules of the non-terminal
-		for(std::size_t nonterm_rhsidx=0; nonterm_rhsidx<nonterm->NumRules(); ++nonterm_rhsidx)
+		for(std::size_t nonterm_ruleidx=0; nonterm_ruleidx<nonterm->NumRules(); ++nonterm_ruleidx)
 		{
-			ElementPtr newelem = std::make_shared<Element>(nonterm, nonterm_rhsidx, 0);
-
-			// iterate lookaheads
-			Terminal::t_terminalset first_la;
-			for(const TerminalPtr& la : nonterm_la)
-			{
-				// iterate all terminals in first set
-				for(const TerminalPtr& first_elem : ruleaftercursor->CalcFirst(la))
-				{
-					if(!first_elem->IsEps())
-						first_la.insert(first_elem);
-				}
-			}
-
-			newelem->SetLookaheads(first_la);
+			ElementPtr newelem = std::make_shared<Element>(nonterm, nonterm_ruleidx, 0);
+			newelem->AddLookaheadDependency(elem, true);
 			AddElement(newelem);
 		}
 	}
@@ -212,11 +191,10 @@ const Closure::t_symbols& Closure::GetPossibleTransitionSymbols() const
 
 
 /**
- * add the lookaheads from another closure with the same core
+ * add the lookahead dependencies from another closure with the same core
  */
-bool Closure::AddLookaheads(const ClosurePtr& closure)
+void Closure::AddLookaheadDependencies(const ClosurePtr& closure)
 {
-	bool lookaheads_added = false;
 	for(const ElementPtr& elem : m_elems)
 	{
 		std::size_t elem_hash = elem->hash(true);
@@ -229,13 +207,18 @@ bool Closure::AddLookaheads(const ClosurePtr& closure)
 			}); iter != closure->m_elems.end())
 		{
 			const ElementPtr& closure_elem = *iter;
-			if(elem->AddLookaheads(closure_elem->GetLookaheads()))
-				lookaheads_added = true;
+			elem->AddLookaheadDependencies(closure_elem->GetLookaheadDependencies());
 		}
 	}
 
 	m_hash = m_hash_core = std::nullopt;
-	return lookaheads_added;
+}
+
+
+void Closure::ResolveLookaheads()
+{
+	for(ElementPtr& elem : m_elems)
+		elem->ResolveLookaheads();
 }
 
 
@@ -256,6 +239,7 @@ ClosurePtr Closure::DoTransition(const SymbolPtr& transsym) const
 		// copy element and perform transition
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
 		newelem->AdvanceCursor();
+		newelem->AddLookaheadDependency(theelem, false);
 		newclosure->AddElement(newelem);
 	}
 
@@ -270,7 +254,7 @@ ClosurePtr Closure::DoTransition(const SymbolPtr& transsym) const
  */
 const Closure::t_transitions& Closure::DoTransitions() const
 {
-	std::size_t hashval = hash(false);
+	std::size_t hashval = hash(true);
 	auto iter = m_cached_transitions.find(hashval);
 
 	// transitions not yet calculated?

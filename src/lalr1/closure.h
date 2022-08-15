@@ -62,7 +62,8 @@ public:
 	ClosurePtr DoTransition(const SymbolPtr& transsym) const;
 	const t_transitions& DoTransitions() const;
 
-	bool AddLookaheads(const ClosurePtr& closure);
+	void AddLookaheadDependencies(const ClosurePtr& closure);
+	void ResolveLookaheads();
 
 	std::size_t hash(bool only_core = false) const;
 

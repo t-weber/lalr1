@@ -241,7 +241,9 @@ public:
 	std::size_t NumSymbols(bool count_eps = true) const;
 	std::size_t size() const;
 
-	Terminal::t_terminalset CalcFirst(TerminalPtr additional_sym = nullptr) const;
+	Terminal::t_terminalset CalcFirst(
+		TerminalPtr additional_sym = nullptr,
+		std::size_t offs = 0) const;
 
 	// gets a symbol in the word
 	const SymbolPtr& GetSymbol(const std::size_t i) const;

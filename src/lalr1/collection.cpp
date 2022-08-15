@@ -225,20 +225,14 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 		}
 		else
 		{
-			// reuse closure that has already been seen
+			// reuse closure with the same core that has already been seen
 			const ClosurePtr& closure_to_existing = cacheIter->second;
 
 			// unite lookaheads
-			bool lookaheads_added = closure_to_existing->AddLookaheads(closure_to);
+			closure_to_existing->AddLookaheadDependencies(closure_to);
 
 			// add the transition from the closure
-			m_transitions.emplace(std::make_tuple(
-				closure_from, closure_to_existing, trans_sym));
-
-			// if a lookahead of an old closure has changed,
-			// the transitions of that closure need to be redone
-			if(lookaheads_added)
-				DoTransitions(closure_to_existing);
+			m_transitions.emplace(std::make_tuple(closure_from, closure_to_existing, trans_sym));
 		}
 	}
 }
@@ -248,10 +242,22 @@ void Collection::DoTransitions()
 {
 	m_closure_cache = nullptr;
 	DoTransitions(*m_collection.begin());
-	Simplify();
-	CreateTableIndices();
+	ReportProgress("Transitions calculated.", true);
 
-	ReportProgress("All transitions done.", true);
+	for(ClosurePtr& closure : m_collection)
+	{
+		std::ostringstream ostrMsg;
+		ostrMsg << "Calculating lookaheads for closure " << closure->GetId() << ".";
+		ReportProgress(ostrMsg.str(), false);
+		closure->ResolveLookaheads();
+	}
+	ReportProgress("Lookaheads calculated.", true);
+
+	Simplify();
+	ReportProgress("Simplified transitions.", true);
+
+	CreateTableIndices();
+	ReportProgress("Created table indices.", true);
 }
 
 

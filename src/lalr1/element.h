@@ -19,7 +19,9 @@
 #include "symbol.h"
 #include "common.h"
 
+#include <unordered_map>
 #include <memory>
+#include <optional>
 #include <functional>
 #include <iostream>
 
@@ -35,6 +37,12 @@ using ElementPtr = std::shared_ptr<Element>;
 class Element : public std::enable_shared_from_this<Element>
 {
 public:
+	// lookahead dependencies; bool flag: true: calculate first, false: copy lookaheads
+	using t_dependency = std::pair<ElementPtr, bool>;
+	using t_dependencies = std::list<t_dependency>;
+
+
+public:
 	Element(const NonTerminalPtr& lhs, std::size_t rhsidx,
 		std::size_t cursor, const Terminal::t_terminalset& la);
 	Element(const NonTerminalPtr& lhs, std::size_t rhsidx, std::size_t cursor);
@@ -47,14 +55,15 @@ public:
 
 	std::size_t GetCursor() const;
 	const Terminal::t_terminalset& GetLookaheads() const;
-	WordPtr GetRhsAfterCursor() const;
 	SymbolPtr GetSymbolAtCursor() const;
 
-	bool AddLookahead(const TerminalPtr& term);
-	bool AddLookaheads(const Terminal::t_terminalset& las);
-	void SetLookaheads(const Terminal::t_terminalset& las);
+	const t_dependencies& GetLookaheadDependencies() const;
+	void AddLookaheadDependencies(const t_dependencies& deps);
+	void AddLookaheadDependency(const t_dependency& dep);
+	void AddLookaheadDependency(const ElementPtr& elem, bool calc_first);
+	void ResolveLookaheads();
 
-	SymbolPtr GetPossibleTransitionSymbol() const;
+	const SymbolPtr& GetPossibleTransitionSymbol() const;
 
 	void AdvanceCursor();
 	bool IsCursorAtEnd() const;
@@ -79,11 +88,15 @@ private:
 	std::size_t m_rhsidx{0};                // rule index
 	std::size_t m_cursor{0};                // pointing before element at this index
 
-	Terminal::t_terminalset m_lookaheads{}; // lookahead symbols
+	t_dependencies m_lookahead_dependencies{};                     // lookahead dependencies
+	mutable std::optional<Terminal::t_terminalset> m_lookaheads{}; // lookahead symbols
 
 	// cached hash values
 	mutable std::optional<std::size_t> m_hash{ std::nullopt };
 	mutable std::optional<std::size_t> m_hash_core{ std::nullopt };
+
+	// cached transition symbols
+	mutable std::unordered_map<std::size_t, SymbolPtr> m_transition_symbol{};
 };
 
 
