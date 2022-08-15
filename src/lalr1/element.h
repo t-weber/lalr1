@@ -19,13 +19,13 @@
 #include "symbol.h"
 #include "common.h"
 
-#include <unordered_set>
-#include <unordered_map>
-#include <vector>
-#include <variant>
 #include <memory>
 #include <functional>
 #include <iostream>
+
+
+class Element;
+using ElementPtr = std::shared_ptr<Element>;
 
 
 
@@ -70,22 +70,22 @@ public:
 
 
 private:
-	NonTerminalPtr m_lhs{nullptr};
-	WordPtr m_rhs{nullptr};
+	NonTerminalPtr m_lhs{nullptr};          // left-hand side of the production rule
+	WordPtr m_rhs{nullptr};                 // right-hand side of the production rule
+
+	// optional semantic rule
 	std::optional<std::size_t> m_semanticrule{std::nullopt};
 
-	std::size_t m_rhsidx{0};  // rule index
-	std::size_t m_cursor{0};  // pointing before element at this index
+	std::size_t m_rhsidx{0};                // rule index
+	std::size_t m_cursor{0};                // pointing before element at this index
 
-	Terminal::t_terminalset m_lookaheads{};
+	Terminal::t_terminalset m_lookaheads{}; // lookahead symbols
 
 	// cached hash values
 	mutable std::optional<std::size_t> m_hash{ std::nullopt };
 	mutable std::optional<std::size_t> m_hash_core{ std::nullopt };
 };
 
-
-using ElementPtr = std::shared_ptr<Element>;
 
 
 #endif

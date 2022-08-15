@@ -250,7 +250,7 @@ void Element::AdvanceCursor()
 
 
 /**
- * cursor is at end, i.e. full handle has been read and can be reduced
+ * is the cursor at the end, i.e. the full handle has been read and can be reduced?
  */
 bool Element::IsCursorAtEnd() const
 {
@@ -282,7 +282,8 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		const SymbolPtr& sym = (*rhs)[i];
 
 		ostr << sym->GetStrId();
-		ostr << " ";
+		if(i < rhs->size() - 1)
+			ostr << " ";
 	}
 
 	if(elem.IsCursorAtEnd())
@@ -294,6 +295,5 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		ostr << la->GetStrId() << " ";
 
 	ostr << "]";
-
 	return ostr;
 }

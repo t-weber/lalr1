@@ -82,7 +82,7 @@ static bool lr1_create_parser(
 
 		auto progress = [](const std::string& msg, [[maybe_unused]] bool done)
 		{
-			std::cout << "\r" << msg << "                ";
+			std::cout << "\r\x1b[K" << msg;
 			if(done)
 				std::cout << "\n";
 			std::cout.flush();

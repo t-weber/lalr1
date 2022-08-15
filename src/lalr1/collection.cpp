@@ -18,6 +18,7 @@
 
 #include <sstream>
 #include <fstream>
+#include <vector>
 #include <algorithm>
 
 #include <boost/functional/hash.hpp>
@@ -131,7 +132,7 @@ Collection::t_transitions Collection::GetTransitions(
 /**
  * get terminals leading to the given closure
  */
-std::vector<TerminalPtr> Collection::GetLookbackTerminals(
+Terminal::t_terminalset Collection::GetLookbackTerminals(
 	const ClosurePtr& closure) const
 {
 	m_seen_closures = std::make_shared<std::unordered_set<std::size_t>>();
@@ -139,10 +140,10 @@ std::vector<TerminalPtr> Collection::GetLookbackTerminals(
 }
 
 
-std::vector<TerminalPtr> Collection::_GetLookbackTerminals(
+Terminal::t_terminalset Collection::_GetLookbackTerminals(
 	const ClosurePtr& closure) const
 {
-	std::vector<TerminalPtr> terms;
+	Terminal::t_terminalset terms;
 
 	for(const t_transition& transition : m_transitions)
 	{
@@ -158,38 +159,22 @@ std::vector<TerminalPtr> Collection::_GetLookbackTerminals(
 		{
 			const TerminalPtr& term =
 				std::dynamic_pointer_cast<Terminal>(sym);
-			terms.emplace_back(std::move(term));
+			terms.emplace(std::move(term));
 		}
 		else if(closure_from)
 		{
 			// closure not yet seen?
 			std::size_t hash = closure_from->hash();
-			if(m_seen_closures->find(hash) == m_seen_closures->end())
+			if(!m_seen_closures->contains(hash))
 			{
 				m_seen_closures->insert(hash);
 
 				// get terminals from previous closure
-				std::vector<TerminalPtr> _terms =
+				Terminal::t_terminalset _terms =
 					_GetLookbackTerminals(closure_from);
-				terms.insert(terms.end(), _terms.begin(), _terms.end());
+				terms.merge(_terms);
 			}
 		}
-	}
-
-	// remove duplicates
-	std::stable_sort(terms.begin(), terms.end(),
-		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
-		{
-			return term1->hash() < term2->hash();
-		});
-
-	if(auto end = std::unique(terms.begin(), terms.end(),
-		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
-		{
-			return *term1 == *term2;
-		}); end != terms.end())
-	{
-		terms.resize(end - terms.begin());
 	}
 
 	return terms;
@@ -197,7 +182,7 @@ std::vector<TerminalPtr> Collection::_GetLookbackTerminals(
 
 
 /**
- * perform all possible lalr(1) transitions from all collections
+ * perform all possible lalr(1) transitions from all closures
  */
 void Collection::DoTransitions(const ClosurePtr& closure_from)
 {
@@ -207,7 +192,7 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 		m_closure_cache->emplace(std::make_pair(closure_from->hash(true), closure_from));
 	}
 
-	Closure::t_transitions transitions = closure_from->DoTransitions();
+	const Closure::t_transitions& transitions = closure_from->DoTransitions();
 
 	// no more transitions?
 	if(transitions.size() == 0)
@@ -223,7 +208,10 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
-			<< closure_from->GetId() << " -> " << closure_to->GetId() << ".";
+			<< closure_from->GetId() << " -> " << closure_to->GetId()
+			<< ". Total closures: " << m_collection.size()
+			<< ", total transitions: " << m_transitions.size()
+			<< ".";
 		ReportProgress(ostrMsg.str(), false);
 
 		if(new_closure)
@@ -231,15 +219,14 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 			// new unique closure
 			m_closure_cache->emplace(std::make_pair(hash_to, closure_to));
 			m_collection.push_back(closure_to);
-			m_transitions.emplace(std::make_tuple(
-				closure_from, closure_to, trans_sym));
+			m_transitions.emplace(std::make_tuple(closure_from, closure_to, trans_sym));
 
 			DoTransitions(closure_to);
 		}
 		else
 		{
 			// reuse closure that has already been seen
-			ClosurePtr closure_to_existing = cacheIter->second;
+			const ClosurePtr& closure_to_existing = cacheIter->second;
 
 			// unite lookaheads
 			bool lookaheads_added = closure_to_existing->AddLookaheads(closure_to);
@@ -277,7 +264,7 @@ void Collection::Simplify()
 			return closure1->GetId() < closure2->GetId();
 		});
 
-	// cleanup ids
+	// cleanup closure ids
 	std::unordered_map<std::size_t, std::size_t> idmap;
 	std::unordered_set<std::size_t> already_seen;
 	std::size_t newid = 0;
@@ -287,7 +274,7 @@ void Collection::Simplify()
 		std::size_t oldid = closure->GetId();
 		std::size_t hash = closure->hash();
 
-		if(already_seen.find(hash) != already_seen.end())
+		if(already_seen.contains(hash))
 			continue;
 
 		auto iditer = idmap.find(oldid);
@@ -317,15 +304,11 @@ void Collection::CreateTableIndices()
 		if(symTrans->IsEps() || !symTrans->IsTerminal())
 			continue;
 
-		std::size_t sym_id = symTrans->GetId();
-		if(m_mapTermIdx.find(sym_id) == m_mapTermIdx.end())
-			m_mapTermIdx.emplace(std::make_pair(sym_id, curTermIdx++));
+		m_mapTermIdx.try_emplace(symTrans->GetId(), curTermIdx++);
 	}
 
 	// add end symbol
-	std::size_t end_id = g_end->GetId();
-	if(m_mapTermIdx.find(end_id) == m_mapTermIdx.end())
-		m_mapTermIdx.emplace(std::make_pair(end_id, curTermIdx++));
+	m_mapTermIdx.try_emplace(g_end->GetId(), curTermIdx++);
 
 
 	// generate able indices for non-terminals
@@ -334,15 +317,13 @@ void Collection::CreateTableIndices()
 
 	for(const ClosurePtr& closure : m_collection)
 	{
-		for(std::size_t elemidx=0; elemidx < closure->NumElements(); ++elemidx)
+		for(const ElementPtr& elem : closure->GetElements())
 		{
-			const ElementPtr& elem = closure->GetElement(elemidx);
 			if(!elem->IsCursorAtEnd())
 				continue;
 
 			std::size_t sym_id = elem->GetLhs()->GetId();
-			if(m_mapNonTermIdx.find(sym_id) == m_mapNonTermIdx.end())
-				m_mapNonTermIdx.emplace(std::make_pair(sym_id, curNonTermIdx++));
+			m_mapNonTermIdx.try_emplace(sym_id, curNonTermIdx++);
 		}
 	}
 }
@@ -385,7 +366,7 @@ void Collection::SetStopOnConflicts(bool b)
  * try to solve a shift/reduce conflict
  */
 bool Collection::SolveConflict(
-	const SymbolPtr& sym_at_cursor, const std::vector<TerminalPtr>& lookbacks,
+	const SymbolPtr& sym_at_cursor, const Terminal::t_terminalset& lookbacks,
 	std::size_t* shiftEntry, std::size_t* reduceEntry) const
 {
 	// no conflict?
@@ -509,7 +490,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	{
 		ostr << *closure;
 
-		std::vector<TerminalPtr> lookbacks = coll.GetLookbackTerminals(closure);
+		Terminal::t_terminalset lookbacks = coll.GetLookbackTerminals(closure);
 		if(lookbacks.size())
 			ostr << "Lookback terminals: ";
 		for(const TerminalPtr& lookback : lookbacks)
@@ -576,9 +557,8 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 
 	for(const ClosurePtr& closure : coll.m_collection)
 	{
-		for(std::size_t elemidx=0; elemidx < closure->NumElements(); ++elemidx)
+		for(const ElementPtr& elem : closure->GetElements())
 		{
-			const ElementPtr& elem = closure->GetElement(elemidx);
 			if(!elem->IsCursorAtEnd())
 				continue;
 

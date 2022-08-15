@@ -79,9 +79,8 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 	for(const ClosurePtr& closure : m_collection)
 	{
-		for(std::size_t elemidx=0; elemidx < closure->NumElements(); ++elemidx)
+		for(const ElementPtr& elem : closure->GetElements())
 		{
-			const ElementPtr& elem = closure->GetElement(elemidx);
 			if(!elem->IsCursorAtEnd())
 				continue;
 
@@ -127,7 +126,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 	std::size_t state = 0;
 	for(const ClosurePtr& closure : m_collection)
 	{
-		std::optional<std::vector<TerminalPtr>> lookbacks;
+		std::optional<Terminal::t_terminalset> lookbacks;
 
 		for(std::size_t termidx=0; termidx<numTerminals; ++termidx)
 		{
@@ -166,11 +165,13 @@ bool Collection::SaveParseTables(const std::string& file) const
 					if(lookbacks->size())
 					{
 						ostrErr << " with look-back terminal(s): ";
-						for(std::size_t i=0; i<lookbacks->size(); ++i)
+						std::size_t i = 0;
+						for(const TerminalPtr& lookback : *lookbacks)
 						{
-							ostrErr << (*lookbacks)[i]->GetStrId();
+							ostrErr << lookback->GetStrId();
 							if(i < lookbacks->size()-1)
 								ostrErr << ", ";
+							++i;
 						}
 					}
 					if(termid)

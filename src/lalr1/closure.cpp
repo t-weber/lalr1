@@ -25,13 +25,12 @@
 std::size_t Closure::g_id = 0;
 
 
-Closure::Closure() : std::enable_shared_from_this<Closure>{},
-	m_elems{}, m_id{g_id++}
+Closure::Closure() : std::enable_shared_from_this<Closure>{}, m_id{g_id++}
 {}
 
 
 Closure::Closure(const Closure& closure)
-	: std::enable_shared_from_this<Closure>{}, m_elems{}
+	: std::enable_shared_from_this<Closure>{}
 {
 	this->operator=(closure);
 }
@@ -43,6 +42,11 @@ const Closure& Closure::operator=(const Closure& closure)
 
 	for(const ElementPtr& elem : closure.m_elems)
 		this->m_elems.emplace_back(std::make_shared<Element>(*elem));
+
+	this->m_hash = closure.m_hash;
+	this->m_hash_core = closure.m_hash_core;
+	this->m_cached_transition_symbols = closure.m_cached_transition_symbols;
+	this->m_cached_transitions = closure.m_cached_transitions;
 
 	return *this;
 }
@@ -67,15 +71,14 @@ void Closure::SetId(std::size_t id)
 void Closure::AddElement(const ElementPtr& elem)
 {
 	// full element already in closure?
-	if(HasElement(elem, false).first)
+	if(FindElement(elem, false) != m_elems.end())
 		return;
 
 	// core element already in closure?
-	if(auto [core_in_closure, core_idx] = HasElement(elem, true);
-		core_in_closure)
+	if(auto core_iter = FindElement(elem, true); core_iter != m_elems.end())
 	{
-		// add new lookahead
-		m_elems[core_idx]->AddLookaheads(elem->GetLookaheads());
+		// add new lookaheads
+		(*core_iter)->AddLookaheads(elem->GetLookaheads());
 	}
 
 	// new element
@@ -87,7 +90,7 @@ void Closure::AddElement(const ElementPtr& elem)
 
 	// if the cursor is before a non-terminal, add the rule as element
 	const WordPtr& rhs = elem->GetRhs();
-	std::size_t cursor = elem->GetCursor();
+	const std::size_t cursor = elem->GetCursor();
 	if(cursor < rhs->size() && !(*rhs)[cursor]->IsTerminal())
 	{
 		// get rest of the rule after the cursor and lookaheads
@@ -98,50 +101,37 @@ void Closure::AddElement(const ElementPtr& elem)
 		const NonTerminalPtr& nonterm =
 			std::dynamic_pointer_cast<NonTerminal>((*rhs)[cursor]);
 
-		// temporary symbols
-		WordPtr _ruleaftercursor = std::make_shared<Word>(*ruleaftercursor);
-		NonTerminalPtr _ruleaftercursorNT = std::make_shared<NonTerminal>(0, "tmp_ruleaftercursor");
-		_ruleaftercursorNT->AddRule(_ruleaftercursor);
-
 		// iterate all rules of the non-terminal
 		for(std::size_t nonterm_rhsidx=0; nonterm_rhsidx<nonterm->NumRules(); ++nonterm_rhsidx)
 		{
-			ElementPtr elem = std::make_shared<Element>(nonterm, nonterm_rhsidx, 0);
+			ElementPtr newelem = std::make_shared<Element>(nonterm, nonterm_rhsidx, 0);
 
 			// iterate lookaheads
 			Terminal::t_terminalset first_la;
 			for(const TerminalPtr& la : nonterm_la)
 			{
-				// copy ruleaftercursor and add lookahead
-				std::size_t sym_idx = _ruleaftercursor->AddSymbol(la);
-				t_map_first tmp_first = _ruleaftercursorNT->CalcFirst();
-				_ruleaftercursor->RemoveSymbol(sym_idx);
-
-				for(const auto& set_first_pair : tmp_first)
+				// iterate all terminals in first set
+				for(const TerminalPtr& first_elem : ruleaftercursor->CalcFirst(la))
 				{
-					const Terminal::t_terminalset& set_first
-						= set_first_pair.second;
-					for(const TerminalPtr& la : set_first)
-					{
-						if(!la->IsEps())
-							first_la.insert(la);
-					}
+					if(!first_elem->IsEps())
+						first_la.insert(first_elem);
 				}
 			}
 
-			elem->SetLookaheads(first_la);
-			AddElement(elem);
+			newelem->SetLookaheads(first_la);
+			AddElement(newelem);
 		}
 	}
 
+	// invalidate caches
 	m_hash = m_hash_core = std::nullopt;
 }
 
 
 /**
- * checks if an element is already in the closure and returns its index
+ * checks if an element is already in the closure and returns its iterator
  */
-std::pair<bool, std::size_t> Closure::HasElement(
+typename Closure::t_elements::const_iterator Closure::FindElement(
 	const ElementPtr& elem, bool only_core) const
 {
 	if(auto iter = std::find_if(m_elems.begin(), m_elems.end(),
@@ -150,22 +140,17 @@ std::pair<bool, std::size_t> Closure::HasElement(
 			return theelem->IsEqual(*elem, only_core);
 		}); iter != m_elems.end())
 	{
-		return std::make_pair(true, iter - m_elems.begin());
+		return iter;
 	}
 
-	return std::make_pair(false, 0);
+	// element not found
+	return m_elems.end();
 }
 
 
-std::size_t Closure::NumElements() const
+const Closure::t_elements& Closure::GetElements() const
 {
-	return m_elems.size();
-}
-
-
-const ElementPtr& Closure::GetElement(std::size_t i) const
-{
-	return m_elems[i];
+	return m_elems;
 }
 
 
@@ -174,9 +159,8 @@ const ElementPtr& Closure::GetElement(std::size_t i) const
  */
 ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
 {
-	for(std::size_t idx=0; idx<m_elems.size(); ++idx)
+	for(const ElementPtr& theelem : m_elems)
 	{
-		const ElementPtr& theelem = m_elems[idx];
 		std::size_t cursor = theelem->GetCursor();
 		const WordPtr& rhs = theelem->GetRhs();
 
@@ -193,9 +177,15 @@ ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
 /**
  * get possible transition symbols from all elements
  */
-std::vector<SymbolPtr> Closure::GetPossibleTransitionSymbols() const
+const Closure::t_symbols& Closure::GetPossibleTransitionSymbols() const
 {
-	std::vector<SymbolPtr> syms;
+	// transition symbols of closure core already calculated?
+	std::size_t hashval = hash(true);
+	if(auto iter = m_cached_transition_symbols.find(hashval);
+		iter != m_cached_transition_symbols.end())
+		return iter->second;
+
+	t_symbols syms;
 	syms.reserve(m_elems.size());
 
 	for(const ElementPtr& theelem : m_elems)
@@ -207,15 +197,17 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitionSymbols() const
 		// do we already have this symbol?
 		bool sym_already_seen = std::find_if(syms.begin(), syms.end(),
 			[sym](const SymbolPtr& sym2) -> bool
-			{
-				return *sym == *sym2;
-			}) != syms.end();
+		{
+			return *sym == *sym2;
+		}) != syms.end();
 
 		if(sym && !sym_already_seen)
 			syms.emplace_back(sym);
 	}
 
-	return syms;
+	auto [iter, inserted] = m_cached_transition_symbols.emplace(
+		std::make_pair(hashval, std::move(syms)));
+	return iter->second;
 }
 
 
@@ -225,10 +217,8 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitionSymbols() const
 bool Closure::AddLookaheads(const ClosurePtr& closure)
 {
 	bool lookaheads_added = false;
-
-	for(std::size_t elemidx=0; elemidx<m_elems.size(); ++elemidx)
+	for(const ElementPtr& elem : m_elems)
 	{
-		ElementPtr& elem = m_elems[elemidx];
 		std::size_t elem_hash = elem->hash(true);
 
 		// find the element whose core has the same hash
@@ -278,19 +268,29 @@ ClosurePtr Closure::DoTransition(const SymbolPtr& transsym) const
  * and get the corresponding lalr(1) collection
  * @return [transition symbol, destination closure]
  */
-Closure::t_transitions Closure::DoTransitions() const
+const Closure::t_transitions& Closure::DoTransitions() const
 {
-	std::vector<SymbolPtr> possible_transitions = GetPossibleTransitionSymbols();
-	t_transitions transitions;
-	transitions.reserve(possible_transitions.size());
+	std::size_t hashval = hash(false);
+	auto iter = m_cached_transitions.find(hashval);
 
-	for(const SymbolPtr& transition : possible_transitions)
+	// transitions not yet calculated?
+	if(iter == m_cached_transitions.end())
 	{
-		ClosurePtr closure = DoTransition(transition);
-		transitions.emplace_back(std::make_tuple(transition, closure));
+		const t_symbols& possible_transitions = GetPossibleTransitionSymbols();
+		t_transitions transitions;
+		transitions.reserve(possible_transitions.size());
+
+		for(const SymbolPtr& transition : possible_transitions)
+		{
+			ClosurePtr closure = DoTransition(transition);
+			transitions.emplace_back(std::make_tuple(transition, closure));
+		}
+
+		std::tie(iter, std::ignore) = m_cached_transitions.emplace(
+			std::make_pair(hashval, transitions));
 	}
 
-	return transitions;
+	return iter->second;
 }
 
 
@@ -318,7 +318,6 @@ std::size_t Closure::hash(bool only_core) const
 	for(std::size_t hash : hashes)
 		boost::hash_combine(fullhash, hash);
 
-
 	if(only_core)
 		m_hash_core = fullhash;
 	else
@@ -335,8 +334,8 @@ std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
 	ostr << "Closure " << closure.GetId() << ":\n";
 
 	// write elements of the closure
-	for(std::size_t i=0; i<closure.NumElements(); ++i)
-		ostr << "\t" << *closure.GetElement(i)<< "\n";
+	for(const ElementPtr& elem : closure.GetElements())
+		ostr << "\t" << *elem << "\n";
 
 	return ostr;
 }

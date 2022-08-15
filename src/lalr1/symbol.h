@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <list>
 #include <unordered_map>
 #include <unordered_set>
 #include <functional>
@@ -222,6 +223,10 @@ private:
 class Word : protected std::enable_shared_from_this<Word>
 {
 public:
+	using t_symbols = std::list<SymbolPtr>;
+
+
+public:
 	Word(const std::initializer_list<SymbolPtr>& init);
 	Word(const Word& other);
 	Word();
@@ -235,6 +240,8 @@ public:
 	// number of symbols in the word
 	std::size_t NumSymbols(bool count_eps = true) const;
 	std::size_t size() const;
+
+	Terminal::t_terminalset CalcFirst(TerminalPtr additional_sym = nullptr) const;
 
 	// gets a symbol in the word
 	const SymbolPtr& GetSymbol(const std::size_t i) const;
@@ -251,7 +258,7 @@ public:
 
 private:
 	// string of symbols
-	std::vector<SymbolPtr> m_syms{};
+	t_symbols m_syms{};
 
 	// cached hash value
 	mutable std::optional<std::size_t> m_hash{ std::nullopt };

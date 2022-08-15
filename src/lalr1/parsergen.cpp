@@ -178,12 +178,12 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 
 	for(const ClosurePtr& closure : m_collection)
 	{
-		std::optional<std::vector<TerminalPtr>> lookbacks;
+		std::optional<Terminal::t_terminalset> lookbacks;
 
 		// write comment
 		ostr_cpp << "/*\n" << *closure;
 
-		if(std::vector<TerminalPtr> lookbacks = GetLookbackTerminals(closure);
+		if(Terminal::t_terminalset lookbacks = GetLookbackTerminals(closure);
 			lookbacks.size())
 		{
 			ostr_cpp << "Lookback terminals:";
@@ -280,9 +280,8 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 		std::vector<std::unordered_set<SymbolPtr>> reduces_lookaheads;
 		std::vector<std::string> reduces;
 
-		for(std::size_t elemidx=0; elemidx < closure->NumElements(); ++elemidx)
+		for(const ElementPtr& elem : closure->GetElements())
 		{
-			const ElementPtr& elem = closure->GetElement(elemidx);
 			if(!elem->IsCursorAtEnd())
 				continue;
 
@@ -399,11 +398,13 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 					if(lookbacks->size())
 					{
 						ostrErr << " with look-back terminal(s): ";
-						for(std::size_t i=0; i<lookbacks->size(); ++i)
+						std::size_t i = 0;
+						for(const TerminalPtr& lookback : *lookbacks)
 						{
-							ostrErr << (*lookbacks)[i]->GetStrId();
+							ostrErr << lookback->GetStrId();
 							if(i < lookbacks->size()-1)
 								ostrErr << ", ";
+							++i;
 						}
 					}
 					ostrErr << " and look-ahead terminal " << la->GetId();

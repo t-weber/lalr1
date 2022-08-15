@@ -20,9 +20,7 @@
 
 #include <unordered_set>
 #include <unordered_map>
-#include <vector>
 #include <list>
-#include <variant>
 #include <memory>
 #include <functional>
 #include <iostream>
@@ -56,6 +54,7 @@ public:
 		bool operator()(const t_transition& tr1, const t_transition& tr2) const;
 	};
 
+	using t_closures = std::list<ClosurePtr>;
 	using t_transitions = std::unordered_set<t_transition, HashTransition, CompareTransitionsEqual>;
 	using t_closurecache = std::shared_ptr<std::unordered_map<std::size_t, ClosurePtr>>;
 	using t_seen_closures = std::shared_ptr<std::unordered_set<std::size_t>>;
@@ -67,7 +66,7 @@ public:
 	void DoTransitions();
 
 	// get terminals leading to the given closure
-	std::vector<TerminalPtr> GetLookbackTerminals(const ClosurePtr& closure) const;
+	Terminal::t_terminalset GetLookbackTerminals(const ClosurePtr& closure) const;
 
 	// get terminal or non-terminal transitions originating from the given closure
 	t_transitions GetTransitions(const ClosurePtr& closure, bool term = true) const;
@@ -85,13 +84,13 @@ public:
 protected:
 	Collection();
 
-	std::vector<TerminalPtr> _GetLookbackTerminals(const ClosurePtr& closure) const;
+	Terminal::t_terminalset _GetLookbackTerminals(const ClosurePtr& closure) const;
 
 	void DoTransitions(const ClosurePtr& closure);
 	void Simplify();
 
 	bool SolveConflict(
-		const SymbolPtr& sym_at_cursor, const std::vector<TerminalPtr>& lookbacks,
+		const SymbolPtr& sym_at_cursor, const Terminal::t_terminalset& lookbacks,
 		std::size_t* shiftEntry, std::size_t* reduceEntry) const;
 
 	void CreateTableIndices();
@@ -101,7 +100,7 @@ protected:
 
 
 private:
-	std::list<ClosurePtr> m_collection{};       // collection of LR(1) closures
+	t_closures m_collection{};                  // collection of LR(1) closures
 	t_transitions m_transitions{};              // transitions between collection, [from, to, transition symbol]
 
 	t_mapIdIdx m_mapTermIdx{};                  // maps the terminal ids to table indices

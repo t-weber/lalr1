@@ -148,8 +148,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 				// in local function scope
 				else
 				{
-					if(m_local_stack.find(m_cur_func) == m_local_stack.end())
-						m_local_stack[m_cur_func] = 0;
+					m_local_stack.try_emplace(m_cur_func, 0);
 
 					m_local_stack[m_cur_func] += get_vm_type_size(symty, true);
 					sym = m_symtab.AddSymbol(varname, -m_local_stack[m_cur_func],
@@ -635,8 +634,7 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 {
 	const std::string& func_name = ast->GetName();
 	t_vm_int num_args = static_cast<t_vm_int>(ast->NumArgs());
-	bool is_external_func = (m_always_call_ext ||
-		m_ext_funcs.find(func_name) != m_ext_funcs.end());
+	bool is_external_func = (m_always_call_ext || m_ext_funcs.contains(func_name));
 
 	// push the function arguments
 	if(ast->GetArgs())

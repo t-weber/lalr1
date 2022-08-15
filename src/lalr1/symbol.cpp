@@ -241,6 +241,8 @@ NonTerminalPtr NonTerminal::RemoveLeftRecursion(
 {
 	std::vector<WordPtr> rulesWithLeftRecursion;
 	std::vector<WordPtr> rulesWithoutLeftRecursion;
+	rulesWithLeftRecursion.reserve(NumRules());
+	rulesWithoutLeftRecursion.reserve(NumRules());
 
 	for(std::size_t ruleidx=0; ruleidx<NumRules(); ++ruleidx)
 	{
@@ -308,7 +310,10 @@ void NonTerminal::print(std::ostream& ostr, bool bnf) const
 	ostr << GetStrId() << lhsrhssep;
 	for(std::size_t i=0; i<NumRules(); ++i)
 	{
-		if(i==0) ostr << rule0sep; else ostr << rulesep;
+		if(i==0)
+			ostr << rule0sep;
+		else
+			ostr << rulesep;
 
 		if(GetSemanticRule(i) && !bnf)
 			ostr << "[rule " << *GetSemanticRule(i) << "] ";
@@ -359,7 +364,7 @@ void NonTerminal::CalcFirst(t_map_first& _first, t_map_first_perrule* _first_per
 		return;
 
 	// set already calculated?
-	if(_first.find(nonterm) != _first.end())
+	if(_first.contains(nonterm))
 		return;
 
 	Terminal::t_terminalset first;
@@ -367,20 +372,21 @@ void NonTerminal::CalcFirst(t_map_first& _first, t_map_first_perrule* _first_per
 	first_perrule.resize(nonterm->NumRules());
 
 	// iterate rules
-	for(std::size_t iRule=0; iRule<nonterm->NumRules(); ++iRule)
+	for(std::size_t rule_idx=0; rule_idx<nonterm->NumRules(); ++rule_idx)
 	{
-		const WordPtr& rule = nonterm->GetRule(iRule);
+		const WordPtr& rule = nonterm->GetRule(rule_idx);
 
 		// iterate RHS of rule
-		for(std::size_t iSym=0; iSym<rule->NumSymbols(); ++iSym)
+		const std::size_t num_all_symbols = rule->NumSymbols();
+		for(std::size_t sym_idx=0; sym_idx<num_all_symbols; ++sym_idx)
 		{
-			const SymbolPtr& sym = (*rule)[iSym];
+			const SymbolPtr& sym = (*rule)[sym_idx];
 
 			// reached terminal symbol -> end
 			if(sym->IsTerminal())
 			{
 				first.insert(std::dynamic_pointer_cast<Terminal>(sym));
-				first_perrule[iRule].insert(std::dynamic_pointer_cast<Terminal>(sym));
+				first_perrule[rule_idx].insert(std::dynamic_pointer_cast<Terminal>(sym));
 				break;
 			}
 
@@ -404,13 +410,13 @@ void NonTerminal::CalcFirst(t_map_first& _first, t_map_first_perrule* _first_per
 						has_eps = true;
 
 						// if last non-terminal is reached -> add epsilon
-						insert = (iSym == rule->NumSymbols()-1);
+						insert = (sym_idx == num_all_symbols-1);
 					}
 
 					if(insert)
 					{
 						first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
-						first_perrule[iRule].insert(std::dynamic_pointer_cast<Terminal>(symprod));
+						first_perrule[rule_idx].insert(std::dynamic_pointer_cast<Terminal>(symprod));
 					}
 				}
 
@@ -444,7 +450,7 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 		return;
 
 	// set already calculated?
-	if(_follow.find(nonterm) != _follow.end())
+	if(_follow.contains(nonterm))
 		return;
 
 	Terminal::t_terminalset follow;
@@ -457,31 +463,31 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 	for(const NonTerminalPtr& _nonterm : allnonterms)
 	{
 		// iterate rules
-		for(std::size_t iRule=0; iRule<_nonterm->NumRules(); ++iRule)
+		for(std::size_t rule_idx=0; rule_idx<_nonterm->NumRules(); ++rule_idx)
 		{
-			const WordPtr& rule = _nonterm->GetRule(iRule);
+			const WordPtr& rule = _nonterm->GetRule(rule_idx);
 
 			// iterate RHS of rule
-			for(std::size_t iSym=0; iSym<rule->NumSymbols(); ++iSym)
+			for(std::size_t sym_idx=0; sym_idx<rule->NumSymbols(); ++sym_idx)
 			{
 				// nonterm is in RHS of _nonterm rules
-				if(*(*rule)[iSym] == *nonterm)
+				if(*(*rule)[sym_idx] == *nonterm)
 				{
 					// add first set of following symbols except eps
-					for(std::size_t _iSym=iSym+1; _iSym < rule->NumSymbols(); ++_iSym)
+					for(std::size_t _sym_idx=sym_idx+1; _sym_idx < rule->NumSymbols(); ++_sym_idx)
 					{
 						// add terminal to follow set
-						if((*rule)[_iSym]->IsTerminal() && !(*rule)[_iSym]->IsEps())
+						if((*rule)[_sym_idx]->IsTerminal() && !(*rule)[_sym_idx]->IsEps())
 						{
 							follow.insert(std::dynamic_pointer_cast<Terminal>(
-								(*rule)[_iSym]));
+								(*rule)[_sym_idx]));
 							break;
 						}
 
 						// non-terminal
 						else
 						{
-							const auto& iterFirst = _first.find((*rule)[_iSym]);
+							const auto& iterFirst = _first.find((*rule)[_sym_idx]);
 
 							for(const TerminalPtr& symfirst : iterFirst->second)
 							{
@@ -490,7 +496,7 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 							}
 
 							if(!std::dynamic_pointer_cast<NonTerminal>(
-								(*rule)[_iSym])->HasEpsRule())
+								(*rule)[_sym_idx])->HasEpsRule())
 							{
 								break;
 							}
@@ -499,10 +505,10 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 
 
 					// last symbol in rule?
-					bool bLastSym = (iSym+1 == rule->NumSymbols());
+					bool bLastSym = (sym_idx+1 == rule->NumSymbols());
 
 					// ... or only epsilon productions afterwards?
-					std::size_t iNextSym = iSym+1;
+					std::size_t iNextSym = sym_idx+1;
 					for(; iNextSym<rule->NumSymbols(); ++iNextSym)
 					{
 						// terminal
@@ -597,7 +603,7 @@ std::size_t Word::size() const
  */
 const SymbolPtr& Word::GetSymbol(const std::size_t i) const
 {
-	return m_syms[i];
+	return *std::next(m_syms.begin(), i);
 }
 
 
@@ -620,14 +626,76 @@ std::size_t Word::NumSymbols(bool count_eps) const
 	{
 		std::size_t num = 0;
 
-		for(std::size_t i=0; i<m_syms.size(); ++i)
+		for(const SymbolPtr& sym : m_syms)
 		{
-			if(!m_syms[i]->IsEps())
+			if(!sym->IsEps())
 				++num;
 		}
 
 		return num;
 	}
+}
+
+
+/**
+ * calculates the first set of a symbol string
+ * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
+ */
+Terminal::t_terminalset Word::CalcFirst(TerminalPtr additional_sym) const
+{
+	Terminal::t_terminalset first;
+
+	// iterate RHS of rule
+	std::size_t num_rule_symbols = NumSymbols();
+	std::size_t num_all_symbols = num_rule_symbols;
+
+	// add an additional symbol to the end of the rules
+	if(additional_sym && additional_sym.get())
+		++num_all_symbols;
+
+	t_map_first first_nonterms;
+
+	for(std::size_t sym_idx=0; sym_idx<num_all_symbols; ++sym_idx)
+	{
+		const SymbolPtr& sym = sym_idx < num_rule_symbols ? (*this)[sym_idx] : additional_sym;
+
+		// reached terminal symbol -> end
+		if(sym->IsTerminal())
+		{
+			first.insert(std::dynamic_pointer_cast<Terminal>(sym));
+			break;
+		}
+
+		// non-terminal
+		else
+		{
+			const NonTerminalPtr& symnonterm = std::dynamic_pointer_cast<NonTerminal>(sym);
+			symnonterm->CalcFirst(first_nonterms);
+
+			// add first set except eps
+			bool has_eps = false;
+			for(const TerminalPtr& symprod : first_nonterms[symnonterm])
+			{
+				bool insert = true;
+				if(symprod->IsEps())
+				{
+					has_eps = true;
+
+					// if last non-terminal is reached -> add epsilon
+					insert = (sym_idx == num_all_symbols-1);
+				}
+
+				if(insert)
+					first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
+			}
+
+			// no epsilon in production -> end
+			if(!has_eps)
+				break;
+		}
+	}
+
+	return first;
 }
 
 
@@ -647,9 +715,9 @@ std::size_t Word::hash() const
 
 	std::size_t hash = 0;
 
-	for(std::size_t i=0; i<NumSymbols(); ++i)
+	for(const SymbolPtr& sym : m_syms)
 	{
-		std::size_t hashSym = m_syms[i]->hash();
+		std::size_t hashSym = sym->hash();
 		boost::hash_combine(hash, hashSym);
 	}
 
@@ -660,8 +728,13 @@ std::size_t Word::hash() const
 
 std::ostream& operator<<(std::ostream& ostr, const Word& word)
 {
-	for(std::size_t i=0; i<word.NumSymbols(); ++i)
-		ostr << word.GetSymbol(i)->GetStrId() << " ";
+	const std::size_t num_syms = word.NumSymbols();
+	for(std::size_t i=0; i<num_syms; ++i)
+	{
+		ostr << word.GetSymbol(i)->GetStrId();
+		if(i < num_syms - 1)
+			ostr << " ";
+	}
 
 	return ostr;
 }

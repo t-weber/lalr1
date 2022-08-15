@@ -88,7 +88,6 @@ public:
 		ostr << "const Table<std::size_t, std::vector> " << var << "{"
 			<< size1() << ", " << size2() << ", "
 			<< "err, acc, ";
-			//<< m_errorval << ", " << m_acceptval << ", ";
 
 		ostr << "{\n";
 		for(std::size_t row=0; row<size1(); ++row)

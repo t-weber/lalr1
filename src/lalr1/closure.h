@@ -18,10 +18,8 @@
 
 #include "element.h"
 
-#include <unordered_set>
-#include <unordered_map>
 #include <vector>
-#include <variant>
+#include <list>
 #include <memory>
 #include <functional>
 #include <iostream>
@@ -40,6 +38,8 @@ public:
 	// [ transition terminal, to closure ]
 	using t_transition = std::tuple<SymbolPtr, ClosurePtr>;
 	using t_transitions = std::vector<t_transition>;
+	using t_elements = std::list<ElementPtr>;
+	using t_symbols = std::vector<SymbolPtr>;
 
 
 public:
@@ -52,16 +52,15 @@ public:
 	void SetId(std::size_t id);
 
 	void AddElement(const ElementPtr& elem);
-	std::pair<bool, std::size_t> HasElement(
+	typename t_elements::const_iterator FindElement(
 		const ElementPtr& elem, bool only_core = false) const;
-
-	std::size_t NumElements() const;
-	const ElementPtr& GetElement(std::size_t i) const;
+	const t_elements& GetElements() const;
+	ElementPtr GetElementWithCursorAtBeginning() const;
 	ElementPtr GetElementWithCursorAtSymbol(const SymbolPtr& sym) const;
 
-	std::vector<SymbolPtr> GetPossibleTransitionSymbols() const;
-	ClosurePtr DoTransition(const SymbolPtr&) const;
-	t_transitions DoTransitions() const;
+	const t_symbols& GetPossibleTransitionSymbols() const;
+	ClosurePtr DoTransition(const SymbolPtr& transsym) const;
+	const t_transitions& DoTransitions() const;
 
 	bool AddLookaheads(const ClosurePtr& closure);
 
@@ -71,7 +70,7 @@ public:
 
 
 private:
-	std::vector<ElementPtr> m_elems{};
+	t_elements m_elems{};     // lalr(1) elements in the closure
 	std::size_t m_id{0};      // closure id
 
 	static std::size_t g_id;  // global closure id counter
@@ -79,6 +78,14 @@ private:
 	// cached hash values
 	mutable std::optional<std::size_t> m_hash{ std::nullopt };
 	mutable std::optional<std::size_t> m_hash_core{ std::nullopt };
+
+	// cached transition symbols
+	mutable std::unordered_map<std::size_t, t_symbols>
+		m_cached_transition_symbols {};	
+
+	// cached transitions
+	mutable std::unordered_map<std::size_t, t_transitions>
+		m_cached_transitions {};
 };
 
 
