@@ -641,8 +641,23 @@ std::size_t Word::NumSymbols(bool count_eps) const
  * calculates the first set of a symbol string
  * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
-Terminal::t_terminalset Word::CalcFirst(TerminalPtr additional_sym, std::size_t offs) const
+const Terminal::t_terminalset& Word::CalcFirst(TerminalPtr additional_sym, std::size_t offs) const
 {
+	std::size_t hashval = this->hash();
+	if(additional_sym)
+	{
+		std::size_t hashSym = additional_sym->hash();
+		boost::hash_combine(hashval, hashSym);
+	}
+
+	std::size_t hashOffs = std::hash<std::size_t>{}(offs);
+	boost::hash_combine(hashval, hashOffs);
+
+	// terminal set already cached?
+	auto iter = m_cached_firsts.find(hashval);
+	if(iter != m_cached_firsts.end())
+		return iter->second;
+
 	Terminal::t_terminalset first;
 
 	// iterate RHS of rule
@@ -695,7 +710,9 @@ Terminal::t_terminalset Word::CalcFirst(TerminalPtr additional_sym, std::size_t 
 		}
 	}
 
-	return first;
+	std::tie(iter, std::ignore) = m_cached_firsts.emplace(
+		std::make_pair(hashval, std::move(first)));
+	return iter->second;
 }
 
 

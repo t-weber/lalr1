@@ -204,10 +204,15 @@ void Element::ResolveLookaheads()
 		return;
 
 	// copy lookaheads from other closure element
+	std::unordered_set<ElementPtr> already_seen;
 	for(auto& [elem, calc_first] : m_lookahead_dependencies)
 	{
 		if(calc_first)
 			continue;
+
+		if(already_seen.contains(elem))
+			continue;
+		already_seen.insert(elem);
 
 		elem->ResolveLookaheads();
 		if(!m_lookaheads)
@@ -218,10 +223,15 @@ void Element::ResolveLookaheads()
 	}
 
 	// calculate first sets
+	already_seen.clear();
 	for(auto& [elem, calc_first] : m_lookahead_dependencies)
 	{
 		if(!calc_first)
 			continue;
+
+		if(already_seen.contains(elem))
+			continue;
+		already_seen.insert(elem);
 
 		elem->ResolveLookaheads();
 		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();

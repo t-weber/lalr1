@@ -242,7 +242,7 @@ void Collection::DoTransitions()
 {
 	m_closure_cache = nullptr;
 	DoTransitions(*m_collection.begin());
-	ReportProgress("Transitions calculated.", true);
+	ReportProgress("Calculated transitions.", true);
 
 	for(ClosurePtr& closure : m_collection)
 	{
@@ -251,7 +251,7 @@ void Collection::DoTransitions()
 		ReportProgress(ostrMsg.str(), false);
 		closure->ResolveLookaheads();
 	}
-	ReportProgress("Lookaheads calculated.", true);
+	ReportProgress("Calculated lookaheads.", true);
 
 	Simplify();
 	ReportProgress("Simplified transitions.", true);
@@ -310,7 +310,9 @@ void Collection::CreateTableIndices()
 		if(symTrans->IsEps() || !symTrans->IsTerminal())
 			continue;
 
-		m_mapTermIdx.try_emplace(symTrans->GetId(), curTermIdx++);
+		if(auto [iter, inserted] = m_mapTermIdx.try_emplace(
+			symTrans->GetId(), curTermIdx); inserted)
+			++curTermIdx;
 	}
 
 	// add end symbol
@@ -329,7 +331,10 @@ void Collection::CreateTableIndices()
 				continue;
 
 			std::size_t sym_id = elem->GetLhs()->GetId();
-			m_mapNonTermIdx.try_emplace(sym_id, curNonTermIdx++);
+
+			if(auto [iter, inserted] = m_mapNonTermIdx.try_emplace(
+				sym_id, curNonTermIdx); inserted)
+				++curNonTermIdx;
 		}
 	}
 }

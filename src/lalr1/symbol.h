@@ -241,7 +241,7 @@ public:
 	std::size_t NumSymbols(bool count_eps = true) const;
 	std::size_t size() const;
 
-	Terminal::t_terminalset CalcFirst(
+	const Terminal::t_terminalset& CalcFirst(
 		TerminalPtr additional_sym = nullptr,
 		std::size_t offs = 0) const;
 
@@ -264,6 +264,9 @@ private:
 
 	// cached hash value
 	mutable std::optional<std::size_t> m_hash{ std::nullopt };
+
+	// cached first calculations
+	mutable std::unordered_map<std::size_t, Terminal::t_terminalset> m_cached_firsts{};
 };
 
 

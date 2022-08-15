@@ -24,7 +24,7 @@
 #define DEBUG_WRITEGRAPH  0
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
-#define USE_RECASC        1
+#define USE_RECASC        0
 
 
 enum : std::size_t
@@ -419,7 +419,7 @@ static void lr1_create_parser()
 
 
 		ElementPtr elem = std::make_shared<Element>(
-			start, 0, 0, Terminal::t_terminalset{{g_end}});
+			start, 0, 0, Terminal::t_terminalset{{ g_end }});
 		ClosurePtr closure = std::make_shared<Closure>();
 		closure->AddElement(elem);
 		//std::cout << "\n\n" << *closure << std::endl;

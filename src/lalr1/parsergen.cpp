@@ -457,7 +457,8 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 		ostr_cpp << "\t\t{\n";
 		// don't write the full string directly so the compiler can optimise duplicate string parts
 		ostr_cpp << "\t\t\tthrow std::runtime_error(\"No transition from closure \""
-			<< " + std::to_string(" << closure->GetId() << ") + \".\");\n";
+			<< " + std::to_string(" << closure->GetId() << ") + \" and look-ahead terminal \""
+			<< " + std::to_string(m_lookahead_id) + \".\");\n";
 		ostr_cpp << "\t\t\tbreak;\n";
 		ostr_cpp << "\t\t}\n";
 
