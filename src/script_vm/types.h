@@ -10,7 +10,7 @@
 
 #include <cstdint>
 #include <string>
-#include "../script/lval.h"
+#include "script/lval.h"
 
 
 using t_vm_int = ::t_int;

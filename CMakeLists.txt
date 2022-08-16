@@ -33,6 +33,8 @@ add_definitions(${Boost_CXX_FLAGS})
 find_package(Threads REQUIRED)
 
 
+include(GNUInstallDirs)
+
 include_directories(
 	${PROJECT_SOURCE_DIR}
 	${PROJECT_SOURCE_DIR}/src
@@ -43,25 +45,73 @@ include_directories(
 
 # -----------------------------------------------------------------------------
 # lalr(1) parser creation library
-add_library(lalr1 STATIC
-	src/lalr1/symbol.cpp src/lalr1/symbol.h
-	src/lalr1/element.cpp src/lalr1/element.h
-	src/lalr1/closure.cpp src/lalr1/closure.h
-	src/lalr1/collection.cpp src/lalr1/collection.h
-	src/lalr1/tablegen.cpp src/lalr1/parsergen.cpp
-	src/lalr1/table.h src/lalr1/common.h
+add_library(lalr1 STATIC)
+
+target_sources(lalr1
+	PUBLIC
+		${PROJECT_SOURCE_DIR}/src/lalr1/symbol.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/collection.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/ast.h
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/src/lalr1/symbol.cpp
+		${PROJECT_SOURCE_DIR}/src/lalr1/element.cpp
+		${PROJECT_SOURCE_DIR}/src/lalr1/closure.cpp
+		${PROJECT_SOURCE_DIR}/src/lalr1/collection.cpp
+		${PROJECT_SOURCE_DIR}/src/lalr1/tablegen.cpp
+		${PROJECT_SOURCE_DIR}/src/lalr1/parsergen.cpp
+		${PROJECT_SOURCE_DIR}/src/lalr1/element.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/closure.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/table.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/common.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/helpers.h
 )
+
+set_target_properties(lalr1 PROPERTIES PUBLIC_HEADER
+	"${PROJECT_SOURCE_DIR}/src/lalr1/symbol.h;\
+	${PROJECT_SOURCE_DIR}/src/lalr1/element.h;\
+	${PROJECT_SOURCE_DIR}/src/lalr1/closure.h;\
+	${PROJECT_SOURCE_DIR}/src/lalr1/collection.h;\
+	${PROJECT_SOURCE_DIR}/src/lalr1/table.h;\
+	${PROJECT_SOURCE_DIR}/src/lalr1/ast.h;\
+	${PROJECT_SOURCE_DIR}/src/lalr1/common.h;\
+	${PROJECT_SOURCE_DIR}/src/lalr1/helpers.h"
+)
+
+#get_target_property(LALR1_HEADERS lalr1 PUBLIC_HEADER)
+#message("lalr1 headers: ${LALR1_HEADERS}")
 
 target_link_libraries(lalr1 ${Boost_LIBRARIES})
 
+install(TARGETS lalr1
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lalr1
+)
+
 
 # lalr(1) parser
-add_library(lalr1-parser STATIC
-	src/lalr1/parser.cpp src/lalr1/parser.h
-	src/lalr1/table.h src/lalr1/common.h src/lalr1/ast.h
+add_library(lalr1-parser STATIC)
+
+target_sources(lalr1-parser
+	PUBLIC
+		${PROJECT_SOURCE_DIR}/src/lalr1/parser.h
+
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/src/lalr1/parser.cpp
+		${PROJECT_SOURCE_DIR}/src/lalr1/table.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/common.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/ast.h
+)
+
+set_target_properties(lalr1-parser PROPERTIES PUBLIC_HEADER
+	${PROJECT_SOURCE_DIR}/src/lalr1/parser.h
 )
 
 target_link_libraries(lalr1-parser ${Boost_LIBRARIES})
+
+install(TARGETS lalr1-parser
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lalr1
+)
 # -----------------------------------------------------------------------------
 
 

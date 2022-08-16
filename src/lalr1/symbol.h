@@ -220,7 +220,7 @@ private:
 /**
  * a collection of terminals and non-terminals
  */
-class Word : protected std::enable_shared_from_this<Word>
+class Word : public std::enable_shared_from_this<Word>
 {
 public:
 	using t_symbols = std::list<SymbolPtr>;
@@ -242,7 +242,7 @@ public:
 	std::size_t size() const;
 
 	const Terminal::t_terminalset& CalcFirst(
-		TerminalPtr additional_sym = nullptr,
+		const TerminalPtr& additional_sym = nullptr,
 		std::size_t offs = 0) const;
 
 	// gets a symbol in the word

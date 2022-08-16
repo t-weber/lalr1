@@ -18,8 +18,8 @@
 #include <sstream>
 
 #include "lval.h"
-#include "../lalr1/ast.h"
-#include "../script_vm/types.h"
+#include "lalr1/ast.h"
+#include "script_vm/types.h"
 
 
 // forward declarations

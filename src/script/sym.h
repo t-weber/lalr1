@@ -13,7 +13,7 @@
 #include <ostream>
 #include <iomanip>
 
-#include "../script_vm/types.h"
+#include "script_vm/types.h"
 
 
 

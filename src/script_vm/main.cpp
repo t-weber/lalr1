@@ -6,7 +6,7 @@
  */
 
 #include "vm.h"
-#include "../common/helpers.h"
+#include "lalr1/helpers.h"
 
 #include <vector>
 #include <optional>

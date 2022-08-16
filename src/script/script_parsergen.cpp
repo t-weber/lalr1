@@ -7,7 +7,7 @@
 
 #include "script_grammar.h"
 #include "lalr1/collection.h"
-#include "common/helpers.h"
+#include "lalr1/helpers.h"
 #include "lexer.h"
 #include "ast.h"
 #include "ast_printer.h"
@@ -141,7 +141,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 
 	args::options_description arg_descr("Script parser generator arguments");
 	arg_descr.add_options()
-		("asc,a", args::bool_switch(&create_asc), "create a recursive ascent parser")
+		("asc,a", args::bool_switch(&create_asc), "create a recursive ascent parser [default]")
 		("table,t", args::bool_switch(&create_tables), "create LALR(1) tables")
 		("graph,g", args::bool_switch(&write_graph), "write a graph of the parser")
 		("debug,d", args::bool_switch(&debug), "enable debug output for parser generation")
@@ -171,10 +171,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 
 	if(!create_asc && !create_tables)
 	{
-		std::cerr << "Warning: Neither recursive ascent parser"
+		/*std::cerr << "Warning: Neither recursive ascent parser"
 			<< " nor LALR(1) table generation was selected,"
 			<< " defaulting to recursive ascent parser."
-			<< std::endl;
+			<< std::endl;*/
 		create_asc = true;
 	}
 	// --------------------------------------------------------------------

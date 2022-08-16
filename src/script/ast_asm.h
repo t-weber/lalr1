@@ -17,7 +17,7 @@
 #include "lval.h"
 #include "ast.h"
 #include "sym.h"
-#include "../script_vm/opcodes.h"
+#include "script_vm/opcodes.h"
 
 
 class ASTAsm : public ASTVisitor

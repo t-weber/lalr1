@@ -16,7 +16,7 @@
 
 #include "ast.h"
 #include "lval.h"
-#include "../lalr1/common.h"
+#include "lalr1/common.h"
 
 
 using t_tok = std::size_t;

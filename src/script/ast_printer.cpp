@@ -6,7 +6,7 @@
  */
 
 #include "ast_printer.h"
-#include "../script_vm/types.h"
+#include "script_vm/types.h"
 
 
 /**

@@ -641,7 +641,7 @@ std::size_t Word::NumSymbols(bool count_eps) const
  * calculates the first set of a symbol string
  * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
-const Terminal::t_terminalset& Word::CalcFirst(TerminalPtr additional_sym, std::size_t offs) const
+const Terminal::t_terminalset& Word::CalcFirst(const TerminalPtr& additional_sym, std::size_t offs) const
 {
 	std::size_t hashval = this->hash();
 	if(additional_sym)
