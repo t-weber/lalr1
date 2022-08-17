@@ -156,11 +156,18 @@ if(BUILD_EXAMPLES)
 	target_link_libraries(script_parsergen lalr1)
 
 	# script compiler
-	add_executable(script_compiler
-		src/script/script.cpp
-		src/script/script_grammar.cpp src/script/script_grammar.h
-	)
-	target_link_libraries(script_compiler script lalr1-parser script-vm)
+	if(EXISTS "${CMAKE_BINARY_DIR}/script_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/script.tab")
+		add_executable(script_compiler
+			src/script/script.cpp
+			src/script/script_grammar.cpp src/script/script_grammar.h
+		)
+	endif()
+
+	if(EXISTS "${CMAKE_BINARY_DIR}/script_parser.cpp")
+		target_link_libraries(script_compiler script script-vm)
+	elseif(EXISTS "${CMAKE_BINARY_DIR}/script.tab")
+		target_link_libraries(script_compiler script lalr1-parser script-vm)
+	endif()
 
 
 	# expression compiler generator

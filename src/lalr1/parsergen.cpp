@@ -33,12 +33,12 @@
 bool Collection::SaveParser(const std::string& filename_cpp) const
 {
 	// output header file stub
-	std::string outfile_h = R"raw(/* 
+	std::string outfile_h = R"raw(/*
  * Parser created using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
-#ifndef __LR1_PARSER_REC_ASC_H__
-#define __LR1_PARSER_REC_ASC_H__
+#ifndef __LALR1_PARSER_REC_ASC_H__
+#define __LALR1_PARSER_REC_ASC_H__
 
 #include "lalr1/ast.h"
 #include "lalr1/common.h"
@@ -103,10 +103,8 @@ void ParserRecAsc::PrintSymbols() const
 	std::cout << symbols.size() << " symbols: ";
 	while(symbols.size())
 	{
-		t_lalrastbaseptr sym = symbols.top();
+		std::cout << symbols.top()->GetId() << ", ";
 		symbols.pop();
-
-		std::cout << sym->GetId() << ", ";
 	}
 	std::cout << std::endl;
 }
@@ -240,7 +238,7 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 		ostr_cpp << "\t\tstd::cout << \"\\nRunning \" << __PRETTY_FUNCTION__ << \"...\" << std::endl;\n";
 		ostr_cpp << "\t\tif(m_lookahead)\n";
 		ostr_cpp << "\t\t\tstd::cout << \"Lookahead [\"  << m_lookahead_idx << \"]: \""
-			" << m_lookahead->GetId() << std::endl;\n";
+			" << m_lookahead_id << std::endl;\n";
 		ostr_cpp << "\t\tPrintSymbols();\n";
 		ostr_cpp << "\t}\n";  // end if
 
@@ -325,14 +323,13 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 					{
 						ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
 						ostr_reduce << "\t\t\t{\n";
-						ostr_reduce << "\t\t\t\targs[" << num_rhs << "-arg-1] = m_symbols.top();\n";
+						ostr_reduce << "\t\t\t\targs[" << num_rhs << "-arg-1] = std::move(m_symbols.top());\n";
 						ostr_reduce << "\t\t\t\tm_symbols.pop();\n";
 						ostr_reduce << "\t\t\t}\n";  // end for
 					}
 
 					// execute semantic rule
-					ostr_reduce << "\t\t\tt_lalrastbaseptr reducedSym = (*m_semantics)[" << *rulenr << "](args);\n";
-					ostr_reduce << "\t\t\tm_symbols.push(reducedSym);\n";
+					ostr_reduce << "\t\t\tm_symbols.emplace((*m_semantics)[" << *rulenr << "](args));\n";
 					ostr_reduce << "\t\t\tbreak;\n";
 				}
 
@@ -470,11 +467,10 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 		ostr_cpp_while << "\twhile(!m_dist_to_jump && m_symbols.size() && !m_accepted)\n";
 		ostr_cpp_while << "\t{\n";
 
-		ostr_cpp_while << "\t\tt_lalrastbaseptr topsym = m_symbols.top();\n";
+		ostr_cpp_while << "\t\tconst t_lalrastbaseptr& topsym = m_symbols.top();\n";
 		ostr_cpp_while << "\t\tif(topsym->IsTerminal())\n\t\t\tbreak;\n";
-		ostr_cpp_while << "\t\tstd::size_t topsym_id = topsym->GetId();\n";
 
-		ostr_cpp_while << "\t\tswitch(topsym_id)\n";
+		ostr_cpp_while << "\t\tswitch(topsym->GetId())\n";
 		ostr_cpp_while << "\t\t{\n";
 
 		bool while_has_entries = false;
@@ -492,7 +488,13 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 			while_has_entries = true;
 		}
 
-		// TODO: default: error
+		ostr_cpp_while << "\t\t\tdefault:\n";
+		ostr_cpp_while << "\t\t\t\tthrow std::runtime_error(\"No transition from closure \""
+			<< " + std::to_string(" << closure->GetId() << ") + \", look-ahead terminal \""
+			<< " + std::to_string(m_lookahead_id) + \", and top non-terminal \""
+			<< " + std::to_string(topsym->GetId()) + \".\");\n";
+		ostr_cpp_while << "\t\t\t\tbreak;\n";
+
 		ostr_cpp_while << "\t\t}\n";  // end switch
 
 		ostr_cpp_while << "\t}\n";    // end while
