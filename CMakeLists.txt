@@ -68,13 +68,13 @@ target_sources(lalr1
 
 set_target_properties(lalr1 PROPERTIES PUBLIC_HEADER
 	"${PROJECT_SOURCE_DIR}/src/lalr1/symbol.h;\
-	${PROJECT_SOURCE_DIR}/src/lalr1/element.h;\
-	${PROJECT_SOURCE_DIR}/src/lalr1/closure.h;\
-	${PROJECT_SOURCE_DIR}/src/lalr1/collection.h;\
-	${PROJECT_SOURCE_DIR}/src/lalr1/table.h;\
-	${PROJECT_SOURCE_DIR}/src/lalr1/ast.h;\
-	${PROJECT_SOURCE_DIR}/src/lalr1/common.h;\
-	${PROJECT_SOURCE_DIR}/src/lalr1/helpers.h"
+${PROJECT_SOURCE_DIR}/src/lalr1/element.h;\
+${PROJECT_SOURCE_DIR}/src/lalr1/closure.h;\
+${PROJECT_SOURCE_DIR}/src/lalr1/collection.h;\
+${PROJECT_SOURCE_DIR}/src/lalr1/table.h;\
+${PROJECT_SOURCE_DIR}/src/lalr1/ast.h;\
+${PROJECT_SOURCE_DIR}/src/lalr1/common.h;\
+${PROJECT_SOURCE_DIR}/src/lalr1/helpers.h"
 )
 
 #get_target_property(LALR1_HEADERS lalr1 PUBLIC_HEADER)

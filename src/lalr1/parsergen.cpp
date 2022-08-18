@@ -1,7 +1,7 @@
 /**
  * generates an lalr(1) parser from a collection
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
- * @date 07-jun-2020
+ * @date aug-2022
  * @license see 'LICENSE' file
  *
  * References:
