@@ -171,12 +171,16 @@ if(BUILD_EXAMPLES)
 
 
 	# expression compiler generator
-	add_executable(expr_parsergen src/script/expr.cpp)
+	add_executable(expr_parsergen src/script/expr.cpp
+		src/script/expr_grammar.cpp src/script/expr_grammar.h
+	)
 	target_compile_definitions(expr_parsergen PUBLIC -DCREATE_PARSER)
 	target_link_libraries(expr_parsergen lalr1)
 
 	# expression compiler
-	add_executable(expr_compiler src/script/expr.cpp)
+	add_executable(expr_compiler src/script/expr.cpp
+		src/script/expr_grammar.cpp src/script/expr_grammar.h
+	)
 	target_compile_definitions(expr_compiler PUBLIC -DRUN_PARSER)
 	target_link_libraries(expr_compiler script lalr1-parser script-vm)
 

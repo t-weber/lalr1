@@ -9,25 +9,6 @@
 #include "lexer.h"
 
 
-std::vector<NonTerminalPtr> ScriptGrammar::GetAllNonTerminals() const
-{
-	return std::vector<NonTerminalPtr>{{
-		start, stmts, stmt, exprs, expr, bool_expr, idents }};
-}
-
-
-NonTerminalPtr ScriptGrammar::GetStartNonTerminal() const
-{
-	return start;
-}
-
-
-const std::vector<t_semanticrule>& ScriptGrammar::GetSemanticRules() const
-{
-	return rules;
-}
-
-
 void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 {
 	// non-terminals
