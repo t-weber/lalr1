@@ -65,7 +65,7 @@ static void lalr1_run_parser()
 		const auto& rules = grammar.GetSemanticRules();
 
 #if USE_RECASC != 0
-		ParserRecAsc parser;
+		ExprParser parser;
 #else
 		// get created parsing tables
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
