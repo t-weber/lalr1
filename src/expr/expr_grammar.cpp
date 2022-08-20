@@ -6,7 +6,7 @@
  */
 
 #include "expr_grammar.h"
-#include "lexer.h"
+#include "script/lexer.h"
 
 
 void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)

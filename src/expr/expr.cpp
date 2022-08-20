@@ -7,10 +7,10 @@
 
 #include "lalr1/collection.h"
 #include "expr_grammar.h"
-#include "lexer.h"
-#include "ast.h"
-#include "ast_printer.h"
-#include "ast_asm.h"
+#include "script/lexer.h"
+#include "script/ast.h"
+#include "script/ast_printer.h"
+#include "script/ast_asm.h"
 #include "script_vm/vm.h"
 
 #include <unordered_map>
@@ -21,125 +21,40 @@
 #include <cstdint>
 
 
-#define DEBUG_PARSERGEN   1
-#define DEBUG_WRITEGRAPH  0
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
-#define USE_RECASC        0
 
 
-#ifdef CREATE_PARSER
+#if __has_include("expr_parser.h")
+	#include "expr_parser.h"
+	#include "expr_parser.cpp"
 
-static void lr1_create_parser()
-{
-	try
-	{
-		ExprGrammar grammar;
-		grammar.CreateGrammar(true, false);
-		NonTerminalPtr start = grammar.GetStartNonTerminal();
+	#define USE_RECASC 1
 
-#if DEBUG_PARSERGEN != 0
-		std::vector<NonTerminalPtr> all_nonterminals = grammar.GetAllNonTerminals();
-
-		std::cout << "Productions:\n";
-		for(NonTerminalPtr nonterm : all_nonterminals)
-			nonterm->print(std::cout);
-		std::cout << std::endl;
-
-
-		std::cout << "FIRST sets:\n";
-		t_map_first first;
-		t_map_first_perrule first_per_rule;
-		for(const NonTerminalPtr& nonterminal : all_nonterminals)
-			nonterminal->CalcFirst(first, &first_per_rule);
-
-		for(const auto& pair : first)
-		{
-			std::cout << pair.first->GetStrId() << ": ";
-			for(const auto& _first : pair.second)
-				std::cout << _first->GetStrId() << " ";
-			std::cout << "\n";
-		}
-		std::cout << std::endl;
-
-		std::cout << "FOLLOW sets:\n";
-		t_map_follow follow;
-		for(const NonTerminalPtr& nonterminal : all_nonterminals)
-			nonterminal->CalcFollow(all_nonterminals, start, first, follow);
-
-		for(const auto& pair : follow)
-		{
-			std::cout << pair.first->GetStrId() << ": ";
-			for(const auto& _first : pair.second)
-				std::cout << _first->GetStrId() << " ";
-			std::cout << "\n";
-		}
-		std::cout << std::endl;
-#endif
-
-
-		ElementPtr elem = std::make_shared<Element>(
-			start, 0, 0, Terminal::t_terminalset{{ g_end }});
-		ClosurePtr closure = std::make_shared<Closure>();
-		closure->AddElement(elem);
-		//std::cout << "\n\n" << *closure << std::endl;
-
-		auto progress = [](const std::string& msg, [[maybe_unused]] bool done)
-		{
-			std::cout << "\r\x1b[K" << msg;
-			if(done)
-				std::cout << "\n";
-			std::cout.flush();
-		};
-
-		Collection collsLALR{ closure };
-		collsLALR.SetProgressObserver(progress);
-		collsLALR.DoTransitions();
-
-#if DEBUG_PARSERGEN != 0
-		std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
-#endif
-
-#if DEBUG_WRITEGRAPH != 0
-		collsLALR.SaveGraph("expr", 1);
-#endif
-
-#if USE_RECASC != 0
-	collsLALR.SaveParser("expr_parser.cpp");
-#else
-	collsLALR.SaveParseTables("expr.tab");
-#endif
-	}
-	catch(const std::exception& err)
-	{
-		std::cerr << "Error: " << err.what() << std::endl;
-	}
-}
-
-#endif  // CREATE_PARSER
-
-
-
-#ifdef RUN_PARSER
-
-#if USE_RECASC != 0
-	#if __has_include("expr_parser.h")
-		#include "expr_parser.h"
-		#include "expr_parser.cpp"
-
-		#define __LALR1_CANRUN_PARSER
-	#endif
-#else
+#elif __has_include("expr.tab")
 	#include "lalr1/parser.h"
-	#if __has_include("expr.tab")
-		#include "expr.tab"
+	#include "expr.tab"
 
-		#define __LALR1_CANRUN_PARSER
-	#endif
+	#define USE_RECASC 0
+
+#else
+	static std::tuple<bool, std::string> lalr1_run_parser()
+	{
+		std::cerr << "No parsing tables available, please\n"
+			"\t- run \"./expr_parsergen\" first,\n"
+			"\t- \"touch " __FILE__ "\", and\n"
+			"\t- rebuild using \"make\"."
+			<< std::endl;
+
+		return std::make_tuple(false, "");
+
+	}
+
+	#define __LALR_NO_PARSER_AVAILABLE
 #endif
 
 
-#ifdef __LALR1_CANRUN_PARSER
+#ifndef __LALR_NO_PARSER_AVAILABLE
 
 static void lalr1_run_parser()
 {
@@ -272,30 +187,13 @@ static void lalr1_run_parser()
 	}
 }
 
-#else
-
-static void lalr1_run_parser()
-{
-	std::cerr << "No parsing tables available, please run ./expr_parsergen first and rebuild."
-		<< std::endl;
-}
-
 #endif
-#endif  // RUN_PARSER
 
 
 
 int main()
 {
 	std::ios_base::sync_with_stdio(false);
-
-#ifdef CREATE_PARSER
-	lr1_create_parser();
-#endif
-
-#ifdef RUN_PARSER
 	lalr1_run_parser();
-#endif
-
 	return 0;
 }

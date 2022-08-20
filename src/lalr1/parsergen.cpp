@@ -30,7 +30,7 @@
  * @see https://doi.org/10.1016/0020-0190(88)90061-0
  * @see https://en.wikipedia.org/wiki/Recursive_ascent_parser
  */
-bool Collection::SaveParser(const std::string& filename_cpp) const
+bool Collection::SaveParser(const std::string& filename_cpp, const std::string& class_name) const
 {
 	// output header file stub
 	std::string outfile_h = R"raw(/*
@@ -45,13 +45,13 @@ bool Collection::SaveParser(const std::string& filename_cpp) const
 
 #include <stack>
 
-class ParserRecAsc
+class %%PARSER_CLASS%%
 {
 public:
-	ParserRecAsc() = default;
-	~ParserRecAsc() = default;
-	ParserRecAsc(const ParserRecAsc&) = delete;
-	ParserRecAsc& operator=(const ParserRecAsc&) = delete;
+	%%PARSER_CLASS%%() = default;
+	~%%PARSER_CLASS%%() = default;
+	%%PARSER_CLASS%%(const %%PARSER_CLASS%%&) = delete;
+	%%PARSER_CLASS%%& operator=(const %%PARSER_CLASS%%&) = delete;
 
 	void SetDebug(bool b);
 	void SetSemanticRules(const std::vector<t_semanticrule>* rules);
@@ -96,7 +96,7 @@ private:
 #include <string>
 #include <iostream>
 
-void ParserRecAsc::PrintSymbols() const
+void %%PARSER_CLASS%%::PrintSymbols() const
 {
 	std::stack<t_lalrastbaseptr> symbols = m_symbols;
 
@@ -109,7 +109,7 @@ void ParserRecAsc::PrintSymbols() const
 	std::cout << std::endl;
 }
 
-void ParserRecAsc::GetNextLookahead()
+void %%PARSER_CLASS%%::GetNextLookahead()
 {
 	++m_lookahead_idx;
 	if(m_lookahead_idx >= int(m_input->size()) || m_lookahead_idx < 0)
@@ -124,17 +124,17 @@ void ParserRecAsc::GetNextLookahead()
 	}
 }
 
-void ParserRecAsc::SetDebug(bool b)
+void %%PARSER_CLASS%%::SetDebug(bool b)
 {
 	m_debug = b;
 }
 
-void ParserRecAsc::SetSemanticRules(const std::vector<t_semanticrule>* rules)
+void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules)
 {
 	m_semantics = rules;
 }
 
-t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
+t_lalrastbaseptr %%PARSER_CLASS%%::Parse(const std::vector<t_toknode>& input)
 {
 	m_input = &input;
 	m_lookahead_idx = -1;
@@ -228,7 +228,7 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 
 
 		// write closure function
-		ostr_cpp << "void ParserRecAsc::closure_" << closure->GetId() << "()\n";
+		ostr_cpp << "void " << class_name << "::closure_" << closure->GetId() << "()\n";
 		ostr_cpp << "{\n";
 
 
@@ -520,6 +520,8 @@ t_lalrastbaseptr ParserRecAsc::Parse(const std::vector<t_toknode>& input)
 
 	// write output files
 	std::string incl = "#include \"" + filename_h + "\"";
+	boost::replace_all(outfile_cpp, "%%PARSER_CLASS%%", class_name);
+	boost::replace_all(outfile_h, "%%PARSER_CLASS%%", class_name);
 	boost::replace_all(outfile_cpp, "%%INCLUDE_HEADER%%", incl);
 	boost::replace_all(outfile_cpp, "%%DEFINE_CLOSURES%%", ostr_cpp.str());
 	boost::replace_all(outfile_h, "%%DECLARE_CLOSURES%%", ostr_h.str());

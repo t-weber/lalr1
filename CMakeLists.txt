@@ -171,27 +171,31 @@ if(BUILD_EXAMPLES)
 
 
 	# expression compiler generator
-	add_executable(expr_parsergen src/script/expr.cpp
-		src/script/expr_grammar.cpp src/script/expr_grammar.h
+	add_executable(expr_parsergen src/expr/expr_parsergen.cpp
+		src/expr/expr_grammar.cpp src/expr/expr_grammar.h
 	)
-	target_compile_definitions(expr_parsergen PUBLIC -DCREATE_PARSER)
 	target_link_libraries(expr_parsergen lalr1)
 
 	# expression compiler
-	add_executable(expr_compiler src/script/expr.cpp
-		src/script/expr_grammar.cpp src/script/expr_grammar.h
-	)
-	target_compile_definitions(expr_compiler PUBLIC -DRUN_PARSER)
-	target_link_libraries(expr_compiler script lalr1-parser script-vm)
+	if(EXISTS "${CMAKE_BINARY_DIR}/expr_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/expr.tab")
+		add_executable(expr_compiler src/expr/expr.cpp
+			src/expr/expr_grammar.cpp src/expr/expr_grammar.h
+		)
+	endif()
+	if(EXISTS "${CMAKE_BINARY_DIR}/expr_parser.cpp")
+		target_link_libraries(expr_compiler script script-vm)
+	elseif(EXISTS "${CMAKE_BINARY_DIR}/expr.tab")
+		target_link_libraries(expr_compiler script lalr1-parser script-vm)
+	endif()
 
 
 	# simple expression compiler generator
-	add_executable(expr_simple_parsergen src/script/expr_simple.cpp)
+	add_executable(expr_simple_parsergen src/expr/expr_simple.cpp)
 	target_compile_definitions(expr_simple_parsergen PUBLIC -DCREATE_PARSER)
 	target_link_libraries(expr_simple_parsergen lalr1)
 
 	# simple expression compiler
-	add_executable(expr_simple_compiler src/script/expr_simple.cpp)
+	add_executable(expr_simple_compiler src/expr/expr_simple.cpp)
 	target_compile_definitions(expr_simple_compiler PUBLIC -DRUN_PARSER)
 	target_link_libraries(expr_simple_compiler script lalr1-parser script-vm)
 endif()

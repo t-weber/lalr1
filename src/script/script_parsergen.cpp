@@ -100,7 +100,7 @@ static bool lr1_create_parser(
 		if(create_ascent_parser)
 		{
 			const char* parser_file = "script_parser.cpp";
-			collsLALR.SaveParser(parser_file);
+			collsLALR.SaveParser(parser_file, "ScriptParser");
 
 			std::cout << "Created recursive ascent parser \""
 				<< parser_file << "\"." << std::endl;

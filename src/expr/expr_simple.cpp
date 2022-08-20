@@ -6,10 +6,10 @@
  */
 
 #include "lalr1/collection.h"
-#include "lexer.h"
-#include "ast.h"
-#include "ast_printer.h"
-#include "ast_asm.h"
+#include "script/lexer.h"
+#include "script/ast.h"
+#include "script/ast_printer.h"
+#include "script/ast_asm.h"
 #include "script_vm/vm.h"
 
 #include <unordered_map>

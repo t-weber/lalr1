@@ -46,6 +46,8 @@ namespace args = boost::program_options;
 	#include "lalr1/parser.h"
 	#include "script.tab"
 
+	#define USE_RECASC 0
+
 #else
 	static std::tuple<bool, std::string>
 	lalr1_run_parser([[maybe_unused]] const std::string& script_file,
@@ -80,7 +82,7 @@ lalr1_run_parser(const std::string& script_file,
 		const auto& rules = grammar.GetSemanticRules();
 
 #if USE_RECASC != 0
-		ParserRecAsc parser;
+		ScriptParser parser;
 #else
 		// get created parsing tables
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();

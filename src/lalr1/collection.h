@@ -72,8 +72,8 @@ public:
 	t_transitions GetTransitions(const ClosurePtr& closure, bool term = true) const;
 
 	bool SaveParseTables(const std::string& file) const;
-	bool SaveParser(const std::string& file) const;
-	bool SaveGraph(const std::string& file, bool write_full_coll=1) const;
+	bool SaveParser(const std::string& file, const std::string& class_name = "ParserRecAsc") const;
+	bool SaveGraph(const std::string& file, bool write_full_coll = true) const;
 
 	void SetStopOnConflicts(bool b = true);
 
