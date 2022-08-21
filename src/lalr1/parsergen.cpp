@@ -306,6 +306,9 @@ t_lalrastbaseptr %%PARSER_CLASS%%::Parse(const std::vector<t_toknode>& input)
 				}
 				else
 				{
+					std::ostringstream rule_descr;
+					rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
+
 					std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
 					ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
 
@@ -313,7 +316,8 @@ t_lalrastbaseptr %%PARSER_CLASS%%::Parse(const std::vector<t_toknode>& input)
 					ostr_reduce << "\t\t\tif(m_debug)\n";
 					ostr_reduce << "\t\t\t{\n";
 					ostr_reduce << "\t\t\t\tstd::cout << \"Reducing \" << " << num_rhs
-						<< " << \" symbol(s) using rule \" << " << *rulenr << " << \".\" << std::endl;\n";
+						<< " << \" symbol(s) using rule \" << " << *rulenr
+						<< " << \" (" << rule_descr.str() << ").\" << std::endl;\n";
 					ostr_reduce << "\t\t\t}\n";  // end if
 
 
@@ -329,6 +333,7 @@ t_lalrastbaseptr %%PARSER_CLASS%%::Parse(const std::vector<t_toknode>& input)
 					}
 
 					// execute semantic rule
+					ostr_reduce << "\t\t\t// semantic rule: " << rule_descr.str() << ".\n";
 					ostr_reduce << "\t\t\tm_symbols.emplace((*m_semantics)[" << *rulenr << "](args));\n";
 					ostr_reduce << "\t\t\tbreak;\n";
 				}

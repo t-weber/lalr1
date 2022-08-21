@@ -58,6 +58,12 @@ public:
 	virtual void print(std::ostream& ostr, bool bnf = false) const = 0;
 	virtual std::size_t hash() const = 0;
 
+	friend std::ostream& operator<<(std::ostream& ostr, const Symbol& sym)
+	{
+		ostr << sym.GetStrId();
+		return ostr;
+	}
+
 
 private:
 	std::size_t m_id{ 0 };    // numeric identifier of the symbol
@@ -176,6 +182,14 @@ public:
 
 	// gets a production rule
 	const WordPtr& GetRule(std::size_t i) const;
+
+	// gets a production rule from a semantic index
+	WordPtr GetRuleFromSemanticIndex(std::size_t semantic_idx) const;
+
+	// gets a vector of all rules having a semantic index
+	static std::vector<WordPtr> GetRulesWithSemanticIndex(
+		const std::vector<NonTerminalPtr>& nonterms,
+		std::size_t num_rules);
 
 	// clears rules
 	void ClearRules();

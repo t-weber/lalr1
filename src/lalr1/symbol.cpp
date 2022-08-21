@@ -213,6 +213,58 @@ const WordPtr& NonTerminal::GetRule(std::size_t i) const
 }
 
 
+/*
+ * gets a production rule from a semantic index
+ */
+WordPtr NonTerminal::GetRuleFromSemanticIndex(std::size_t semantic_idx) const
+{
+	for(std::size_t ruleidx = 0; ruleidx < NumRules(); ++ruleidx)
+	{
+		std::optional<std::size_t> semanticidx =
+			GetSemanticRule(ruleidx);
+		if(!semanticidx)
+			continue;
+
+		if(*semanticidx == semantic_idx)
+			return GetRule(ruleidx);
+	}
+
+	return nullptr;
+}
+
+
+/**
+ * gets a vector of all rules having a semantic index
+ */
+std::vector<WordPtr> NonTerminal::GetRulesWithSemanticIndex(
+	const std::vector<NonTerminalPtr>& nonterms,
+	std::size_t num_rules)
+{
+	std::vector<WordPtr> rules;
+	rules.reserve(num_rules);
+
+	// iterate semantic indices
+	for(std::size_t semantic_idx = 0; semantic_idx < num_rules; ++semantic_idx)
+	{
+		WordPtr ruleptr{};
+
+		// iterate non-terminals
+		for(const NonTerminalPtr& nonterm : nonterms)
+		{
+			ruleptr = nonterm->GetRuleFromSemanticIndex(semantic_idx);
+			// found the rule?
+			if(ruleptr)
+				break;
+		}
+
+		// add the rule whether it has been found or a nullptr if not
+		rules.emplace_back(std::move(ruleptr));
+	}
+
+	return rules;
+}
+
+
 /**
  * clears rules
  */

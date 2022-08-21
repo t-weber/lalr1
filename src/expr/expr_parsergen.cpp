@@ -41,7 +41,6 @@ static void lr1_create_parser()
 			nonterm->print(std::cout);
 		std::cout << std::endl;
 
-
 		std::cout << "FIRST sets:\n";
 		t_map_first first;
 		t_map_first_perrule first_per_rule;

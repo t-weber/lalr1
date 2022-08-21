@@ -59,7 +59,6 @@ static bool lr1_create_parser(
 			}
 			std::cout << std::endl;
 
-
 			std::cout << "FOLLOW sets:\n";
 			t_map_follow follow;
 			for(const NonTerminalPtr& nonterminal : all_nonterminals)
