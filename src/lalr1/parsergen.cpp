@@ -48,6 +48,9 @@ bool Collection::SaveParser(const std::string& filename_cpp, const std::string& 
 class %%PARSER_CLASS%%
 {
 public:
+	using t_token = t_toknode;                 // token data type
+	using t_symbol = t_lalrastbaseptr;         // symbol data type
+
 	%%PARSER_CLASS%%() = default;
 	~%%PARSER_CLASS%%() = default;
 	%%PARSER_CLASS%%(const %%PARSER_CLASS%%&) = delete;
@@ -55,7 +58,7 @@ public:
 
 	void SetDebug(bool b);
 	void SetSemanticRules(const std::vector<t_semanticrule>* rules);
-	t_lalrastbaseptr Parse(const std::vector<t_toknode>& input);
+	t_symbol Parse(const std::vector<t_token>& input);
 
 protected:
 	void PrintSymbols() const;
@@ -66,10 +69,10 @@ protected:
 private:
 	// semantic rules
 	const std::vector<t_semanticrule>* m_semantics{};
-	const std::vector<t_toknode>* m_input{};   // input tokens
-	std::stack<t_lalrastbaseptr> m_symbols{};  // currently active symbols
+	const std::vector<t_token>* m_input{};     // input tokens
+	std::stack<t_symbol> m_symbols{};          // currently active symbols
 
-	t_toknode m_lookahead{nullptr};            // lookahead token
+	t_token m_lookahead{nullptr};              // lookahead token
 	std::size_t m_lookahead_id{0};             // lookahead identifier
 	int m_lookahead_idx{-1};                   // index into input token array
 
@@ -98,7 +101,7 @@ private:
 
 void %%PARSER_CLASS%%::PrintSymbols() const
 {
-	std::stack<t_lalrastbaseptr> symbols = m_symbols;
+	std::stack<t_symbol> symbols = m_symbols;
 
 	std::cout << symbols.size() << " symbols: ";
 	while(symbols.size())
@@ -134,7 +137,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 	m_semantics = rules;
 }
 
-t_lalrastbaseptr %%PARSER_CLASS%%::Parse(const std::vector<t_toknode>& input)
+%%PARSER_CLASS%%::t_symbol %%PARSER_CLASS%%::Parse(const std::vector<t_token>& input)
 {
 	m_input = &input;
 	m_lookahead_idx = -1;
@@ -322,7 +325,7 @@ t_lalrastbaseptr %%PARSER_CLASS%%::Parse(const std::vector<t_toknode>& input)
 
 
 					// take the symbols from the stack and create an argument vector for the semantic rule
-					ostr_reduce << "\t\t\tstd::vector<t_lalrastbaseptr> args(" << num_rhs << ");\n";
+					ostr_reduce << "\t\t\tstd::vector<t_symbol> args(" << num_rhs << ");\n";
 					if(num_rhs)
 					{
 						ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
@@ -472,7 +475,7 @@ t_lalrastbaseptr %%PARSER_CLASS%%::Parse(const std::vector<t_toknode>& input)
 		ostr_cpp_while << "\twhile(!m_dist_to_jump && m_symbols.size() && !m_accepted)\n";
 		ostr_cpp_while << "\t{\n";
 
-		ostr_cpp_while << "\t\tconst t_lalrastbaseptr& topsym = m_symbols.top();\n";
+		ostr_cpp_while << "\t\tconst t_symbol& topsym = m_symbols.top();\n";
 		ostr_cpp_while << "\t\tif(topsym->IsTerminal())\n\t\t\tbreak;\n";
 
 		ostr_cpp_while << "\t\tswitch(topsym->GetId())\n";
