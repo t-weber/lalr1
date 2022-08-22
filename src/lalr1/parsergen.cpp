@@ -43,6 +43,7 @@ bool Collection::SaveParser(const std::string& filename_cpp, const std::string& 
 #include "lalr1/ast.h"
 #include "lalr1/common.h"
 
+#include <vector>
 #include <stack>
 
 class %%PARSER_CLASS%%
