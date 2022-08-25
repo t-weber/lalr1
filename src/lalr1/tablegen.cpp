@@ -232,6 +232,8 @@ bool Collection::SaveParseTables(const std::string& file) const
 			ofstr << "eps";
 		else if(id == END_IDENT)
 			ofstr << "end";
+		else if(m_useOpChar && std::isprint(id))
+			ofstr << "'" << char(id) << "'";
 		else
 			ofstr << id;
 		ofstr << ", " << idx << "},\n";

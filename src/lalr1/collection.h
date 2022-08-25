@@ -76,6 +76,7 @@ public:
 	bool SaveGraph(const std::string& file, bool write_full_coll = true) const;
 
 	void SetStopOnConflicts(bool b = true);
+	void SetUseOpChar(bool b = true);
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
@@ -109,6 +110,7 @@ private:
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures
 
 	bool m_stopOnConflicts{true};               // stop table/code generation on shift/reduce conflicts
+	bool m_useOpChar{true};                     // use printable character for operators if possible
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

@@ -262,6 +262,11 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 			{
 				ostr_shift << "\t\tcase s_end_id:\n";
 			}
+			else if(m_useOpChar && std::isprint(symTrans->GetId()))
+			{
+				ostr_shift << "\t\tcase \'"
+					<< char(symTrans->GetId()) << "\':\n";
+			}
 			else
 			{
 				ostr_shift << "\t\tcase " << symTrans->GetId() << ": // "
@@ -448,6 +453,12 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 				if(la->GetId() == g_end->GetId())
 				{
 					ostr_cpp << "\t\tcase s_end_id:\n";
+				}
+				else if(m_useOpChar && std::isprint(la->GetId()))
+				{
+					ostr_cpp << "\t\tcase \'"
+						<< char(la->GetId())
+						<< "\':\n";
 				}
 				else
 				{

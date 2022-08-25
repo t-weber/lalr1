@@ -374,6 +374,15 @@ void Collection::SetStopOnConflicts(bool b)
 
 
 /**
+ * use printable operator character if possible
+ */
+void Collection::SetUseOpChar(bool b)
+{
+	m_useOpChar = b;
+}
+
+
+/**
  * try to solve a shift/reduce conflict
  */
 bool Collection::SolveConflict(
