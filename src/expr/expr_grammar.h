@@ -41,11 +41,9 @@ private:
 	NonTerminalPtr start{}, expr{};
 
 	// terminals
-	TerminalPtr op_assign{}, op_plus{}, op_minus{},
+	//TerminalPtr op_assign{};
+	TerminalPtr op_plus{}, op_minus{},
 		op_mult{}, op_div{}, op_mod{}, op_pow{};
-	TerminalPtr op_and{}, op_or{}, op_not{},
-		op_equ{}, op_nequ{},
-		op_lt{}, op_gt{}, op_gequ{}, op_lequ{};
 	TerminalPtr bracket_open{}, bracket_close{};
 	TerminalPtr comma{};
 	TerminalPtr sym_real{}, sym_int{}, ident{};

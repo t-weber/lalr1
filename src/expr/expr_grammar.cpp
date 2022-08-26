@@ -16,6 +16,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	expr = std::make_shared<NonTerminal>(EXPR, "expr");
 
 	// terminals
+	//op_assign = std::make_shared<Terminal>('=', "=");
 	op_plus = std::make_shared<Terminal>('+', "+");
 	op_minus = std::make_shared<Terminal>('-', "-");
 	op_mult = std::make_shared<Terminal>('*', "*");
@@ -30,6 +31,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
 
 	// precedences and associativities
+	//op_assign->SetPrecedence(10, 'r');
 	op_plus->SetPrecedence(70, 'l');
 	op_minus->SetPrecedence(70, 'l');
 	op_mult->SetPrecedence(80, 'l');
@@ -331,4 +333,33 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_plus->GetId());
 		});
 	}
+
+
+	// rule 16, assignment: expr -> ident = expr
+	/*if(add_rules)
+	{
+		expr->AddRule({ ident, op_assign, expr }, semanticindex++);
+	}
+	if(add_semantics)
+	{
+		rules.emplace_back(
+		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		{
+			t_astbaseptr rhsident = std::dynamic_pointer_cast<ASTBase>(args[0]);
+			t_astbaseptr rhsexpr = std::dynamic_pointer_cast<ASTBase>(args[2]);
+
+			if(rhsident->GetType() != ASTType::TOKEN)
+			{
+				throw std::runtime_error(
+					"Expected a symbol name on lhs of assignment.");
+			}
+
+			auto symname = std::dynamic_pointer_cast<ASTToken<std::string>>(rhsident);
+			symname->SetIdent(true);
+			symname->SetLValue(true);
+			symname->SetDataType(rhsexpr->GetDataType());
+
+			return std::make_shared<ASTBinary>(expr->GetId(), 0, rhsexpr, symname, op_assign->GetId());
+		});
+	}*/
 }

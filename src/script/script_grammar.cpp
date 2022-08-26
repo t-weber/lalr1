@@ -139,6 +139,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 2: expr -> expr - expr
 	if(add_rules)
 	{
@@ -154,6 +155,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_minus->GetId());
 		});
 	}
+
 
 	// rule 3: expr -> expr * expr
 	if(add_rules)
@@ -171,6 +173,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 4: expr -> expr / expr
 	if(add_rules)
 	{
@@ -186,6 +189,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_div->GetId());
 		});
 	}
+
 
 	// rule 5: expr -> expr % expr
 	if(add_rules)
@@ -203,6 +207,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 6: expr -> expr ^ expr
 	if(add_rules)
 	{
@@ -219,6 +224,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 7: expr -> ( expr )
 	if(add_rules)
 	{
@@ -232,6 +238,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return args[1];
 		});
 	}
+
 
 	// rule 8: function call, expr -> ident( exprs )
 	if(add_rules)
@@ -278,6 +285,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 10: expr -> int symbol
 	if(add_rules)
 	{
@@ -296,6 +304,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 11: expr -> string symbol
 	if(add_rules)
 	{
@@ -313,6 +322,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return sym;
 		});
 	}
+
 
 	// rule 12: expr -> ident
 	if(add_rules)
@@ -348,6 +358,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 14, unary+: expr -> +expr
 	if(add_rules)
 	{
@@ -362,6 +373,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return std::make_shared<ASTUnary>(expr->GetId(), 0, rhsexpr, op_plus->GetId());
 		});
 	}
+
 
 	// rule 15, assignment: expr -> ident = expr
 	if(add_rules)
@@ -408,6 +420,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return stmts_lst;
 		});
 	}
+
 
 	// rule 17: stmts -> eps
 	if(add_rules)
@@ -457,6 +470,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 20: stmt -> if(bool_expr) { stmts } else { stmts }
 	if(add_rules)
 	{
@@ -494,6 +508,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 22: stmt -> func name ( idents ) { stmts }
 	if(add_rules)
 	{
@@ -520,6 +535,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 23: stmt -> extern func idents ;
 	if(add_rules)
 	{
@@ -535,6 +551,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return std::make_shared<ASTDeclare>(stmt->GetId(), 0, true, true, rhsidents);
 		});
 	}
+
 
 	// rule 24: stmt -> break ;
 	if(add_rules)
@@ -552,6 +569,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 25: stmt -> break symbol ;
 	if(add_rules)
 	{
@@ -566,6 +584,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return std::make_shared<ASTJump>(stmt->GetId(), 0, ASTJump::JumpType::BREAK, sym);
 		});
 	}
+
 
 	// rule 26: stmt -> continue ;
 	if(add_rules)
@@ -583,6 +602,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 27: stmt -> continue symbol ;
 	if(add_rules)
 	{
@@ -599,6 +619,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 28: stmt -> return ;
 	if(add_rules)
 	{
@@ -614,6 +635,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return jump;
 		});
 	}
+
 
 	// rule 29: stmt -> return expr ;
 	if(add_rules)
@@ -647,6 +669,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 31: bool_expr -> bool_expr or bool_expr
 	if(add_rules)
 	{
@@ -663,6 +686,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 32: bool_expr -> !bool_expr
 	if(add_rules)
 	{
@@ -678,6 +702,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 33: bool_expr -> ( bool_expr )
 	if(add_rules)
 	{
@@ -691,6 +716,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return  args[1];
 		});
 	}
+
 
 	// rule 34: bool_expr -> expr > expr
 	if(add_rules)
@@ -707,6 +733,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return std::make_shared<ASTBinary>(bool_expr->GetId(), 0, arg1, arg2, op_gt->GetId());
 		});
 	}
+
 
 	// rule 35: bool_expr -> expr < expr
 	if(add_rules)
@@ -725,6 +752,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 36: bool_expr -> expr >= expr
 	if(add_rules)
 	{
@@ -741,6 +769,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 				bool_expr->GetId(), 0, arg1, arg2, op_gequ->GetId());
 		});
 	}
+
 
 	// rule 37: bool_expr -> expr <= expr
 	if(add_rules)
@@ -759,6 +788,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 38: bool_expr -> expr == expr
 	if(add_rules)
 	{
@@ -775,6 +805,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 				bool_expr->GetId(), 0, arg1, arg2, op_equ->GetId());
 		});
 	}
+
 
 	// rule 39: bool_expr -> expr != expr
 	if(add_rules)
@@ -813,6 +844,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 41: idents -> ident
 	if(add_rules)
 	{
@@ -831,6 +863,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return idents_lst;
 		});
 	}
+
 
 	// rule 42: idents -> eps
 	if(add_rules)
@@ -864,6 +897,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 44: exprs -> expr
 	if(add_rules)
 	{
@@ -880,6 +914,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return exprs_lst;
 		});
 	}
+
 
 	// rule 45: exprs -> eps
 	if(add_rules)
@@ -911,6 +946,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 47: expr -> expr bin_and expr
 	if(add_rules)
 	{
@@ -926,6 +962,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_binand->GetId());
 		});
 	}
+
 
 	// rule 48: expr -> expr bin_or expr
 	if(add_rules)
@@ -943,6 +980,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 49: expr -> expr bin_xor expr
 	if(add_rules)
 	{
@@ -959,6 +997,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		});
 	}
 
+
 	// rule 50: expr -> expr << expr
 	if(add_rules)
 	{
@@ -974,6 +1013,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_shift_left->GetId());
 		});
 	}
+
 
 	// rule 51: expr -> expr >> expr
 	if(add_rules)
