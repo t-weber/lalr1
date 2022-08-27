@@ -294,8 +294,7 @@ bool Closure::HasReduceConflict() const
 		// different finished closure elements cannot share lookaheads
 		for(const TerminalPtr& lookahead : elem->GetLookaheads())
 		{
-			if(auto iter = seen_lookaheads.find(lookahead);
-				iter != seen_lookaheads.end())
+			if(seen_lookaheads.contains(lookahead))
 				return true;
 			else
 				seen_lookaheads.insert(lookahead);
