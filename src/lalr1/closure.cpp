@@ -278,6 +278,34 @@ const Closure::t_transitions& Closure::DoTransitions() const
 }
 
 
+/**
+ * tests if the closure has a reduce/reduce conflict
+ */
+bool Closure::HasReduceConflict() const
+{
+	Terminal::t_terminalset seen_lookaheads;
+
+	for(const ElementPtr& elem : m_elems)
+	{
+		// only consider finished rules that are reduced
+		if(!elem->IsCursorAtEnd())
+			continue;
+
+		// different finished closure elements cannot share lookaheads
+		for(const TerminalPtr& lookahead : elem->GetLookaheads())
+		{
+			if(auto iter = seen_lookaheads.find(lookahead);
+				iter != seen_lookaheads.end())
+				return true;
+			else
+				seen_lookaheads.insert(lookahead);
+		}
+	}
+
+	return false;
+}
+
+
 std::size_t Closure::hash(bool only_core) const
 {
 	if(m_hash && !only_core)

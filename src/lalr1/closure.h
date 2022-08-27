@@ -65,6 +65,9 @@ public:
 	void AddLookaheadDependencies(const ClosurePtr& closure);
 	void ResolveLookaheads();
 
+	// tests if the closure has a reduce/reduce conflict
+	bool HasReduceConflict() const;
+
 	std::size_t hash(bool only_core = false) const;
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Closure& coll);

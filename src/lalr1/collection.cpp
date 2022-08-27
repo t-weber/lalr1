@@ -256,6 +256,25 @@ void Collection::DoTransitions()
 	Simplify();
 	ReportProgress("Simplified transitions.", true);
 
+	std::vector<std::size_t> conflicts = HasReduceConflicts();
+	if(conflicts.size())
+	{
+		std::ostringstream ostrConflicts;
+		ostrConflicts << "Error: The grammar has reduce/reduce conflicts for closure(s) ";
+		for(std::size_t conflict_idx=0; conflict_idx<conflicts.size(); ++conflict_idx)
+		{
+			ostrConflicts << conflicts[conflict_idx];
+			if(conflict_idx < conflicts.size() - 1)
+				ostrConflicts << ", ";
+		}
+		ostrConflicts << ".";
+
+		if(m_stopOnConflicts)
+			throw std::runtime_error(ostrConflicts.str());
+		else
+			std::cerr << ostrConflicts.str() << std::endl;
+	}
+
 	CreateTableIndices();
 	ReportProgress("Created table indices.", true);
 }
@@ -291,6 +310,23 @@ void Collection::Simplify()
 		closure->SetId(iditer->second);
 		already_seen.insert(hash);
 	}
+}
+
+
+/**
+ * tests which closures of the collection have reduce/reduce conflicts
+ */
+std::vector<std::size_t> Collection::HasReduceConflicts() const
+{
+	std::vector<std::size_t> conflicting_closures;
+
+	for(const ClosurePtr& closure : m_collection)
+	{
+		if(closure->HasReduceConflict())
+			conflicting_closures.push_back(closure->GetId());
+	}
+
+	return conflicting_closures;
 }
 
 

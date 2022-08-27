@@ -65,6 +65,9 @@ public:
 
 	void DoTransitions();
 
+	// tests which closures of the collection have reduce/reduce conflicts
+	std::vector<std::size_t> HasReduceConflicts() const;
+
 	// get terminals leading to the given closure
 	Terminal::t_terminalset GetLookbackTerminals(const ClosurePtr& closure) const;
 
