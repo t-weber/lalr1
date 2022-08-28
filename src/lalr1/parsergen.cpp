@@ -361,6 +361,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 
 			for(auto iter_la = reduce_lookaheads.begin(); iter_la != reduce_lookaheads.end();)
 			{
+				bool already_incremented_la = false;
 				const SymbolPtr& la = *iter_la;
 
 				// does the same token also exist in the shifts?
@@ -371,60 +372,53 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 					continue;
 				}
 
-				// shift-reduce conflict found
-				//std::cout << "Shift/reduce conflict for closure " << closure->GetId()
-				//	<< " and lookahead " << la->GetId() << "." << std::endl;
-
-				SymbolPtr sym_at_cursor = nullptr;
-				ElementPtr conflictelem = closure-> GetElementWithCursorAtSymbol(la);
-				if(conflictelem)
-					sym_at_cursor = conflictelem->GetSymbolAtCursor();
-
-				if(!lookbacks)
-					lookbacks = GetLookbackTerminals(closure);
-
-				bool already_incremented_la = false;
-				std::size_t shift_val = 0, reduce_val = 0;  // dummy values (only need to check for ERROR_VAL)
-				if(SolveConflict(sym_at_cursor, *lookbacks, &shift_val, &reduce_val))
+				if(ElementPtr conflictelem = closure-> GetElementWithCursorAtSymbol(la); conflictelem)
 				{
-					if(shift_val == ERROR_VAL && reduce_val != ERROR_VAL)
+					if(!lookbacks)
+						lookbacks = GetLookbackTerminals(closure);
+
+					std::size_t shift_val = 0, reduce_val = 0;  // dummy values (only need to check for ERROR_VAL)
+					if(SolveConflict(la, *lookbacks, &shift_val, &reduce_val))
 					{
-						// keep reduce, remove shift
-						iter_shift = shifts.erase(iter_shift);
-					}
-					else if(shift_val != ERROR_VAL && reduce_val == ERROR_VAL)
-					{
-						// keep shift, remove reduce
-						iter_la = reduce_lookaheads.erase(iter_la);
-						already_incremented_la = true;
-					}
-				}
-				else
-				{
-					std::ostringstream ostrErr;
-					ostrErr << "Shift/reduce conflict detected"
-						<< " for closure " << closure->GetId();
-					if(conflictelem)
-						ostrErr << ":\n\t" << *conflictelem << "\n";
-					if(lookbacks->size())
-					{
-						ostrErr << " with look-back terminal(s): ";
-						std::size_t i = 0;
-						for(const TerminalPtr& lookback : *lookbacks)
+						if(shift_val == ERROR_VAL && reduce_val != ERROR_VAL)
 						{
-							ostrErr << lookback->GetStrId();
-							if(i < lookbacks->size()-1)
-								ostrErr << ", ";
-							++i;
+							// keep reduce, remove shift
+							iter_shift = shifts.erase(iter_shift);
+						}
+						else if(shift_val != ERROR_VAL && reduce_val == ERROR_VAL)
+						{
+							// keep shift, remove reduce
+							iter_la = reduce_lookaheads.erase(iter_la);
+							already_incremented_la = true;
 						}
 					}
-					ostrErr << " and look-ahead terminal " << la->GetId();
-					ostrErr << ".";
-
-					if(m_stopOnConflicts)
-						throw std::runtime_error(ostrErr.str());
 					else
-						std::cerr << ostrErr.str() << std::endl;
+					{
+						std::ostringstream ostrErr;
+						ostrErr << "Shift/reduce conflict detected"
+							<< " in closure " << closure->GetId();
+						if(conflictelem)
+							ostrErr << ":\n\t" << *conflictelem << "\n";
+						if(lookbacks->size())
+						{
+							ostrErr << " with look-back terminal(s): ";
+							std::size_t i = 0;
+							for(const TerminalPtr& lookback : *lookbacks)
+							{
+								ostrErr << lookback->GetStrId();
+								if(i < lookbacks->size()-1)
+									ostrErr << ", ";
+								++i;
+							}
+						}
+						ostrErr << " and look-ahead terminal " << la->GetId();
+						ostrErr << ".";
+
+						if(m_stopOnConflicts)
+							throw std::runtime_error(ostrErr.str());
+						else
+							std::cerr << ostrErr.str() << std::endl;
+					}
 				}
 
 				if(!already_incremented_la)

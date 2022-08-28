@@ -130,25 +130,24 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 		for(std::size_t termidx=0; termidx<numTerminals; ++termidx)
 		{
+			// get table entries
 			std::size_t& shiftEntry = tabActionShift(state, termidx);
 			std::size_t& reduceEntry = tabActionReduce(state, termidx);
 
+			// get potentially conflicting element
 			std::optional<std::string> termid;
 			ElementPtr conflictelem = nullptr;
 			SymbolPtr sym_at_cursor = nullptr;
 
-			if(auto termiter = seen_terminals.find(termidx);
-				termiter != seen_terminals.end())
+			if(auto termiter = seen_terminals.find(termidx); termiter != seen_terminals.end())
 			{
 				termid = termiter->second->GetStrId();
-				conflictelem = closure->
-					GetElementWithCursorAtSymbol(termiter->second);
-				if(conflictelem)
-					sym_at_cursor = conflictelem->GetSymbolAtCursor();
+				sym_at_cursor = termiter->second;
+				conflictelem = closure->GetElementWithCursorAtSymbol(sym_at_cursor);
 			}
 
-			// both have an entry?
-			if(shiftEntry!=ERROR_VAL && reduceEntry!=ERROR_VAL)
+			// a conflicting element exists and both tables have an entry?
+			if(conflictelem && shiftEntry!=ERROR_VAL && reduceEntry!=ERROR_VAL)
 			{
 				if(!lookbacks)
 					lookbacks = GetLookbackTerminals(closure);

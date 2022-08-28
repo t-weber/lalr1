@@ -256,24 +256,36 @@ void Collection::DoTransitions()
 	Simplify();
 	ReportProgress("Simplified transitions.", true);
 
-	std::vector<std::size_t> conflicts = HasReduceConflicts();
-	if(conflicts.size())
+	// reports reduce/reduce or shift/reduce conflicts
+	auto report_conflicts = [this](const std::set<std::size_t>& conflicts, const char* ty) -> void
 	{
+		if(!conflicts.size())
+			return;
+
 		std::ostringstream ostrConflicts;
-		ostrConflicts << "Error: The grammar has reduce/reduce conflicts for closure(s) ";
-		for(std::size_t conflict_idx=0; conflict_idx<conflicts.size(); ++conflict_idx)
+		ostrConflicts << "The grammar has " << ty << " conflicts in closure";
+		if(conflicts.size() > 1)
+			ostrConflicts << "s";  // plural
+		ostrConflicts << " ";
+
+		std::size_t conflict_idx = 0;
+		for(std::size_t conflict : conflicts)
 		{
-			ostrConflicts << conflicts[conflict_idx];
+			ostrConflicts << conflict;
 			if(conflict_idx < conflicts.size() - 1)
 				ostrConflicts << ", ";
+			++conflict_idx;
 		}
 		ostrConflicts << ".";
 
 		if(m_stopOnConflicts)
 			throw std::runtime_error(ostrConflicts.str());
 		else
-			std::cerr << ostrConflicts.str() << std::endl;
-	}
+			std::cerr << "Error: " << ostrConflicts.str() << std::endl;
+	};
+
+	report_conflicts(HasReduceConflicts(), "reduce/reduce");
+	report_conflicts(HasShiftReduceConflicts(), "shift/reduce");
 
 	CreateTableIndices();
 	ReportProgress("Created table indices.", true);
@@ -316,14 +328,58 @@ void Collection::Simplify()
 /**
  * tests which closures of the collection have reduce/reduce conflicts
  */
-std::vector<std::size_t> Collection::HasReduceConflicts() const
+std::set<std::size_t> Collection::HasReduceConflicts() const
 {
-	std::vector<std::size_t> conflicting_closures;
+	std::set<std::size_t> conflicting_closures;
 
 	for(const ClosurePtr& closure : m_collection)
 	{
 		if(closure->HasReduceConflict())
-			conflicting_closures.push_back(closure->GetId());
+			conflicting_closures.insert(closure->GetId());
+	}
+
+	return conflicting_closures;
+}
+
+
+/**
+ * tests which closures of the collection have shift/reduce conflicts
+ */
+std::set<std::size_t> Collection::HasShiftReduceConflicts() const
+{
+	std::set<std::size_t> conflicting_closures;
+
+	for(const ClosurePtr& closure : m_collection)
+	{
+		// get all terminals leading to a reduction
+		Terminal::t_terminalset reduce_lookaheads;
+
+		for(const ElementPtr& elem : closure->GetElements())
+		{
+			// reductions take place for finished elements
+			if(!elem->IsCursorAtEnd())
+				continue;
+
+			const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
+			reduce_lookaheads.insert(lookaheads.begin(), lookaheads.end());
+		}
+
+		// get all terminals leading to a shift
+		for(const Collection::t_transition& tup : m_transitions)
+		{
+			const ClosurePtr& stateFrom = std::get<0>(tup);
+			const SymbolPtr& symTrans = std::get<2>(tup);
+
+			if(stateFrom->hash() != closure->hash())
+				continue;
+			if(symTrans->IsEps() || !symTrans->IsTerminal())
+				continue;
+
+			const TerminalPtr termTrans = std::dynamic_pointer_cast<Terminal>(symTrans);
+			bool has_solution = termTrans->GetPrecedence() || termTrans->GetAssociativity();
+			if(reduce_lookaheads.contains(termTrans) && !has_solution)
+				conflicting_closures.insert(closure->GetId());
+		}
 	}
 
 	return conflicting_closures;

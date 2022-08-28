@@ -20,6 +20,7 @@
 
 #include <unordered_set>
 #include <unordered_map>
+#include <set>
 #include <list>
 #include <memory>
 #include <functional>
@@ -66,7 +67,10 @@ public:
 	void DoTransitions();
 
 	// tests which closures of the collection have reduce/reduce conflicts
-	std::vector<std::size_t> HasReduceConflicts() const;
+	std::set<std::size_t> HasReduceConflicts() const;
+
+	// tests which closures of the collection have shift/reduce conflicts
+	std::set<std::size_t> HasShiftReduceConflicts() const;
 
 	// get terminals leading to the given closure
 	Terminal::t_terminalset GetLookbackTerminals(const ClosurePtr& closure) const;
@@ -112,7 +116,7 @@ private:
 	t_closurecache m_closure_cache{};           // seen closures
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures
 
-	bool m_stopOnConflicts{true};               // stop table/code generation on shift/reduce conflicts
+	bool m_stopOnConflicts{true};               // stop table/code generation on conflicts
 	bool m_useOpChar{true};                     // use printable character for operators if possible
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
