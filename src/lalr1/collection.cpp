@@ -208,7 +208,7 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
-			<< closure_from->GetId() << " -> " << closure_to->GetId()
+			<< closure_from->GetId() << " \xe2\x86\x92 " << closure_to->GetId()
 			<< ". Total closures: " << m_collection.size()
 			<< ", total transitions: " << m_transitions.size()
 			<< ".";
@@ -582,7 +582,7 @@ bool Collection::SaveGraph(const std::string& file, bool write_full_coll) const
 		if(symTrans->IsEps())
 			continue;
 
-		ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
+		ofstr << "\t" << closure_from->GetId() << " \xe2\x86\x92 " << closure_to->GetId()
 			<< " [label=\"" << symTrans->GetStrId() << "\"];\n";
 	}
 
@@ -620,7 +620,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	for(const Collection::t_transition& tup : coll.m_transitions)
 	{
 		ostr << "closure " << std::get<0>(tup)->GetId()
-			<< " -> closure " << std::get<1>(tup)->GetId()
+			<< " \xe2\x86\x92 closure " << std::get<1>(tup)->GetId()
 			<< " via " << std::get<2>(tup)->GetStrId()
 			<< "\n";
 	}
@@ -684,7 +684,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 					<< *elem->GetSemanticRule() << "] ";
 			}
 			ostrActionReduce << elem->GetLhs()->GetStrId()
-				<< " -> " << *elem->GetRhs();
+				<< " \xe2\x86\x92 " << *elem->GetRhs();
 			ostrActionReduce << "\n";
 		}
 	}

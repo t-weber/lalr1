@@ -331,7 +331,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	const NonTerminalPtr& lhs = elem.GetLhs();
 	const WordPtr& rhs = elem.GetRhs();
 
-	ostr << lhs->GetStrId() << " -> [ ";
+	ostr << lhs->GetStrId() << " \xe2\x86\x92 [ ";
 	for(std::size_t i=0; i<rhs->size(); ++i)
 	{
 		if(elem.GetCursor() == i)

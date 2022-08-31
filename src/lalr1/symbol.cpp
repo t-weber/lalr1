@@ -355,7 +355,7 @@ std::size_t NonTerminal::hash() const
 
 void NonTerminal::print(std::ostream& ostr, bool bnf) const
 {
-	std::string lhsrhssep = bnf ? "\t ::=" :  " ->\n";
+	std::string lhsrhssep = bnf ? "\t ::=" :  " \xe2\x86\x92\n";
 	std::string rulesep = bnf ? "\t  |  " :  "\t| ";
 	std::string rule0sep = bnf ? " " :  "\t  ";
 
