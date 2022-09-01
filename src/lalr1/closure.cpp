@@ -165,23 +165,12 @@ const Closure::t_symbols& Closure::GetPossibleTransitionSymbols() const
 		return iter->second;
 
 	t_symbols syms;
-	syms.reserve(m_elems.size());
-
 	for(const ElementPtr& theelem : m_elems)
 	{
 		const SymbolPtr& sym = theelem->GetPossibleTransitionSymbol();
 		if(!sym)
 			continue;
-
-		// do we already have this symbol?
-		bool sym_already_seen = std::find_if(syms.begin(), syms.end(),
-			[sym](const SymbolPtr& sym2) -> bool
-		{
-			return *sym == *sym2;
-		}) != syms.end();
-
-		if(sym && !sym_already_seen)
-			syms.emplace_back(sym);
+		syms.emplace(sym);
 	}
 
 	auto [iter, inserted] = m_cached_transition_symbols.emplace(

@@ -39,7 +39,7 @@ public:
 	using t_transition = std::tuple<SymbolPtr, ClosurePtr>;
 	using t_transitions = std::vector<t_transition>;
 	using t_elements = std::list<ElementPtr>;
-	using t_symbols = std::vector<SymbolPtr>;
+	using t_symbols = std::unordered_set<SymbolPtr, Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
 
 
 public:
@@ -85,7 +85,7 @@ private:
 
 	// cached transition symbols
 	mutable std::unordered_map<std::size_t, t_symbols>
-		m_cached_transition_symbols {};	
+		m_cached_transition_symbols {};
 
 	// cached transitions
 	mutable std::unordered_map<std::size_t, t_transitions>

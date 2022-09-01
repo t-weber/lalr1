@@ -17,8 +17,8 @@
 
 
 // special terminal symbols
-const TerminalPtr g_eps = std::make_shared<Terminal>(EPS_IDENT, "eps", true, false);
-const TerminalPtr g_end = std::make_shared<Terminal>(END_IDENT, "end", false, true);
+const TerminalPtr g_eps = std::make_shared<Terminal>(EPS_IDENT, "\xce\xb5", true, false);
+const TerminalPtr g_end = std::make_shared<Terminal>(END_IDENT, "$", false, true);
 
 
 // ----------------------------------------------------------------------------
