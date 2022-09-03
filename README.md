@@ -1,5 +1,5 @@
 # lalr1
-Optimised LALR(1) parser generator in C++. Generates either a recursive ascent parser or LALR(1) tables out of a given grammar.
+Optimised LALR(1) parser generator library in C++. Generates either a recursive ascent parser or LALR(1) tables out of a given grammar.
 
 [![DOI: 10.5281/zenodo.6987396](https://zenodo.org/badge/DOI/10.5281/zenodo.6987396.svg)](https://doi.org/10.5281/zenodo.6987396)
 
