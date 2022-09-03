@@ -8,6 +8,7 @@
 #include "script_grammar.h"
 #include "lalr1/collection.h"
 #include "lalr1/helpers.h"
+#include "lalr1/options.h"
 #include "lexer.h"
 #include "ast.h"
 #include "ast_printer.h"
@@ -135,6 +136,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 	bool create_asc = false;
 	bool create_tables = false;
 	bool debug = false;
+	bool colours = false;
 	bool write_graph = false;
 	bool show_help = false;
 
@@ -144,6 +146,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 		("table,t", args::bool_switch(&create_tables), "create LALR(1) tables")
 		("graph,g", args::bool_switch(&write_graph), "write a graph of the parser")
 		("debug,d", args::bool_switch(&debug), "enable debug output for parser generation")
+		("colours,c", args::bool_switch(&colours), "enable colours in output")
 		("help,h", args::bool_switch(&show_help), "show help");
 
 	auto argparser = args::command_line_parser{argc, argv};
@@ -167,6 +170,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 		std::cout << "\n" << arg_descr << std::endl;
 		return 0;
 	}
+
+	g_options.SetUseColour(colours);
 
 	if(!create_asc && !create_tables)
 	{

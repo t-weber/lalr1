@@ -156,7 +156,7 @@ ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
 /**
  * get possible transition symbols from all elements
  */
-const Closure::t_symbols& Closure::GetPossibleTransitionSymbols() const
+const Closure::t_symbolset& Closure::GetPossibleTransitionSymbols() const
 {
 	// transition symbols of closure core already calculated?
 	std::size_t hashval = hash(true);
@@ -164,7 +164,7 @@ const Closure::t_symbols& Closure::GetPossibleTransitionSymbols() const
 		iter != m_cached_transition_symbols.end())
 		return iter->second;
 
-	t_symbols syms;
+	t_symbolset syms;
 	for(const ElementPtr& theelem : m_elems)
 	{
 		const SymbolPtr& sym = theelem->GetPossibleTransitionSymbol();
@@ -249,7 +249,7 @@ const Closure::t_transitions& Closure::DoTransitions() const
 	// transitions not yet calculated?
 	if(iter == m_cached_transitions.end())
 	{
-		const t_symbols& possible_transitions = GetPossibleTransitionSymbols();
+		const t_symbolset& possible_transitions = GetPossibleTransitionSymbols();
 		t_transitions transitions;
 		transitions.reserve(possible_transitions.size());
 

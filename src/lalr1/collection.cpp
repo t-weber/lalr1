@@ -15,6 +15,7 @@
  */
 
 #include "collection.h"
+#include "options.h"
 
 #include <sstream>
 #include <fstream>
@@ -547,28 +548,98 @@ bool Collection::SolveConflict(
 
 
 /**
- * write out the transitions graph
+ * write out the transitions graph to an ostream
+ * @see https://graphviz.org/doc/info/shapes.html#html
  */
-bool Collection::SaveGraph(const std::string& file, bool write_full_coll) const
+bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 {
-	std::string outfile_graph = file + ".graph";
-	std::string outfile_svg = file + ".svg";
+	const std::string& shift_col = g_options.GetShiftColour();
+	const std::string& reduce_col = g_options.GetReduceColour();
+	const std::string& jump_col = g_options.GetJumpColour();
+	const bool use_colour = g_options.GetUseColour();
 
-	std::ofstream ofstr{outfile_graph};
-	if(!ofstr)
-		return false;
-
-	ofstr << "digraph G_lr1\n{\n";
+	ofstr << "digraph G_lalr1\n{\n";
 
 	// write states
 	for(const ClosurePtr& closure : m_collection)
 	{
-		ofstr << "\t" << closure->GetId() << " [label=\"";
+		ofstr << "\t" << closure->GetId() << " [label=";
 		if(write_full_coll)
-			ofstr << *closure;
+		{
+			ofstr << "<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"0\">";
+			ofstr << "<tr><td colspan=\"2\" sides=\"b\"><b>" << "Closure "
+				<< closure->GetId() << "</b></td></tr>";
+
+			for(const ElementPtr& elem : closure->GetElements())
+			{
+				ofstr << "<tr>";
+				// closure core
+				bool at_end = elem->IsCursorAtEnd();
+				const WordPtr& rhs = elem->GetRhs();
+
+				auto set_colour = [&ofstr, &elem, &at_end, &shift_col, &reduce_col, &jump_col]()
+				{
+					if(at_end)
+					{
+						ofstr << "<font color=\"" << reduce_col << "\">";
+					}
+					else
+					{
+						if(elem->GetSymbolAtCursor()->IsTerminal())
+							ofstr << "<font color=\"" << shift_col << "\">";
+						else
+							ofstr << "<font color=\"" << jump_col << "\">";
+					}
+				};
+
+				ofstr << "<td align=\"left\" sides=\"r\">";
+				if(use_colour)
+					set_colour();
+
+				ofstr << elem->GetLhs()->GetStrId();
+				ofstr << " &#8594; ";
+
+				for(std::size_t rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
+				{
+					// write cursor symbol
+					if(elem->GetCursor() == rhs_idx)
+						ofstr << "&#8226;";
+
+					ofstr << (*rhs)[rhs_idx]->GetStrId();
+					if(rhs_idx < rhs->size()-1)
+						ofstr << " ";
+				}
+				if(at_end)
+					ofstr << "&#8226;";
+				if(use_colour)
+					ofstr << "</font>";
+				ofstr << "</td>";
+
+				// lookaheads
+				ofstr << "<td align=\"left\" sides=\"l\"> ";
+				if(use_colour)
+					set_colour();
+
+				const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
+				std::size_t lookahead_num = 0;
+				for(const auto& la : lookaheads)
+				{
+					ofstr << la->GetStrId();
+					if(lookahead_num < lookaheads.size()-1)
+						ofstr << " ";
+					++lookahead_num;
+				}
+				if(use_colour)
+					ofstr << "</font>";
+				ofstr << "</td></tr>";
+			}
+			ofstr << "</table>>";
+		}
 		else
-			ofstr << closure->GetId();
-		ofstr << "\"];\n";
+		{
+			ofstr << "\"" << closure->GetId() << "\"";
+		}
+		ofstr << "];\n";
 	}
 
 	// write transitions
@@ -579,14 +650,47 @@ bool Collection::SaveGraph(const std::string& file, bool write_full_coll) const
 		const ClosurePtr& closure_to = std::get<1>(tup);
 		const SymbolPtr& symTrans = std::get<2>(tup);
 
-		if(symTrans->IsEps())
+		bool symIsTerm = symTrans->IsTerminal();
+		bool symIsEps = symTrans->IsEps();
+
+		if(symIsEps)
 			continue;
 
-		ofstr << "\t" << closure_from->GetId() << " \xe2\x86\x92 " << closure_to->GetId()
-			<< " [label=\"" << symTrans->GetStrId() << "\"];\n";
+		ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
+			<< " [label=\"" << symTrans->GetStrId()
+			<< "\", ";
+
+		if(use_colour)
+		{
+			if(symIsTerm)
+				ofstr << "color=\"" << shift_col << "\", fontcolor=\"" << shift_col << "\"";
+			else
+				ofstr << "color=\"" << jump_col << "\", fontcolor=\"" << jump_col << "\"";
+		}
+		ofstr << "];\n";
 	}
 
 	ofstr << "}" << std::endl;
+	return true;
+}
+
+
+/**
+ * write out the transitions graph to a file
+ */
+bool Collection::SaveGraph(const std::string& file, bool write_full_coll) const
+{
+	std::string outfile_graph = file + ".graph";
+	std::string outfile_svg = file + ".svg";
+
+	std::ofstream ofstr{outfile_graph};
+	if(!ofstr)
+		return false;
+
+	if(!SaveGraph(ofstr, write_full_coll))
+		return false;
+
+	ofstr.flush();
 	ofstr.close();
 
 	return std::system(("dot -Tsvg " + outfile_graph + " -o " + outfile_svg).c_str()) == 0;
@@ -595,9 +699,21 @@ bool Collection::SaveGraph(const std::string& file, bool write_full_coll) const
 
 std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 {
+	const std::string& shift_col = g_options.GetTermShiftColour();
+	const std::string& reduce_col = g_options.GetTermReduceColour();
+	const std::string& jump_col = g_options.GetTermJumpColour();
+	const std::string& no_col = g_options.GetTermNoColour();
+	const std::string& bold_col = g_options.GetTermBoldColour();
+	const bool use_colour = g_options.GetUseColour();
+
+	if(use_colour)
+		ostr << bold_col;
 	ostr << "--------------------------------------------------------------------------------\n";
 	ostr << "Collection\n";
 	ostr << "--------------------------------------------------------------------------------\n";
+	if(use_colour)
+		ostr << no_col;
+
 	for(const ClosurePtr& closure : coll.m_collection)
 	{
 		ostr << *closure;
@@ -614,22 +730,47 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	ostr << "\n";
 
 
+	if(use_colour)
+		ostr << bold_col;
 	ostr << "--------------------------------------------------------------------------------\n";
 	ostr << "Transitions\n";
 	ostr << "--------------------------------------------------------------------------------\n";
+	if(use_colour)
+		ostr << no_col;
+
 	for(const Collection::t_transition& tup : coll.m_transitions)
 	{
+		const SymbolPtr& symTrans = std::get<2>(tup);
+
+		if(use_colour)
+		{
+			if(symTrans->IsTerminal())
+				ostr << shift_col;
+			else
+				ostr << jump_col;
+		}
+
 		ostr << "closure " << std::get<0>(tup)->GetId()
 			<< " \xe2\x86\x92 closure " << std::get<1>(tup)->GetId()
-			<< " via " << std::get<2>(tup)->GetStrId()
+			<< " via " << symTrans->GetStrId()
 			<< "\n";
+
+		if(use_colour)
+		{
+			ostr << no_col;
+		}
 	}
 	ostr << "\n\n";
 
 
+	if(use_colour)
+		ostr << bold_col;
 	ostr << "--------------------------------------------------------------------------------\n";
 	ostr << "Tables\n";
 	ostr << "--------------------------------------------------------------------------------\n";
+	if(use_colour)
+		ostr << no_col;
+
 	// sort transitions
 	std::vector<Collection::t_transition> transitions;
 	transitions.reserve(coll.m_transitions.size());
@@ -637,6 +778,14 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	std::stable_sort(transitions.begin(), transitions.end(), Collection::CompareTransitionsLess{});
 
 	std::ostringstream ostrActionShift, ostrActionReduce, ostrJump;
+
+	if(use_colour)
+	{
+		ostrActionShift << shift_col;
+		ostrActionReduce << reduce_col;
+		ostrJump << jump_col;
+	}
+
 	for(const Collection::t_transition& tup : transitions)
 	{
 		const ClosurePtr& stateFrom = std::get<0>(tup);
@@ -687,6 +836,13 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 				<< " \xe2\x86\x92 " << *elem->GetRhs();
 			ostrActionReduce << "\n";
 		}
+	}
+
+	if(use_colour)
+	{
+		ostrActionShift << no_col;
+		ostrActionReduce << no_col;
+		ostrJump << no_col;
 	}
 
 	ostr << ostrActionShift.str() << "\n"

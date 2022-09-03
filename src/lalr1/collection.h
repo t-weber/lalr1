@@ -80,6 +80,8 @@ public:
 
 	bool SaveParseTables(const std::string& file) const;
 	bool SaveParser(const std::string& file, const std::string& class_name = "ParserRecAsc") const;
+
+	bool SaveGraph(std::ostream& ostr, bool write_full_coll = true) const;
 	bool SaveGraph(const std::string& file, bool write_full_coll = true) const;
 
 	void SetStopOnConflicts(bool b = true);

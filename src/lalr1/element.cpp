@@ -14,6 +14,7 @@
  */
 
 #include "element.h"
+#include "options.h"
 
 #include <sstream>
 #include <algorithm>
@@ -328,23 +329,46 @@ bool Element::IsCursorAtEnd() const
 
 std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 {
+	const std::string& shift_col = g_options.GetTermShiftColour();
+	const std::string& reduce_col = g_options.GetTermReduceColour();
+	const std::string& jump_col = g_options.GetTermJumpColour();
+	const std::string& no_col = g_options.GetTermNoColour();
+	const std::string& bold_col = g_options.GetTermBoldColour();
+	const bool use_colour = g_options.GetUseColour();
+
 	const NonTerminalPtr& lhs = elem.GetLhs();
 	const WordPtr& rhs = elem.GetRhs();
+	bool at_end = elem.IsCursorAtEnd();
+
+	if(use_colour)
+	{
+		if(at_end)
+		{
+			ostr << reduce_col;
+		}
+		else
+		{
+			if(elem.GetSymbolAtCursor()->IsTerminal())
+				ostr << shift_col;
+			else
+				ostr << jump_col;
+		}
+	}
 
 	ostr << lhs->GetStrId() << " \xe2\x86\x92 [ ";
-	for(std::size_t i=0; i<rhs->size(); ++i)
+	for(std::size_t rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
 	{
-		if(elem.GetCursor() == i)
+		if(elem.GetCursor() == rhs_idx)
 			ostr << "\xe2\x80\xa2";
 
-		const SymbolPtr& sym = (*rhs)[i];
+		const SymbolPtr& sym = (*rhs)[rhs_idx];
 
 		ostr << sym->GetStrId();
-		if(i < rhs->size() - 1)
+		if(rhs_idx < rhs->size() - 1)
 			ostr << " ";
 	}
 
-	if(elem.IsCursorAtEnd())
+	if(at_end)
 		ostr << "\xe2\x80\xa2";
 
 	ostr << "\xef\xbd\x9c ";
@@ -353,6 +377,8 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		ostr << la->GetStrId() << " ";
 
 	ostr << "]";
+	if(use_colour)
+		ostr << no_col;
 
 	return ostr;
 }

@@ -6,6 +6,7 @@
  */
 
 #include "lalr1/collection.h"
+#include "lalr1/options.h"
 #include "expr_grammar.h"
 #include "script/lexer.h"
 #include "script/ast.h"
@@ -112,6 +113,8 @@ static void lr1_create_parser()
 int main()
 {
 	std::ios_base::sync_with_stdio(false);
+
+	g_options.SetUseColour(true);
 	lr1_create_parser();
 	return 0;
 }

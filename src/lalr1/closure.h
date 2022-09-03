@@ -39,7 +39,7 @@ public:
 	using t_transition = std::tuple<SymbolPtr, ClosurePtr>;
 	using t_transitions = std::vector<t_transition>;
 	using t_elements = std::list<ElementPtr>;
-	using t_symbols = std::unordered_set<SymbolPtr, Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
+	using t_symbolset = std::unordered_set<SymbolPtr, Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
 
 
 public:
@@ -58,7 +58,7 @@ public:
 	ElementPtr GetElementWithCursorAtBeginning() const;
 	ElementPtr GetElementWithCursorAtSymbol(const SymbolPtr& sym) const;
 
-	const t_symbols& GetPossibleTransitionSymbols() const;
+	const t_symbolset& GetPossibleTransitionSymbols() const;
 	ClosurePtr DoTransition(const SymbolPtr& transsym) const;
 	const t_transitions& DoTransitions() const;
 
@@ -84,7 +84,7 @@ private:
 	mutable std::optional<std::size_t> m_hash_core{ std::nullopt };
 
 	// cached transition symbols
-	mutable std::unordered_map<std::size_t, t_symbols>
+	mutable std::unordered_map<std::size_t, t_symbolset>
 		m_cached_transition_symbols {};
 
 	// cached transitions
