@@ -6,7 +6,7 @@
  */
 
 #include "vm.h"
-#include "lalr1/helpers.h"
+#include "lalr1/timer.h"
 
 #include <vector>
 #include <optional>

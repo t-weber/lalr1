@@ -63,6 +63,8 @@ public:
 
 public:
 	Collection(const ClosurePtr& closure);
+	Collection(const Collection& coll);
+	const Collection& operator=(const Collection& coll);
 
 	void DoTransitions();
 
@@ -92,7 +94,7 @@ public:
 
 
 protected:
-	Collection();
+	Collection() = delete;
 
 	Terminal::t_terminalset _GetLookbackTerminals(const ClosurePtr& closure) const;
 

@@ -65,7 +65,7 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/lalr1/closure.h
 		${PROJECT_SOURCE_DIR}/src/lalr1/table.h
 		${PROJECT_SOURCE_DIR}/src/lalr1/common.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/helpers.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/timer.h
 )
 
 set_target_properties(lalr1 PROPERTIES PUBLIC_HEADER
@@ -77,7 +77,7 @@ ${PROJECT_SOURCE_DIR}/src/lalr1/options.h;\
 ${PROJECT_SOURCE_DIR}/src/lalr1/table.h;\
 ${PROJECT_SOURCE_DIR}/src/lalr1/ast.h;\
 ${PROJECT_SOURCE_DIR}/src/lalr1/common.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/helpers.h"
+${PROJECT_SOURCE_DIR}/src/lalr1/timer.h"
 )
 
 #get_target_property(LALR1_HEADERS lalr1 PUBLIC_HEADER)
@@ -124,6 +124,7 @@ if(BUILD_EXAMPLES)
 	# script compiler library
 	add_library(script STATIC
 		src/lalr1/symbol.cpp src/lalr1/symbol.h
+		src/lalr1/options.cpp src/lalr1/options.h
 		src/script/lexer.cpp src/script/lexer.h
 		src/script/sym.h src/script/ast.h
 		src/script/ast_printer.cpp src/script/ast_printer.h

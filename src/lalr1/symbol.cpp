@@ -12,13 +12,14 @@
 
 #include "symbol.h"
 #include "common.h"
+#include "options.h"
 
 #include <boost/functional/hash.hpp>
 
 
 // special terminal symbols
 const TerminalPtr g_eps = std::make_shared<Terminal>(EPS_IDENT, "\xce\xb5", true, false);
-const TerminalPtr g_end = std::make_shared<Terminal>(END_IDENT, "$", false, true);
+const TerminalPtr g_end = std::make_shared<Terminal>(END_IDENT, "\xe2\x88\x8e", false, true);
 
 
 // ----------------------------------------------------------------------------
@@ -34,9 +35,24 @@ Symbol::Symbol(std::size_t id, const std::string& strid, bool bEps, bool bEnd)
 		m_strid = std::to_string(id);
 }
 
+Symbol::Symbol(const Symbol& other) : std::enable_shared_from_this<Symbol>{}
+{
+	this->operator=(other);
+}
+
 
 Symbol::~Symbol()
+{}
+
+
+const Symbol& Symbol::operator=(const Symbol& other)
 {
+	this->m_id = other.m_id;
+	this->m_strid = other.m_strid;
+	this->m_iseps = other.m_iseps;
+	this->m_isend = other.m_isend;
+
+	return *this;
 }
 
 
@@ -70,8 +86,25 @@ Terminal::Terminal(std::size_t id, const std::string& strid, bool bEps, bool bEn
 {}
 
 
-Terminal::~Terminal()
+Terminal::Terminal(const Terminal& other) : Symbol(other)
 {
+	this->operator=(other);
+}
+
+
+Terminal::~Terminal()
+{}
+
+
+const Terminal& Terminal::operator=(const Terminal& other)
+{
+	static_cast<Symbol*>(this)->operator=(*static_cast<const Symbol*>(&other));
+	this->m_semantic = other.m_semantic;
+	this->m_precedence = other.m_precedence;
+	this->m_associativity = other.m_associativity;
+	this->m_hash = other.m_hash;
+
+	return *this;
 }
 
 
@@ -130,6 +163,9 @@ void Terminal::print(std::ostream& ostr, bool /*bnf*/) const
 }
 
 
+/**
+ * calculates a unique hash for the terminal symbol
+ */
 std::size_t Terminal::hash() const
 {
 	if(m_hash)
@@ -158,8 +194,24 @@ NonTerminal::NonTerminal(std::size_t id, const std::string& strid)
 {}
 
 
-NonTerminal::~NonTerminal()
+NonTerminal::NonTerminal(const NonTerminal& other) : Symbol(other)
 {
+	this->operator=(other);
+}
+
+
+NonTerminal::~NonTerminal()
+{}
+
+
+const NonTerminal& NonTerminal::operator=(const NonTerminal& other)
+{
+	static_cast<Symbol*>(this)->operator=(*static_cast<const Symbol*>(&other));
+	this->m_rules = other.m_rules;
+	this->m_semantics = other.m_semantics;
+	this->m_hash = other.m_hash;
+
+	return *this;
 }
 
 
@@ -341,6 +393,9 @@ NonTerminalPtr NonTerminal::RemoveLeftRecursion(
 }
 
 
+/**
+ * calculates a unique hash for the non-terminal symbol
+ */
 std::size_t NonTerminal::hash() const
 {
 	if(m_hash)
@@ -355,7 +410,7 @@ std::size_t NonTerminal::hash() const
 
 void NonTerminal::print(std::ostream& ostr, bool bnf) const
 {
-	std::string lhsrhssep = bnf ? "\t ::=" :  " \xe2\x86\x92\n";
+	std::string lhsrhssep = bnf ? "\t ::=" :  (" " + g_options.GetArrowChar() + "\n");
 	std::string rulesep = bnf ? "\t  |  " :  "\t| ";
 	std::string rule0sep = bnf ? " " :  "\t  ";
 
@@ -611,14 +666,24 @@ Word::Word(const std::initializer_list<SymbolPtr>& init)
 {}
 
 
-Word::Word(const Word& other)
-	: std::enable_shared_from_this<Word>{},
-	  m_syms{other.m_syms}
-{}
+Word::Word(const Word& other) : std::enable_shared_from_this<Word>{}
+{
+	this->operator=(other);
+}
 
 
 Word::Word() : std::enable_shared_from_this<Word>{}
 {}
+
+
+const Word& Word::operator=(const Word& other)
+{
+	this->m_syms = other.m_syms;
+	this->m_hash = other.m_hash;
+	this->m_cached_firsts = other.m_cached_firsts;
+
+	return *this;
+}
 
 
 /**
@@ -777,6 +842,9 @@ bool Word::operator==(const Word& other) const
 }
 
 
+/**
+ * calculates a unique hash for the symbol string
+ */
 std::size_t Word::hash() const
 {
 	if(m_hash)

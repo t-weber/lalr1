@@ -7,7 +7,7 @@
 
 #include "script_grammar.h"
 #include "lalr1/collection.h"
-#include "lalr1/helpers.h"
+#include "lalr1/timer.h"
 #include "lexer.h"
 #include "ast.h"
 #include "ast_printer.h"

@@ -84,8 +84,26 @@ Collection::Collection(const ClosurePtr& closure)
 }
 
 
-Collection::Collection() : std::enable_shared_from_this<Collection>{}
+Collection::Collection(const Collection& coll)
+	: std::enable_shared_from_this<Collection>{}
 {
+	this->operator=(coll);
+}
+
+
+const Collection& Collection::operator=(const Collection& coll)
+{
+	this->m_collection = coll.m_collection;
+	this->m_transitions = coll.m_transitions;
+	this->m_mapTermIdx = coll.m_mapTermIdx;
+	this->m_mapNonTermIdx = coll.m_mapNonTermIdx;
+	this->m_closure_cache = coll.m_closure_cache;
+	this->m_seen_closures = coll.m_seen_closures;
+	this->m_stopOnConflicts = coll.m_stopOnConflicts;
+	this->m_useOpChar = coll.m_useOpChar;
+	this->m_progress_observer = coll.m_progress_observer;
+
+	return *this;
 }
 
 
@@ -209,7 +227,7 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
-			<< closure_from->GetId() << " \xe2\x86\x92 " << closure_to->GetId()
+			<< closure_from->GetId() << " " << g_options.GetArrowChar() << " " << closure_to->GetId()
 			<< ". Total closures: " << m_collection.size()
 			<< ", total transitions: " << m_transitions.size()
 			<< ".";
@@ -751,7 +769,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 		}
 
 		ostr << "closure " << std::get<0>(tup)->GetId()
-			<< " \xe2\x86\x92 closure " << std::get<1>(tup)->GetId()
+			<< " " << g_options.GetArrowChar() << " " << std::get<1>(tup)->GetId()
 			<< " via " << symTrans->GetStrId()
 			<< "\n";
 
@@ -833,7 +851,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 					<< *elem->GetSemanticRule() << "] ";
 			}
 			ostrActionReduce << elem->GetLhs()->GetStrId()
-				<< " \xe2\x86\x92 " << *elem->GetRhs();
+				<< " " << g_options.GetArrowChar() << " " << *elem->GetRhs();
 			ostrActionReduce << "\n";
 		}
 	}

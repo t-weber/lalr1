@@ -7,7 +7,7 @@
 
 #include "script_grammar.h"
 #include "lalr1/collection.h"
-#include "lalr1/helpers.h"
+#include "lalr1/timer.h"
 #include "lalr1/options.h"
 #include "lexer.h"
 #include "ast.h"
@@ -137,6 +137,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 	bool create_tables = false;
 	bool debug = false;
 	bool colours = false;
+	bool ascii = false;
 	bool write_graph = false;
 	bool show_help = false;
 
@@ -147,6 +148,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 		("graph,g", args::bool_switch(&write_graph), "write a graph of the parser")
 		("debug,d", args::bool_switch(&debug), "enable debug output for parser generation")
 		("colours,c", args::bool_switch(&colours), "enable colours in output")
+		("ascii,o", args::bool_switch(&ascii), "only use ascii characters in output")
 		("help,h", args::bool_switch(&show_help), "show help");
 
 	auto argparser = args::command_line_parser{argc, argv};
@@ -172,6 +174,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 	}
 
 	g_options.SetUseColour(colours);
+	g_options.SetUseAsciiChars(ascii);
 
 	if(!create_asc && !create_tables)
 	{

@@ -294,6 +294,9 @@ bool Closure::HasReduceConflict() const
 }
 
 
+/**
+ * calculates a unique hash for the closure (with or without lookaheads)
+ */
 std::size_t Closure::hash(bool only_core) const
 {
 	if(m_hash && !only_core)

@@ -124,6 +124,9 @@ bool Element::operator==(const Element& other) const
 }
 
 
+/**
+ * calculates a unique hash for the closure element (with or without lookaheads)
+ */
 std::size_t Element::hash(bool only_core) const
 {
 	if(m_hash && !only_core)
@@ -333,7 +336,6 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	const std::string& reduce_col = g_options.GetTermReduceColour();
 	const std::string& jump_col = g_options.GetTermJumpColour();
 	const std::string& no_col = g_options.GetTermNoColour();
-	const std::string& bold_col = g_options.GetTermBoldColour();
 	const bool use_colour = g_options.GetUseColour();
 
 	const NonTerminalPtr& lhs = elem.GetLhs();
@@ -355,11 +357,11 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		}
 	}
 
-	ostr << lhs->GetStrId() << " \xe2\x86\x92 [ ";
+	ostr << lhs->GetStrId() << " " << g_options.GetArrowChar() << " [ ";
 	for(std::size_t rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
 	{
 		if(elem.GetCursor() == rhs_idx)
-			ostr << "\xe2\x80\xa2";
+			ostr << g_options.GetCursorChar();
 
 		const SymbolPtr& sym = (*rhs)[rhs_idx];
 
@@ -369,9 +371,9 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	}
 
 	if(at_end)
-		ostr << "\xe2\x80\xa2";
+		ostr << g_options.GetCursorChar();
 
-	ostr << "\xef\xbd\x9c ";
+	ostr << " " << g_options.GetSeparatorChar() << " ";
 
 	for(const auto& la : elem.GetLookaheads())
 		ostr << la->GetStrId() << " ";

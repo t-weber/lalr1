@@ -40,12 +40,15 @@ class Symbol : public std::enable_shared_from_this<Symbol>
 public:
 	Symbol(std::size_t id, const std::string& strid = "",
 		bool bEps = false, bool bEnd = false);
+	Symbol(const Symbol& other);
 	Symbol() = delete;
-
 	virtual ~Symbol();
+
+	const Symbol& operator=(const Symbol& other);
 
 	virtual bool IsTerminal() const = 0;
 
+	void SetStrId(const std::string& str) { m_strid = str; }
 	const std::string& GetStrId() const { return m_strid; }
 	std::size_t GetId() const { return m_id; }
 
@@ -101,8 +104,11 @@ class Terminal : public Symbol
 public:
 	Terminal(std::size_t id, const std::string& strid = "",
 		bool bEps = false, bool bEnd = false);
+	Terminal(const Terminal& other);
 	Terminal() = delete;
 	virtual ~Terminal();
+
+	const Terminal& operator=(const Terminal& other);
 
 	virtual bool IsTerminal() const override { return true; }
 
@@ -161,8 +167,11 @@ class NonTerminal : public Symbol
 {
 public:
 	NonTerminal(std::size_t id, const std::string& strid);
+	NonTerminal(const NonTerminal& other);
 	NonTerminal() = delete;
 	virtual ~NonTerminal();
+
+	const NonTerminal& operator=(const NonTerminal& other);
 
 	virtual bool IsTerminal() const override { return false; }
 
@@ -244,6 +253,8 @@ public:
 	Word(const std::initializer_list<SymbolPtr>& init);
 	Word(const Word& other);
 	Word();
+
+	const Word& operator=(const Word& word);
 
 	// adds a symbol to the word
 	std::size_t AddSymbol(const SymbolPtr& sym);
