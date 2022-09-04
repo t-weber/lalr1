@@ -334,7 +334,7 @@ std::size_t Closure::hash(bool only_core) const
  */
 std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
 {
-	ostr << "Closure " << closure.GetId() << ":\n";
+	ostr << "State " << closure.GetId() << ":\n";
 
 	// write elements of the closure
 	for(const ElementPtr& elem : closure.GetElements())

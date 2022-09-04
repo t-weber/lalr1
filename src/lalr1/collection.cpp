@@ -268,7 +268,7 @@ void Collection::DoTransitions()
 	for(ClosurePtr& closure : m_collection)
 	{
 		std::ostringstream ostrMsg;
-		ostrMsg << "Calculating lookaheads for closure " << closure->GetId() << ".";
+		ostrMsg << "Calculating lookaheads for state " << closure->GetId() << ".";
 		ReportProgress(ostrMsg.str(), false);
 		closure->ResolveLookaheads();
 	}
@@ -284,7 +284,7 @@ void Collection::DoTransitions()
 			return;
 
 		std::ostringstream ostrConflicts;
-		ostrConflicts << "The grammar has " << ty << " conflicts in closure";
+		ostrConflicts << "The grammar has " << ty << " conflicts in state";
 		if(conflicts.size() > 1)
 			ostrConflicts << "s";  // plural
 		ostrConflicts << " ";
@@ -605,7 +605,7 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 		if(write_full_coll)
 		{
 			ofstr << "<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"0\">";
-			ofstr << "<tr><td colspan=\"2\" sides=\"b\"><b>" << "Closure "
+			ofstr << "<tr><td colspan=\"2\" sides=\"b\"><b>" << "State "
 				<< closure->GetId() << "</b></td></tr>";
 
 			for(const ElementPtr& elem : closure->GetElements())
@@ -788,7 +788,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 				ostr << jump_col;
 		}
 
-		ostr << "closure " << std::get<0>(tup)->GetId()
+		ostr << "state " << std::get<0>(tup)->GetId()
 			<< " " << g_options.GetArrowChar() << " " << std::get<1>(tup)->GetId()
 			<< " via " << symTrans->GetStrId()
 			<< "\n";
@@ -839,17 +839,17 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 		if(symIsTerm)
 		{
 			ostrActionShift
-				<< "action_shift[ closure "
+				<< "shift[ state "
 				<< stateFrom->GetId() << ", "
-				<< symTrans->GetStrId() << " ] = closure "
+				<< symTrans->GetStrId() << " ] = state "
 				<< stateTo->GetId() << "\n";
 		}
 		else
 		{
 			ostrJump
-				<< "jump[ closure "
+				<< "jump[ state "
 				<< stateFrom->GetId() << ", "
-				<< symTrans->GetStrId() << " ] = closure "
+				<< symTrans->GetStrId() << " ] = state "
 				<< stateTo->GetId() << "\n";
 		}
 	}
@@ -861,7 +861,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 			if(!elem->IsCursorAtEnd())
 				continue;
 
-			ostrActionReduce << "action_reduce[ closure " << closure->GetId() << ", ";
+			ostrActionReduce << "reduce[ state " << closure->GetId() << ", ";
 			for(const auto& la : elem->GetLookaheads())
 				ostrActionReduce << la->GetStrId() << " ";
 			ostrActionReduce << "] = ";

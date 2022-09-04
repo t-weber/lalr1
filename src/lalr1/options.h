@@ -58,7 +58,7 @@ private:
 	std::string m_arrow{"\xe2\x86\x92"};
 	std::string m_sep{"\xef\xbd\x9c"};
 	std::string m_eps{"\xce\xb5"};
-	std::string m_end{"\xe2\x88\x8e"};
+	std::string m_end{"\xcf\x89"};
 
 	// ascii variant of special characters
 	std::string m_cursor_asc{"."};
