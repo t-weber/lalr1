@@ -88,6 +88,8 @@ public:
 
 	void SetStopOnConflicts(bool b = true);
 	void SetUseOpChar(bool b = true);
+	void SetGenDebugCode(bool b = true);
+	void SetGenErrorCode(bool b = true);
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
@@ -122,6 +124,8 @@ private:
 
 	bool m_stopOnConflicts{true};               // stop table/code generation on conflicts
 	bool m_useOpChar{true};                     // use printable character for operators if possible
+	bool m_genDebugCode{true};                  // generate debug code in parser output
+	bool m_genErrorCode{true};                  // generate error handling code in parser output
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

@@ -101,6 +101,8 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_seen_closures = coll.m_seen_closures;
 	this->m_stopOnConflicts = coll.m_stopOnConflicts;
 	this->m_useOpChar = coll.m_useOpChar;
+	this->m_genDebugCode = coll.m_genDebugCode;
+	this->m_genErrorCode = coll.m_genErrorCode;
 	this->m_progress_observer = coll.m_progress_observer;
 
 	return *this;
@@ -494,6 +496,24 @@ void Collection::SetUseOpChar(bool b)
 
 
 /**
+ * generate debug code in parser output
+ */
+void Collection::SetGenDebugCode(bool b)
+{
+	m_genDebugCode = b;
+}
+
+
+/**
+ * generate error handling code in parser output
+ */
+void Collection::SetGenErrorCode(bool b)
+{
+	m_genErrorCode = b;
+}
+
+
+/**
  * try to solve a shift/reduce conflict
  */
 bool Collection::SolveConflict(
@@ -631,7 +651,7 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 					ofstr << "&#8226;";
 				if(use_colour)
 					ofstr << "</font>";
-				ofstr << "</td>";
+				ofstr << " </td>";
 
 				// lookaheads
 				ofstr << "<td align=\"left\" sides=\"l\"> ";

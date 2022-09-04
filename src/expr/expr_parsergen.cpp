@@ -92,7 +92,7 @@ static void lr1_create_parser()
 		collsLALR.DoTransitions();
 
 #if DEBUG_PARSERGEN != 0
-		std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
+		std::cout << "\n\n" << collsLALR << std::endl;
 		collsLALR.SaveGraph("expr", 1);
 #endif
 

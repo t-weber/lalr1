@@ -181,7 +181,7 @@ static void lr1_create_parser()
 		collsLALR.DoTransitions();
 
 #if DEBUG_PARSERGEN != 0
-		std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
+		std::cout << "\n\n" << collsLALR << std::endl;
 #endif
 
 #if DEBUG_WRITEGRAPH != 0
@@ -222,8 +222,8 @@ static void lalr1_run_parser()
 	try
 	{
 		// get created parsing tables
-		auto [shift_tab, reduce_tab, jump_tab, term_idx, nonterm_idx, num_rhs, lhs_idx]
-			= get_lalr1_tables();
+		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
+		auto [term_idx, nonterm_idx] = get_lalr1_table_indices();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);

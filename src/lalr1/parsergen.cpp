@@ -15,6 +15,7 @@
  */
 
 #include "collection.h"
+#include "options.h"
 
 #include <sstream>
 #include <fstream>
@@ -169,14 +170,16 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 	if(!file_cpp || !file_h)
 	{
 		std::cerr << "Cannot open output files \"" << filename_cpp
-		<< "\" and \"" << filename_h << "\"." << std::endl;
+			<< "\" and \"" << filename_h << "\"." << std::endl;
 		return false;
 	}
 
 
 	// generate closures
-	std::ostringstream ostr_h, ostr_cpp;
+	bool use_col_saved = g_options.GetUseColour();
 
+	std::ostringstream ostr_h, ostr_cpp;
+	g_options.SetUseColour(false);
 
 	for(const ClosurePtr& closure : m_collection)
 	{
@@ -236,15 +239,18 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 		ostr_cpp << "{\n";
 
 
-		// debug infos
-		ostr_cpp << "\tif(m_debug)\n";
-		ostr_cpp << "\t{\n";
-		ostr_cpp << "\t\tstd::cout << \"\\nRunning \" << __PRETTY_FUNCTION__ << \"...\" << std::endl;\n";
-		ostr_cpp << "\t\tif(m_lookahead)\n";
-		ostr_cpp << "\t\t\tstd::cout << \"Lookahead [\"  << m_lookahead_idx << \"]: \""
-			" << m_lookahead_id << std::endl;\n";
-		ostr_cpp << "\t\tPrintSymbols();\n";
-		ostr_cpp << "\t}\n";  // end if
+		if(m_genDebugCode)
+		{
+			// debug infos
+			ostr_cpp << "\tif(m_debug)\n";
+			ostr_cpp << "\t{\n";
+			ostr_cpp << "\t\tstd::cout << \"\\nRunning \" << __PRETTY_FUNCTION__ << \"...\" << std::endl;\n";
+			ostr_cpp << "\t\tif(m_lookahead)\n";
+			ostr_cpp << "\t\t\tstd::cout << \"Lookahead [\"  << m_lookahead_idx << \"]: \""
+				" << m_lookahead_id << std::endl;\n";
+			ostr_cpp << "\t\tPrintSymbols();\n";
+			ostr_cpp << "\t}\n";  // end if
+		}
 
 
 		// shift actions
@@ -321,13 +327,16 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 					std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
 					ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
 
-					// debug infos
-					ostr_reduce << "\t\t\tif(m_debug)\n";
-					ostr_reduce << "\t\t\t{\n";
-					ostr_reduce << "\t\t\t\tstd::cout << \"Reducing \" << " << num_rhs
-						<< " << \" symbol(s) using rule \" << " << *rulenr
-						<< " << \" (" << rule_descr.str() << ").\" << std::endl;\n";
-					ostr_reduce << "\t\t\t}\n";  // end if
+					if(m_genDebugCode)
+					{
+						// debug infos
+						ostr_reduce << "\t\t\tif(m_debug)\n";
+						ostr_reduce << "\t\t\t{\n";
+						ostr_reduce << "\t\t\t\tstd::cout << \"Reducing \" << " << num_rhs
+							<< " << \" symbol(s) using rule \" << " << *rulenr
+							<< " << \" (" << rule_descr.str() << ").\" << std::endl;\n";
+						ostr_reduce << "\t\t\t}\n";  // end if
+					}
 
 
 					// take the symbols from the stack and create an argument vector for the semantic rule
@@ -463,15 +472,18 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 			ostr_cpp << reduce;
 		}
 
-		// default: error
-		ostr_cpp << "\t\tdefault:\n";
-		ostr_cpp << "\t\t{\n";
-		// don't write the full string directly so the compiler can optimise duplicate string parts
-		ostr_cpp << "\t\t\tthrow std::runtime_error(\"No transition from closure \""
-			<< " + std::to_string(" << closure->GetId() << ") + \" and look-ahead terminal \""
-			<< " + std::to_string(m_lookahead_id) + \".\");\n";
-		ostr_cpp << "\t\t\tbreak;\n";
-		ostr_cpp << "\t\t}\n";
+		if(m_genErrorCode)
+		{
+			// default: error
+			ostr_cpp << "\t\tdefault:\n";
+			ostr_cpp << "\t\t{\n";
+			// don't write the full string directly so the compiler can optimise duplicate string parts
+			ostr_cpp << "\t\t\tthrow std::runtime_error(\"No transition from closure \""
+				<< " + std::to_string(" << closure->GetId() << ") + \" and look-ahead terminal \""
+				<< " + std::to_string(m_lookahead_id) + \".\");\n";
+			ostr_cpp << "\t\t\tbreak;\n";
+			ostr_cpp << "\t\t}\n";
+		}
 
 		ostr_cpp << "\t}\n";        // end switch
 
@@ -502,12 +514,15 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 			while_has_entries = true;
 		}
 
-		ostr_cpp_while << "\t\t\tdefault:\n";
-		ostr_cpp_while << "\t\t\t\tthrow std::runtime_error(\"No transition from closure \""
-			<< " + std::to_string(" << closure->GetId() << ") + \", look-ahead terminal \""
-			<< " + std::to_string(m_lookahead_id) + \", and top non-terminal \""
-			<< " + std::to_string(topsym->GetId()) + \".\");\n";
-		ostr_cpp_while << "\t\t\t\tbreak;\n";
+		if(m_genErrorCode)
+		{
+			ostr_cpp_while << "\t\t\tdefault:\n";
+			ostr_cpp_while << "\t\t\t\tthrow std::runtime_error(\"No transition from closure \""
+				<< " + std::to_string(" << closure->GetId() << ") + \", look-ahead terminal \""
+				<< " + std::to_string(m_lookahead_id) + \", and top non-terminal \""
+				<< " + std::to_string(topsym->GetId()) + \".\");\n";
+			ostr_cpp_while << "\t\t\t\tbreak;\n";
+		}
 
 		ostr_cpp_while << "\t\t}\n";  // end switch
 
@@ -518,12 +533,15 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 		// return from closure -> decrement distance counter
 		ostr_cpp << "\tif(m_dist_to_jump > 0)\n\t\t--m_dist_to_jump;\n";
 
-		// debug infos
-		ostr_cpp << "\tif(m_debug)\n";
-		ostr_cpp << "\t{\n";
-		ostr_cpp << "\t\tstd::cout << \"Returning from closure \" << " << closure->GetId()
-			<< " << \", distance to jump: \" " << "<< m_dist_to_jump << \".\" << std::endl;\n";
-		ostr_cpp << "\t}\n";  // end if
+		if(m_genDebugCode)
+		{
+			// debug infos
+			ostr_cpp << "\tif(m_debug)\n";
+			ostr_cpp << "\t{\n";
+			ostr_cpp << "\t\tstd::cout << \"Returning from closure \" << " << closure->GetId()
+				<< " << \", distance to jump: \" " << "<< m_dist_to_jump << \".\" << std::endl;\n";
+			ostr_cpp << "\t}\n";  // end if
+		}
 
 		// end closure function
 		ostr_cpp << "}\n\n";
@@ -544,5 +562,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 	file_cpp << outfile_cpp << std::endl;
 	file_h << outfile_h << std::endl;
 
+	// restore options
+	g_options.SetUseColour(use_col_saved);
 	return true;
 }

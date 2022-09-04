@@ -28,7 +28,8 @@ namespace args = boost::program_options;
 
 static bool lr1_create_parser(
 	bool create_ascent_parser = true, bool create_tables = false,
-	bool debug = false, bool write_graph = false)
+	bool verbose = false, bool gen_debug_code = true, bool gen_error_code = true,
+	bool write_graph = false)
 {
 	try
 	{
@@ -36,7 +37,7 @@ static bool lr1_create_parser(
 		grammar.CreateGrammar(true, false);
 		NonTerminalPtr start = grammar.GetStartNonTerminal();
 
-		if(debug)
+		if(verbose)
 		{
 			std::vector<NonTerminalPtr> all_nonterminals = grammar.GetAllNonTerminals();
 
@@ -89,11 +90,13 @@ static bool lr1_create_parser(
 		};
 
 		Collection collsLALR{ closure };
+		collsLALR.SetGenDebugCode(gen_debug_code);
+		collsLALR.SetGenErrorCode(gen_error_code);
 		collsLALR.SetProgressObserver(progress);
 		collsLALR.DoTransitions();
 
-		if(debug)
-			std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
+		if(verbose)
+			std::cout << "\n\n" << collsLALR << std::endl;
 		if(write_graph)
 			collsLALR.SaveGraph("script_lalr", 1);
 
@@ -135,7 +138,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 	// --------------------------------------------------------------------
 	bool create_asc = false;
 	bool create_tables = false;
-	bool debug = false;
+	bool verbose = false;
+	bool no_debug_code = false;
+	bool no_error_code = false;
 	bool colours = false;
 	bool ascii = false;
 	bool write_graph = false;
@@ -146,7 +151,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 		("asc,a", args::bool_switch(&create_asc), "create a recursive ascent parser [default]")
 		("table,t", args::bool_switch(&create_tables), "create LALR(1) tables")
 		("graph,g", args::bool_switch(&write_graph), "write a graph of the parser")
-		("debug,d", args::bool_switch(&debug), "enable debug output for parser generation")
+		("verbose,v", args::bool_switch(&verbose), "enable verbose output for parser generation")
+		("nodebug,d", args::bool_switch(&no_debug_code), "disable generation of debug code for parser")
+		("noerror,e", args::bool_switch(&no_error_code), "disable generation of error handling code for parser")
 		("colours,c", args::bool_switch(&colours), "enable colours in output")
 		("ascii,o", args::bool_switch(&ascii), "only use ascii characters in output")
 		("help,h", args::bool_switch(&show_help), "show help");
@@ -188,7 +195,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 
 	t_timepoint start_parsergen = t_clock::now();
 
-	if(lr1_create_parser(create_asc, create_tables, debug, write_graph))
+	if(lr1_create_parser(create_asc, create_tables,
+		verbose, !no_debug_code, !no_error_code,
+		write_graph))
 	{
 		auto [run_time, time_unit] = get_elapsed_time<
 			t_real, t_timepoint>(start_parsergen);
