@@ -605,7 +605,7 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 		if(write_full_coll)
 		{
 			ofstr << "<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"0\">";
-			ofstr << "<tr><td colspan=\"2\" sides=\"b\"><b>" << "State "
+			ofstr << "<tr><td colspan=\"3\" sides=\"b\"><b>" << "State "
 				<< closure->GetId() << "</b></td></tr>";
 
 			for(const ElementPtr& elem : closure->GetElements())
@@ -667,6 +667,20 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 						ofstr << " ";
 					++lookahead_num;
 				}
+				if(use_colour)
+					ofstr << "</font>";
+				ofstr << " </td>";
+
+				// semantic rule
+				ofstr << "<td align=\"left\" sides=\"l\"> ";
+				if(use_colour)
+					set_colour();
+
+				if(std::optional<std::size_t> rule = elem->GetSemanticRule(); rule)
+				{
+					ofstr << *rule;
+				}
+
 				if(use_colour)
 					ofstr << "</font>";
 				ofstr << "</td></tr>";

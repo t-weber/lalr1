@@ -357,6 +357,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		}
 	}
 
+	// core element
 	ostr << lhs->GetStrId() << " " << g_options.GetArrowChar() << " [ ";
 	for(std::size_t rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
 	{
@@ -370,13 +371,19 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 			ostr << " ";
 	}
 
+	// end cursor
 	if(at_end)
 		ostr << g_options.GetCursorChar();
 
+	// lookaheads
 	ostr << " " << g_options.GetSeparatorChar() << " ";
 
-	for(const auto& la : elem.GetLookaheads())
+	for(const TerminalPtr& la : elem.GetLookaheads())
 		ostr << la->GetStrId() << " ";
+
+	// semantic rule
+	if(std::optional<std::size_t> rule = elem.GetSemanticRule(); rule)
+		ostr << " " << g_options.GetSeparatorChar() << " rule " << *rule << " ";
 
 	ostr << "]";
 	if(use_colour)

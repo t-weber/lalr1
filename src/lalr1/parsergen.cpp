@@ -300,7 +300,11 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 
 			std::optional<std::size_t> rulenr = *elem->GetSemanticRule();
 			if(!rulenr)
+			{
+				std::cerr << "Error: No semantic rule assigned to element "
+					<< (*elem) << "." << std::endl;
 				continue;
+			}
 
 			const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
 			if(lookaheads.size())

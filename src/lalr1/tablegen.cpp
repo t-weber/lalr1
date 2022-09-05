@@ -86,7 +86,11 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 			std::optional<std::size_t> rulenr = *elem->GetSemanticRule();
 			if(!rulenr)		// no semantic rule assigned
+			{
+				std::cerr << "Error: No semantic rule assigned to element "
+					<< (*elem) << "." << std::endl;
 				continue;
+			}
 			std::size_t rule = *rulenr;
 
 			if(numRhsSymsPerRule.size() <= rule)
