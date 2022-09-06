@@ -26,16 +26,31 @@
 
 
 /**
+ * partial match of a rule
+ */
+struct PartialMatch
+{
+	std::size_t matched_len{0};
+	std::vector<std::size_t> lookahead_indices{};
+};
+
+
+/**
  * export lalr(1) tables to C++ code
  */
 bool Collection::SaveParseTables(const std::string& file) const
 {
+	const std::size_t numStates = m_collection.size();
+
 	// create lalr(1) tables
 	bool ok = true;
 	std::vector<std::size_t> numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
-	std::vector<std::size_t> vecRuleLhsIdx{};     // nonterminal index of the rule's result type
+	std::vector<std::size_t> ruleLhsIdx{};        // nonterminal index of the rule's result type
 
-	const std::size_t numStates = m_collection.size();
+	// partial match per rule number
+	using t_partialmatch = std::unordered_map<std::size_t, PartialMatch>;
+	std::vector<t_partialmatch> partials{};       // partial matches per closure
+	partials.reserve(numStates);
 
 	// lalr(1) tables
 	std::vector<std::vector<std::size_t>> _action_shift, _action_reduce, _jump;
@@ -43,24 +58,38 @@ bool Collection::SaveParseTables(const std::string& file) const
 	_action_reduce.resize(numStates);
 	_jump.resize(numStates);
 
+	for(std::size_t state=0; state<numStates; ++state)
+	{
+		_action_shift[state].reserve(m_mapTermIdx.size());
+		_action_reduce[state].reserve(m_mapTermIdx.size());
+		_jump[state].reserve(m_mapNonTermIdx.size());
+	}
+
+
+	// set a table item
+	auto set_item = [](std::vector<std::size_t>& vec, std::size_t idx,
+		std::size_t val, std::size_t filler = ERROR_VAL) -> void
+	{
+		if(vec.size() <= idx)
+			vec.resize(idx+1, filler);
+		vec[idx] = val;
+	};
+
+
 	// map terminal table index to terminal symbol
 	std::unordered_map<std::size_t, TerminalPtr> seen_terminals{};
 
 
 	for(const t_transition& tup : m_transitions)
 	{
-		const ClosurePtr& stateFrom = std::get<0>(tup);
-		const ClosurePtr& stateTo = std::get<1>(tup);
 		const SymbolPtr& symTrans = std::get<2>(tup);
-
-		bool symIsTerm = symTrans->IsTerminal();
-		bool symIsEps = symTrans->IsEps();
-
-		if(symIsEps)
+		if(symTrans->IsEps())
 			continue;
 
 		// terminal transitions -> shift table
 		// nonterminal transition -> jump table
+		const bool symIsTerm = symTrans->IsTerminal();
+
 		std::vector<std::vector<std::size_t>>* tab =
 			symIsTerm ? &_action_shift : &_jump;
 
@@ -71,49 +100,87 @@ bool Collection::SaveParseTables(const std::string& file) const
 				symIdx, std::dynamic_pointer_cast<Terminal>(symTrans)));
 		}
 
-		auto& _tab_row = (*tab)[stateFrom->GetId()];
-		if(_tab_row.size() <= symIdx)
-			_tab_row.resize(symIdx+1, ERROR_VAL);
-		_tab_row[symIdx] = stateTo->GetId();
+		const ClosurePtr& stateFrom = std::get<0>(tup);
+		const ClosurePtr& stateTo = std::get<1>(tup);
+		set_item((*tab)[stateFrom->GetId()], symIdx, stateTo->GetId());
 	}
 
 	for(const ClosurePtr& closure : m_collection)
 	{
 		for(const ElementPtr& elem : closure->GetElements())
 		{
-			if(!elem->IsCursorAtEnd())
-				continue;
+			std::optional<std::size_t> rulenr = elem->GetSemanticRule();
 
-			std::optional<std::size_t> rulenr = *elem->GetSemanticRule();
-			if(!rulenr)		// no semantic rule assigned
+			// cursor at end -> reduce a completely parsed rule
+			if(elem->IsCursorAtEnd())
 			{
-				std::cerr << "Error: No semantic rule assigned to element "
-					<< (*elem) << "." << std::endl;
-				continue;
+				if(!rulenr)  // no semantic rule assigned
+				{
+					std::cerr << "Error: No semantic rule assigned to element "
+						<< (*elem) << "." << std::endl;
+					continue;
+				}
+
+				set_item(numRhsSymsPerRule, *rulenr, elem->GetRhs()->NumSymbols(false), 0);
+				set_item(ruleLhsIdx, *rulenr, GetTableIndex(elem->GetLhs()->GetId(), false), 0);
+
+				auto& _action_row = _action_reduce[closure->GetId()];
+				for(const TerminalPtr& la : elem->GetLookaheads())
+				{
+					std::size_t laIdx = GetTableIndex(la->GetId(), true);
+
+					// in extended grammar, first production (rule 0) is of the form start -> ...
+					if(*rulenr == 0)
+						*rulenr = ACCEPT_VAL;
+
+					// semantic rule number -> reduce table
+					set_item(_action_row, laIdx, *rulenr);
+				}
 			}
-			std::size_t rule = *rulenr;
 
-			if(numRhsSymsPerRule.size() <= rule)
-				numRhsSymsPerRule.resize(rule+1);
-			if(vecRuleLhsIdx.size() <= rule)
-				vecRuleLhsIdx.resize(rule+1);
-			numRhsSymsPerRule[rule] = elem->GetRhs()->NumSymbols(false);
-			vecRuleLhsIdx[rule] = GetTableIndex(elem->GetLhs()->GetId(), false);
-
-			auto& _action_row = _action_reduce[closure->GetId()];
-
-			for(const auto& la : elem->GetLookaheads())
+			// cursor not at end -> partially parsed rule
+			else
 			{
-				std::size_t laIdx = GetTableIndex(la->GetId(), true);
+				if(!rulenr)  // no semantic rule assigned
+					continue;
 
-				// in extended grammar, first production (rule 0) is of the form start -> ...
-				if(rule == 0)
-					rule = ACCEPT_VAL;
+				if(partials.size() <= closure->GetId())
+					partials.resize(closure->GetId() + 1);
+				t_partialmatch& partial = partials[closure->GetId()];
 
-				// semantic rule number -> reduce table
-				if(_action_row.size() <= laIdx)
-					_action_row.resize(laIdx+1, ERROR_VAL);
-				_action_row[laIdx] = rule;
+				auto update_match = [this, &elem](PartialMatch& match) -> void
+				{
+					const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
+
+					match.matched_len = elem->GetCursor();
+					match.lookahead_indices.clear();
+					match.lookahead_indices.reserve(lookaheads.size());
+
+					for(const TerminalPtr& la : lookaheads)
+					{
+						std::size_t laIdx = GetTableIndex(la->GetId(), true);
+						match.lookahead_indices.push_back(laIdx);
+					}
+				};
+
+				if(auto iter = partial.find(*rulenr); iter != partial.end())
+				{
+					// update existing partial match for this closure and rule
+					PartialMatch& match = iter->second;
+
+					// longer match with the same rule?
+					if(elem->GetCursor() > match.matched_len)
+						update_match(match);
+				}
+				else
+				{
+					// add a new partial match
+					PartialMatch match;
+					update_match(match);
+					partial.emplace(std::make_pair(*rulenr, std::move(match)));
+				}
+
+				// TODO: save partial matches
 			}
 		}
 	}
@@ -257,7 +324,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 	// index of lhs nonterminal in rule
 	ofstr << "const t_vecIdx vec_lhs_idx{{ ";
-	for(const auto& val : vecRuleLhsIdx)
+	for(const auto& val : ruleLhsIdx)
 		ofstr << val << ", ";
 	ofstr << "}};\n\n";
 

@@ -295,74 +295,85 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 
 		for(const ElementPtr& elem : closure->GetElements())
 		{
-			if(!elem->IsCursorAtEnd())
-				continue;
+			std::optional<std::size_t> rulenr = elem->GetSemanticRule();
 
-			std::optional<std::size_t> rulenr = *elem->GetSemanticRule();
-			if(!rulenr)
+			// cursor at end -> reduce a completely parsed rule
+			if(elem->IsCursorAtEnd())
 			{
-				std::cerr << "Error: No semantic rule assigned to element "
-					<< (*elem) << "." << std::endl;
-				continue;
+				if(!rulenr)
+				{
+					std::cerr << "Error: No semantic rule assigned to element "
+						<< (*elem) << "." << std::endl;
+					continue;
+				}
+
+				const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
+				if(lookaheads.size())
+				{
+					std::ostringstream ostr_reduce;
+
+					std::unordered_set<SymbolPtr> reduce_lookaheads;
+					for(const TerminalPtr& la : lookaheads)
+						reduce_lookaheads.insert(la);
+					reduces_lookaheads.emplace_back(std::move(reduce_lookaheads));
+					ostr_reduce << "\t\t{\n";
+
+					// in extended grammar, first production (rule 0) is of the form start -> ...
+					if(*rulenr == 0)
+					{
+						ostr_reduce << "\t\t\tm_accepted = true;\n";
+						ostr_reduce << "\t\t\tbreak;\n";
+					}
+					else
+					{
+						std::ostringstream rule_descr;
+						rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
+
+						std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
+						ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
+
+						if(m_genDebugCode)
+						{
+							// debug infos
+							ostr_reduce << "\t\t\tif(m_debug)\n";
+							ostr_reduce << "\t\t\t{\n";
+							ostr_reduce << "\t\t\t\tstd::cout << \"Reducing \" << " << num_rhs
+								<< " << \" symbol(s) using rule \" << " << *rulenr
+								<< " << \" (" << rule_descr.str() << ").\" << std::endl;\n";
+							ostr_reduce << "\t\t\t}\n";  // end if
+						}
+
+
+						// take the symbols from the stack and create an argument vector for the semantic rule
+						ostr_reduce << "\t\t\tstd::vector<t_symbol> args(" << num_rhs << ");\n";
+						if(num_rhs)
+						{
+							ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
+							ostr_reduce << "\t\t\t{\n";
+							ostr_reduce << "\t\t\t\targs[" << num_rhs << "-arg-1] = std::move(m_symbols.top());\n";
+							ostr_reduce << "\t\t\t\tm_symbols.pop();\n";
+							ostr_reduce << "\t\t\t}\n";  // end for
+						}
+
+						// execute semantic rule
+						ostr_reduce << "\t\t\t// semantic rule: " << rule_descr.str() << ".\n";
+						ostr_reduce << "\t\t\tm_symbols.emplace((*m_semantics)[" << *rulenr << "](args));\n";
+						ostr_reduce << "\t\t\tbreak;\n";
+					}
+
+					ostr_reduce << "\t\t}\n";  // end case
+
+					reduces.emplace_back(ostr_reduce.str());
+				}
 			}
 
-			const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
-			if(lookaheads.size())
+			// cursor not at end -> partially parsed rule
+			else
 			{
-				std::ostringstream ostr_reduce;
+				if(!rulenr)  // no semantic rule assigned
+					continue;
 
-				std::unordered_set<SymbolPtr> reduce_lookaheads;
-				for(const auto& la : lookaheads)
-					reduce_lookaheads.insert(la);
-				reduces_lookaheads.emplace_back(std::move(reduce_lookaheads));
-				ostr_reduce << "\t\t{\n";
-
-				// in extended grammar, first production (rule 0) is of the form start -> ...
-				if(*rulenr == 0)
-				{
-					ostr_reduce << "\t\t\tm_accepted = true;\n";
-					ostr_reduce << "\t\t\tbreak;\n";
-				}
-				else
-				{
-					std::ostringstream rule_descr;
-					rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
-
-					std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
-					ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
-
-					if(m_genDebugCode)
-					{
-						// debug infos
-						ostr_reduce << "\t\t\tif(m_debug)\n";
-						ostr_reduce << "\t\t\t{\n";
-						ostr_reduce << "\t\t\t\tstd::cout << \"Reducing \" << " << num_rhs
-							<< " << \" symbol(s) using rule \" << " << *rulenr
-							<< " << \" (" << rule_descr.str() << ").\" << std::endl;\n";
-						ostr_reduce << "\t\t\t}\n";  // end if
-					}
-
-
-					// take the symbols from the stack and create an argument vector for the semantic rule
-					ostr_reduce << "\t\t\tstd::vector<t_symbol> args(" << num_rhs << ");\n";
-					if(num_rhs)
-					{
-						ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
-						ostr_reduce << "\t\t\t{\n";
-						ostr_reduce << "\t\t\t\targs[" << num_rhs << "-arg-1] = std::move(m_symbols.top());\n";
-						ostr_reduce << "\t\t\t\tm_symbols.pop();\n";
-						ostr_reduce << "\t\t\t}\n";  // end for
-					}
-
-					// execute semantic rule
-					ostr_reduce << "\t\t\t// semantic rule: " << rule_descr.str() << ".\n";
-					ostr_reduce << "\t\t\tm_symbols.emplace((*m_semantics)[" << *rulenr << "](args));\n";
-					ostr_reduce << "\t\t\tbreak;\n";
-				}
-
-				ostr_reduce << "\t\t}\n";  // end case
-
-				reduces.emplace_back(ostr_reduce.str());
+				// TODO
 			}
 		}
 
