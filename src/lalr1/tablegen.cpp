@@ -26,16 +26,6 @@
 
 
 /**
- * partial match of a rule
- */
-struct PartialMatch
-{
-	std::size_t matched_len{0};
-	std::vector<std::size_t> lookahead_indices{};
-};
-
-
-/**
  * export lalr(1) tables to C++ code
  */
 bool Collection::SaveParseTables(const std::string& file) const
@@ -48,8 +38,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 	std::vector<std::size_t> ruleLhsIdx{};        // nonterminal index of the rule's result type
 
 	// partial match per rule number
-	using t_partialmatch = std::unordered_map<std::size_t, PartialMatch>;
-	std::vector<t_partialmatch> partials{};       // partial matches per closure
+	t_partialmatches partials{};                  // partial matches per closure
 	partials.reserve(numStates);
 
 	// lalr(1) tables
@@ -177,7 +166,9 @@ bool Collection::SaveParseTables(const std::string& file) const
 					// add a new partial match
 					PartialMatch match;
 					update_match(match);
-					partial.emplace(std::make_pair(*rulenr, std::move(match)));
+
+					if(match.matched_len > 0)
+						partial.emplace(std::make_pair(*rulenr, std::move(match)));
 				}
 
 				// TODO: save partial matches
@@ -297,7 +288,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "const t_mapIdIdx map_term_idx{{\n";
 	for(const auto& [id, idx] : m_mapTermIdx)
 	{
-		ofstr << "\t{";
+		ofstr << "\t{ ";
 		if(id == EPS_IDENT)
 			ofstr << "eps";
 		else if(id == END_IDENT)
@@ -306,14 +297,14 @@ bool Collection::SaveParseTables(const std::string& file) const
 			ofstr << "'" << char(id) << "'";
 		else
 			ofstr << id;
-		ofstr << ", " << idx << "},\n";
+		ofstr << ", " << idx << " },\n";
 	}
 	ofstr << "}};\n\n";
 
 	// non-terminal symbol indices
 	ofstr << "const t_mapIdIdx map_nonterm_idx{{\n";
 	for(const auto& [id, idx] : m_mapNonTermIdx)
-		ofstr << "\t{" << id << ", " << idx << "},\n";
+		ofstr << "\t{ " << id << ", " << idx << " },\n";
 	ofstr << "}};\n\n";
 
 	// number of symbols on right-hand side of rule
@@ -326,6 +317,25 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "const t_vecIdx vec_lhs_idx{{ ";
 	for(const auto& val : ruleLhsIdx)
 		ofstr << val << ", ";
+	ofstr << "}};\n\n";
+
+	// partial matches
+	ofstr << "const t_partialmatches vec_partials{{\n";
+	for(const t_partialmatch& partial : partials)
+	{
+		ofstr << "\tt_partialmatch\n\t{\n";
+		for(const auto& [rulenr, partialmatch] : partial)
+		{
+			ofstr << "\t\tstd::make_pair(" << rulenr << ", ";
+			ofstr << "PartialMatch{ .matched_len=" << partialmatch.matched_len << ", ";
+			ofstr << ".lookahead_indices={{ ";
+			for(std::size_t laidx : partialmatch.lookahead_indices)
+				ofstr << laidx << ", ";
+			ofstr << "}}";
+			ofstr << " }),\n";
+		}
+		ofstr << "\t},\n";
+	}
 	ofstr << "}};\n\n";
 
 	ofstr << "}\n\n\n";

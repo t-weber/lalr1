@@ -14,6 +14,7 @@
 #include <vector>
 #include <unordered_map>
 #include <variant>
+#include <tuple>
 
 
 #define ERROR_VAL  0xffffffff  /* 'error' table entry */
@@ -28,6 +29,21 @@ using t_toknode = t_lalrastbaseptr;
 using t_table = Table<std::size_t, std::vector>;
 using t_mapIdIdx = std::unordered_map<std::size_t, std::size_t>;
 using t_vecIdx = std::vector<std::size_t>;
+
+
+/**
+ * partial match of a rule
+ */
+struct PartialMatch
+{
+	std::size_t matched_len{0};
+	std::vector<std::size_t> lookahead_indices{};
+};
+
+
+// partial match per rule number
+using t_partialmatch = std::unordered_map<std::size_t, PartialMatch>;
+using t_partialmatches = std::vector<t_partialmatch>;
 
 
 #endif
