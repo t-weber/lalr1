@@ -29,8 +29,8 @@ public:
 
 
 	Table(const t_cont<t_cont<T>>& cont,
-		  T errorval=0xffffffff, T acceptval=0xfffffffe,
-		  std::optional<std::size_t> ROWS=std::nullopt,
+		  T errorval = 0xffffffff, T acceptval = 0xfffffffe,
+		  std::optional<std::size_t> ROWS = std::nullopt,
 	   std::optional<std::size_t> COLS=std::nullopt)
 		: m_data{}, m_rowsize{}, m_colsize{},
 			m_errorval{errorval}, m_acceptval{acceptval}
@@ -61,13 +61,16 @@ public:
 	{}
 
 	Table(std::size_t ROWS, std::size_t COLS,
-		T errorval=0xffffffff, T acceptval=0xfffffffe,
-		const std::initializer_list<T>& lst={})
-		: m_data{lst}, m_rowsize{ROWS}, m_colsize{COLS}, m_errorval{errorval}, m_acceptval{acceptval}
+		T errorval = 0xffffffff, T acceptval = 0xfffffffe,
+		const std::initializer_list<T>& lst = {})
+		: m_data{lst}, m_rowsize{ROWS}, m_colsize{COLS},
+			m_errorval{errorval}, m_acceptval{acceptval}
 	{}
+
 
 	std::size_t size1() const { return m_rowsize; }
 	std::size_t size2() const { return m_colsize; }
+
 
 	const T& operator()(std::size_t row, std::size_t col) const
 	{
@@ -83,11 +86,17 @@ public:
 	/**
 	 * export table to C++ code
 	 */
-	void SaveCXXDefinition(std::ostream& ostr, const std::string& var) const
+	void SaveCXXDefinition(std::ostream& ostr, const std::string& var,
+		const std::string& row_label = "", const std::string& col_label = "") const
 	{
-		ostr << "const Table<std::size_t, std::vector> " << var << "{"
-			<< size1() << ", " << size2() << ", "
-			<< "err, acc, ";
+		ostr << "const Table<std::size_t, std::vector> " << var << "{";
+		ostr << size1();
+		if(row_label.size())
+			ostr << " /*" << row_label << "*/";
+		ostr << ", " << size2();
+		if(col_label.size())
+			ostr << " /*" << col_label << "*/";
+		ostr << ", " << "err, acc,\n";
 
 		ostr << "{\n";
 		for(std::size_t row=0; row<size1(); ++row)
@@ -104,7 +113,7 @@ public:
 				else
 					ostr << entry << ", ";
 			}
-			ostr << "\n";
+			ostr << "// " << row_label << " " << row << "\n";
 		}
 		ostr << "}";
 		ostr << "};\n\n";

@@ -39,7 +39,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 	// partial match per rule number
 	t_partialmatches partials{};                  // partial matches per closure
-	partials.reserve(numStates);
+	partials.resize(numStates);
 
 	// lalr(1) tables
 	std::vector<std::vector<std::size_t>> _action_shift, _action_reduce, _jump;
@@ -113,7 +113,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 				set_item(numRhsSymsPerRule, *rulenr, elem->GetRhs()->NumSymbols(false), 0);
 				set_item(ruleLhsIdx, *rulenr, GetTableIndex(elem->GetLhs()->GetId(), false), 0);
 
-				auto& _action_row = _action_reduce[closure->GetId()];
+				auto& _reduce_row = _action_reduce[closure->GetId()];
 				for(const TerminalPtr& la : elem->GetLookaheads())
 				{
 					std::size_t laIdx = GetTableIndex(la->GetId(), true);
@@ -123,7 +123,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 						*rulenr = ACCEPT_VAL;
 
 					// semantic rule number -> reduce table
-					set_item(_action_row, laIdx, *rulenr);
+					set_item(_reduce_row, laIdx, *rulenr);
 				}
 			}
 
@@ -142,13 +142,20 @@ bool Collection::SaveParseTables(const std::string& file) const
 					const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
 
 					match.matched_len = elem->GetCursor();
-					match.lookahead_indices.clear();
-					match.lookahead_indices.reserve(lookaheads.size());
+					match.la_idx.clear();
+					match.la_idx.reserve(lookaheads.size());
 
 					for(const TerminalPtr& la : lookaheads)
+						match.la_idx.push_back(GetTableIndex(la->GetId(), true));
+
+					if(SymbolPtr next_sym = elem->GetSymbolAtCursor(); next_sym)
 					{
-						std::size_t laIdx = GetTableIndex(la->GetId(), true);
-						match.lookahead_indices.push_back(laIdx);
+						match.next_sym_is_term = next_sym->IsTerminal();
+						match.next_sym_idx = GetTableIndex(next_sym->GetId(), match.next_sym_is_term);
+					}
+					else
+					{
+						std::cerr << "Error: Not expected to be at end of element " << *elem << ".";
 					}
 				};
 
@@ -170,8 +177,6 @@ bool Collection::SaveParseTables(const std::string& file) const
 					if(match.matched_len > 0)
 						partial.emplace(std::make_pair(*rulenr, std::move(match)));
 				}
-
-				// TODO: save partial matches
 			}
 		}
 	}
@@ -280,12 +285,12 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "\tconst std::size_t end = " << END_IDENT << ";\n";
 	ofstr << "\n";
 
-	tabActionShift.SaveCXXDefinition(ofstr, "tab_action_shift");
-	tabActionReduce.SaveCXXDefinition(ofstr, "tab_action_reduce");
-	tabJump.SaveCXXDefinition(ofstr, "tab_jump");
+	tabActionShift.SaveCXXDefinition(ofstr, "tab_action_shift", "state", "terminal");
+	tabActionReduce.SaveCXXDefinition(ofstr, "tab_action_reduce", "state", "lookahead");
+	tabJump.SaveCXXDefinition(ofstr, "tab_jump", "state", "nonterminal");
 
 	// terminal symbol indices
-	ofstr << "const t_mapIdIdx map_term_idx{{\n";
+	ofstr << "const t_mapIdIdx map_term_idx\n{{\n";
 	for(const auto& [id, idx] : m_mapTermIdx)
 	{
 		ofstr << "\t{ ";
@@ -302,7 +307,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "}};\n\n";
 
 	// non-terminal symbol indices
-	ofstr << "const t_mapIdIdx map_nonterm_idx{{\n";
+	ofstr << "const t_mapIdIdx map_nonterm_idx\n{{\n";
 	for(const auto& [id, idx] : m_mapNonTermIdx)
 		ofstr << "\t{ " << id << ", " << idx << " },\n";
 	ofstr << "}};\n\n";
@@ -320,21 +325,25 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "}};\n\n";
 
 	// partial matches
-	ofstr << "const t_partialmatches vec_partials{{\n";
+	ofstr << "const t_partialmatches vec_partials\n{{\n";
+	std::size_t closure_idx = 0;
 	for(const t_partialmatch& partial : partials)
 	{
-		ofstr << "\tt_partialmatch\n\t{\n";
+		ofstr << "\tt_partialmatch // state " << closure_idx << "\n\t{\n";
 		for(const auto& [rulenr, partialmatch] : partial)
 		{
 			ofstr << "\t\tstd::make_pair(" << rulenr << ", ";
 			ofstr << "PartialMatch{ .matched_len=" << partialmatch.matched_len << ", ";
-			ofstr << ".lookahead_indices={{ ";
-			for(std::size_t laidx : partialmatch.lookahead_indices)
+			ofstr << ".next_sym_is_term=" << partialmatch.next_sym_is_term << ", ";
+			ofstr << ".next_sym_idx=" << partialmatch.next_sym_idx << ", ";
+			ofstr << ".la_idx={{ ";
+			for(std::size_t laidx : partialmatch.la_idx)
 				ofstr << laidx << ", ";
 			ofstr << "}}";
 			ofstr << " }),\n";
 		}
 		ofstr << "\t},\n";
+		++closure_idx;
 	}
 	ofstr << "}};\n\n";
 

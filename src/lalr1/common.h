@@ -36,8 +36,10 @@ using t_vecIdx = std::vector<std::size_t>;
  */
 struct PartialMatch
 {
-	std::size_t matched_len{0};
-	std::vector<std::size_t> lookahead_indices{};
+	std::size_t matched_len{0};         // number of already matched symbols in the rule
+	bool next_sym_is_term{true};        // is the next symbol in the rule a terminal?
+	std::size_t next_sym_idx{0};        // terminal or nonterminal index of the next symbol in the rule
+	std::vector<std::size_t> la_idx{};  // indices of the lr element's lookaheads
 };
 
 

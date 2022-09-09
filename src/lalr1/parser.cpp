@@ -92,23 +92,25 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 	states.push(0);
 	std::size_t inputidx = 0;
 
+	// next token
 	t_toknode curtok = input[inputidx++];
-	std::size_t curtokidx = curtok->GetTableIdx();
 
 	// debug output of current token
-	auto print_input_token = [&inputidx, &curtok, &curtokidx](std::ostream& ostr)
+	auto print_input_token = [&inputidx, &curtok](std::ostream& ostr)
 	{
 		ostr << "\tCurrent token [" << inputidx-1 << "]"
-			<< ": " << curtok->GetId()
-			<< " (table index " << curtokidx << ")."
+			<< ": " << curtok->GetId();
+		if(std::isprint(curtok->GetId()))
+			ostr << " = '" << char(curtok->GetId()) << "'";
+		ostr << " (table index " << curtok->GetTableIdx() << ")."
 			<< std::endl;
 	};
 
 	while(true)
 	{
 		std::size_t topstate = states.top();
-		std::size_t newstate = (*m_tabActionShift)(topstate, curtokidx);
-		std::size_t newrule = (*m_tabActionReduce)(topstate, curtokidx);
+		std::size_t newstate = (*m_tabActionShift)(topstate, curtok->GetTableIdx());
+		std::size_t newrule = (*m_tabActionReduce)(topstate, curtok->GetTableIdx());
 
 		if(m_debug)
 		{
@@ -123,9 +125,10 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			std::ostringstream ostrErr;
 			ostrErr << "Undefined shift and reduce entries"
 				<< " from state " << topstate << "."
-				<< " Current token id is " << curtok->GetId()
-				<< get_line_numbers(curtok)
-				<< ".";
+				<< " Current token id is " << curtok->GetId();
+			if(std::isprint(curtok->GetId()))
+				ostrErr << " = '" << char(curtok->GetId()) << "'";
+			ostrErr << get_line_numbers(curtok) << ".";
 
 			throw std::runtime_error(ostrErr.str());
 		}
@@ -135,9 +138,10 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			ostrErr << "Shift/reduce conflict between shift"
 				<< " from state " << topstate << " to state " << newstate
 				<< " and reduce using rule " << newrule << "."
-				<< " Current token id is " << curtok->GetId()
-				<< get_line_numbers(curtok)
-				<< ".";
+				<< " Current token id is " << curtok->GetId();
+			if(std::isprint(curtok->GetId()))
+				ostrErr << " = '" << char(curtok->GetId()) << "'";
+			ostrErr << get_line_numbers(curtok) << ".";
 
 			throw std::runtime_error(ostrErr.str());
 		}
@@ -174,8 +178,8 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 				throw std::runtime_error(ostrErr.str());
 			}
 
+			// next token
 			curtok = input[inputidx++];
-			curtokidx = curtok->GetTableIdx();
 		}
 
 		// reduce
