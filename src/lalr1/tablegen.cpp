@@ -15,6 +15,7 @@
  */
 
 #include "collection.h"
+#include "timer.h"
 
 #include <sstream>
 #include <fstream>
@@ -81,6 +82,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 	std::unordered_map<std::size_t, TerminalPtr> seen_terminals{};
 
 
+	// calculate shift and jump table entries
 	for(const t_transition& transition : m_transitions)
 	{
 		const SymbolPtr& symTrans = std::get<2>(transition);
@@ -137,16 +139,36 @@ bool Collection::SaveParseTables(const std::string& file) const
 			}
 		}
 
+		// unique partial match?
 		if(matching_rules.size() == 1)
 		{
-			// unique partial match
-			set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], symIdx,
-				matching_rules.begin()->first);
-			set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], symIdx,
-				matching_rules.begin()->second->GetCursor(), 0);
+			auto set_partials_elems = [&set_tab_elem,
+				&partials_rule_tab, &partials_matchlen_tab,
+				&matching_rules, &stateFrom](std::size_t sym_idx) -> void
+			{
+				set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], sym_idx,
+					matching_rules.begin()->first);
+				set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], sym_idx,
+					matching_rules.begin()->second->GetCursor(), 0);
+			};
+
+			if(symIsTerm)
+			{
+				set_partials_elems(symIdx);
+			}
+			else
+			{
+				for(const TerminalPtr& la : matching_rules.begin()->second->GetLookaheads())
+				{
+					const std::size_t laIdx = GetTableIndex(la->GetId(), true);
+					set_partials_elems(laIdx);
+				}
+			}
 		}
 	}
 
+
+	// calculate reduce table entries
 	for(const ClosurePtr& closure : m_collection)
 	{
 		for(const ElementPtr& elem : closure->GetElements())
@@ -170,7 +192,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 			auto& _reduce_row = action_reduce[closure->GetId()];
 			for(const TerminalPtr& la : elem->GetLookaheads())
 			{
-				std::size_t laIdx = GetTableIndex(la->GetId(), true);
+				const std::size_t laIdx = GetTableIndex(la->GetId(), true);
 
 				// in extended grammar, first production (rule 0) is of the form start -> ...
 				if(*rulenr == 0)
@@ -200,6 +222,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 		ERROR_VAL, ACCEPT_VAL, 0, numStates, numTerminals};
 	t_table tabPartialMatchLenNonterm = t_table{partials_matchlen_nonterm,
 		ERROR_VAL, ACCEPT_VAL, 0, numStates, numTerminals};
+
 
 	// check for and try to resolve shift/reduce conflicts
 	std::size_t state = 0;
@@ -301,20 +324,21 @@ bool Collection::SaveParseTables(const std::string& file) const
 		return false;
 
 	ofstr << "/*\n";
-	ofstr << " * Parsing tables created using liblalr1 by Tobias Weber, 2020-2022.\n";
+	ofstr << " * Parsing tables created on " << get_timestamp();
+	ofstr << " using liblalr1 by Tobias Weber, 2020-2022.\n";
 	ofstr << " * DOI: https://doi.org/10.5281/zenodo.6987396\n";
 	ofstr << " */\n\n";
 
 	ofstr << "#ifndef __LALR1_TABLES__\n";
 	ofstr << "#define __LALR1_TABLES__\n\n";
 
-	ofstr <<"namespace _lr1_tables {\n\n";
+	ofstr <<"namespace _lalr1_tables {\n\n";
 
 	// save constants
-	ofstr << "\tconst std::size_t err = " << ERROR_VAL << ";\n";
-	ofstr << "\tconst std::size_t acc = " << ACCEPT_VAL << ";\n";
-	ofstr << "\tconst std::size_t eps = " << EPS_IDENT << ";\n";
-	ofstr << "\tconst std::size_t end = " << END_IDENT << ";\n";
+	ofstr << "const constexpr std::size_t err = " << ERROR_VAL << ";\n";
+	ofstr << "const constexpr std::size_t acc = " << ACCEPT_VAL << ";\n";
+	ofstr << "const constexpr std::size_t eps = " << EPS_IDENT << ";\n";
+	ofstr << "const constexpr std::size_t end = " << END_IDENT << ";\n";
 	ofstr << "\n";
 
 	// save lalr(1) tables
@@ -366,18 +390,27 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "}\n\n\n";
 
 
-	ofstr << "static std::tuple<const t_table*, const t_table*, const t_table*,\n"
+	// lalr(1) tables getter
+	ofstr << "static\nstd::tuple<const t_table*, const t_table*, const t_table*,\n"
 		<< "\tconst t_vecIdx*, const t_vecIdx*>\n";
 	ofstr << "get_lalr1_tables()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n"
-		<< "\t\t&_lr1_tables::tab_action_shift, &_lr1_tables::tab_action_reduce, &_lr1_tables::tab_jump,\n"
-		<< "\t\t&_lr1_tables::vec_num_rhs_syms, &_lr1_tables::vec_lhs_idx);\n";
+		<< "\t\t&_lalr1_tables::tab_action_shift, &_lalr1_tables::tab_action_reduce, &_lalr1_tables::tab_jump,\n"
+		<< "\t\t&_lalr1_tables::vec_num_rhs_syms, &_lalr1_tables::vec_lhs_idx);\n";
 	ofstr << "}\n\n";
 
-	ofstr << "static std::tuple<const t_mapIdIdx*, const t_mapIdIdx*>\n";
+	// partial match tables getter
+	ofstr << "[[maybe_unused]] static\nstd::tuple<const t_table*, const t_table*>\n";
+	ofstr << "get_lalr1_partials_tables()\n{\n";
+	ofstr << "\treturn std::make_tuple(\n"
+		<< "\t\t&_lalr1_tables::tab_partials_rule, &_lalr1_tables::tab_partials_matchlen);\n";
+	ofstr << "}\n\n";
+
+	// index maps getter
+	ofstr << "static\nstd::tuple<const t_mapIdIdx*, const t_mapIdIdx*>\n";
 	ofstr << "get_lalr1_table_indices()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n"
-		<< "\t\t&_lr1_tables::map_term_idx, &_lr1_tables::map_nonterm_idx);\n";
+		<< "\t\t&_lalr1_tables::map_term_idx, &_lalr1_tables::map_nonterm_idx);\n";
 	ofstr << "}\n\n";
 
 

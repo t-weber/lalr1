@@ -116,8 +116,9 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
 			return args[0];
 		});
 	}
@@ -131,8 +132,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_plus->GetId());
@@ -148,8 +151,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_minus->GetId());
@@ -165,8 +170,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mult->GetId());
@@ -182,8 +189,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_div->GetId());
@@ -199,8 +208,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mod->GetId());
@@ -216,8 +227,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_pow->GetId());
@@ -233,8 +246,9 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
 			return args[1];
 		});
 	}
@@ -248,8 +262,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsident = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr rhsexprs = std::dynamic_pointer_cast<ASTBase>(args[2]);
 
@@ -275,8 +291,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::REAL);
 			sym->SetId(expr->GetId());
@@ -294,8 +312,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::INT);
 			sym->SetId(expr->GetId());
@@ -313,8 +333,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::STR);
 			sym->SetId(expr->GetId());
@@ -332,8 +354,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			auto rhsident = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
 			rhsident->SetIdent(true);
 			rhsident->SetId(expr->GetId());
@@ -351,8 +375,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr expr = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			return std::make_shared<ASTUnary>(expr->GetId(), 0, expr, op_minus->GetId());
 		});
@@ -367,8 +393,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsexpr = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			return std::make_shared<ASTUnary>(expr->GetId(), 0, rhsexpr, op_plus->GetId());
 		});
@@ -383,8 +411,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsident = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr rhsexpr = std::dynamic_pointer_cast<ASTBase>(args[2]);
 
@@ -412,8 +442,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			auto stmts_lst = std::dynamic_pointer_cast<ASTList>(args[1]);
 			t_astbaseptr rhsstmt = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			stmts_lst->AddChild(rhsstmt, true);
@@ -430,8 +462,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this]([[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			return std::make_shared<ASTList>(stmts->GetId(), 0);
 		});
 	}
@@ -445,8 +479,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			args[0]->SetId(stmt->GetId());
 			return args[0];
 		});
@@ -462,8 +498,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsexpr = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			t_astbaseptr rhsstmts = std::dynamic_pointer_cast<ASTBase>(args[5]);
 			return std::make_shared<ASTCondition>(stmt->GetId(), 0, rhsexpr, rhsstmts);
@@ -481,8 +519,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsexpr = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			t_astbaseptr rhsstmts = std::dynamic_pointer_cast<ASTBase>(args[5]);
 			t_astbaseptr rhselse_stmts = std::dynamic_pointer_cast<ASTBase>(args[9]);
@@ -500,8 +540,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsexpr = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			t_astbaseptr rhsstmts = std::dynamic_pointer_cast<ASTBase>(args[5]);
 			return std::make_shared<ASTLoop>(stmt->GetId(), 0, rhsexpr, rhsstmts);
@@ -518,8 +560,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[1]);
 			if(funcname->GetType() != ASTType::TOKEN)
 				throw std::runtime_error("Expected a function name.");
@@ -545,8 +589,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsidents = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTDeclare>(stmt->GetId(), 0, true, true, rhsidents);
 		});
@@ -561,8 +607,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this]([[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			auto jump = std::make_shared<ASTJump>(stmt->GetId(), 0, ASTJump::JumpType::BREAK);
 			jump->SetLineRange(args[0]->GetLineRange());
 			return jump;
@@ -578,8 +626,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			return std::make_shared<ASTJump>(stmt->GetId(), 0, ASTJump::JumpType::BREAK, sym);
 		});
@@ -594,8 +644,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this]([[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			auto jump = std::make_shared<ASTJump>(stmt->GetId(), 0, ASTJump::JumpType::CONTINUE);
 			jump->SetLineRange(args[0]->GetLineRange());
 			return jump;
@@ -611,8 +663,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			return std::make_shared<ASTJump>(
 				stmt->GetId(), 0, ASTJump::JumpType::CONTINUE, sym);
@@ -628,8 +682,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this]([[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			auto jump = std::make_shared<ASTJump>(stmt->GetId(), 0, ASTJump::JumpType::RETURN);
 			jump->SetLineRange(args[0]->GetLineRange());
 			return jump;
@@ -645,8 +701,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsexpr = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			return std::make_shared<ASTJump>(stmt->GetId(), 0, ASTJump::JumpType::RETURN, rhsexpr);
 		});
@@ -661,8 +719,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(bool_expr->GetId(), 0, arg1, arg2, op_and->GetId());
@@ -678,8 +738,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(bool_expr->GetId(), 0, arg1, arg2, op_or->GetId());
@@ -695,8 +757,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			return std::make_shared<ASTUnary>(bool_expr->GetId(), 0, arg, op_not->GetId());
 		});
@@ -711,8 +775,9 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
 			return  args[1];
 		});
 	}
@@ -726,8 +791,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(bool_expr->GetId(), 0, arg1, arg2, op_gt->GetId());
@@ -743,8 +810,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(
@@ -761,8 +830,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(
@@ -779,8 +850,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(
@@ -797,8 +870,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(
@@ -815,8 +890,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(
@@ -833,8 +910,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			auto rhsident = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
 			rhsident->SetIdent(true);
 
@@ -853,8 +932,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			auto rhsident = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
 			rhsident->SetIdent(true);
 
@@ -873,8 +954,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this]([[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			return std::make_shared<ASTList>(idents->GetId(), 0);
 		});
 	}
@@ -888,8 +971,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsexpr = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			auto exprs_lst = std::dynamic_pointer_cast<ASTList>(args[2]);
 			exprs_lst->AddChild(rhsexpr, false);
@@ -906,8 +991,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr rhsexpr = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			auto exprs_lst = std::make_shared<ASTList>(exprs->GetId(), 0);
 			exprs_lst->AddChild(rhsexpr, false);
@@ -924,8 +1011,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this]([[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			return std::make_shared<ASTList>(exprs->GetId(), 0);
 		});
 	}
@@ -939,8 +1028,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			return std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_binnot->GetId());
 		});
@@ -955,8 +1046,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_binand->GetId());
@@ -972,8 +1065,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_binor->GetId());
@@ -989,8 +1084,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_binxor->GetId());
@@ -1006,8 +1103,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_shift_left->GetId());
@@ -1023,8 +1122,10 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[this](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[this](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_shift_right->GetId());

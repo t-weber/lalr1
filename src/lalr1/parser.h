@@ -27,8 +27,13 @@ public:
 	void SetShiftTable(const t_table* tab) { m_tabActionShift = tab; }
 	void SetReduceTable(const t_table* tab) { m_tabActionReduce = tab; }
 	void SetJumpTable(const t_table* tab) { m_tabJump = tab; }
+
+	void SetPartialsRules(const t_table* tab) { m_tabPartialsRules = tab; }
+	void SetPartialsMatchLen(const t_table* tab) { m_tabPartialsMatchLen = tab; }
+
 	void SetNumRhsSymsPerRule(const t_vecIdx* vec) { m_numRhsSymsPerRule = vec; }
 	void SetLhsIndices(const t_vecIdx* vec) { m_vecLhsIndices = vec; }
+
 	void SetSemanticRules(const std::vector<t_semanticrule>* rules) { m_semantics = rules; }
 
 	void SetDebug(bool b) { m_debug = b; }
@@ -37,10 +42,14 @@ public:
 
 
 private:
-	// parse tables
+	// lalr(1) parse tables
 	const t_table *m_tabActionShift{nullptr};
 	const t_table *m_tabActionReduce{nullptr};
 	const t_table *m_tabJump{nullptr};
+
+	// lalr(1) partial matches tables
+	const t_table *m_tabPartialsRules{nullptr};
+	const t_table *m_tabPartialsMatchLen{nullptr};
 
 	// number of symbols on right hand side of a rule
 	const t_vecIdx *m_numRhsSymsPerRule{nullptr};

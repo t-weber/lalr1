@@ -5,11 +5,13 @@
  * @license: see 'LICENSE' file
  */
 
-#ifndef __LALR1_HELPERS__
-#define __LALR1_HELPERS__
+#ifndef __LALR1_TIME_HELPERS__
+#define __LALR1_TIME_HELPERS__
 
 
 #include <chrono>
+#include <sstream>
+#include <iomanip>
 
 
 using t_clock = std::chrono::steady_clock;
@@ -46,6 +48,17 @@ get_elapsed_time(const t_timepoint& start_time)
 	}
 
 	return std::make_tuple(run_time, time_unit);
+}
+
+
+template<class t_clock = std::chrono::system_clock>
+std::string get_timestamp()
+{
+	std::time_t now{t_clock::to_time_t(t_clock::now())};
+
+	std::ostringstream ostr;
+	ostr << std::put_time(std::localtime(&now), "%d/%m/%Y %Hh%M");
+	return ostr.str();
 }
 
 

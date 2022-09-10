@@ -75,7 +75,8 @@ using t_lalrastbaseptr = std::shared_ptr<ASTLALR1Base>;
 
 // semantic rule: returns an ast pointer and gets a vector of ast pointers
 using t_semanticrule = std::function<
-	t_lalrastbaseptr(const std::vector<t_lalrastbaseptr>&)>;
+	t_lalrastbaseptr(bool /*full_match*/,
+	const std::vector<t_lalrastbaseptr>& /*args*/)>;
 
 
 #endif

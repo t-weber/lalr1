@@ -66,8 +66,9 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
 			return args[0];
 		});
 	}
@@ -77,8 +78,10 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_plus->GetId());
@@ -90,8 +93,10 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
+			if(!full_match) return nullptr;
+
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mult->GetId());
@@ -103,10 +108,11 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
 		{
-			std::size_t id = expr->GetId();
+			if(!full_match) return nullptr;
 
+			std::size_t id = expr->GetId();
 			t_astbaseptr sym = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			sym->SetDataType(VMType::REAL);
 			sym->SetId(id);

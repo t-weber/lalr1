@@ -15,6 +15,7 @@
  */
 
 #include "collection.h"
+#include "timer.h"
 #include "options.h"
 
 #include <sstream>
@@ -35,7 +36,7 @@ bool Collection::SaveParser(const std::string& filename_cpp, const std::string& 
 {
 	// output header file stub
 	std::string outfile_h = R"raw(/*
- * Parser created using liblalr1 by Tobias Weber, 2020-2022.
+ * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
 #ifndef __LALR1_PARSER_REC_ASC_H__
@@ -93,7 +94,7 @@ private:
 
 	// output cpp file stub
 	std::string outfile_cpp = R"raw(/*
- * Parser created using liblalr1 by Tobias Weber, 2020-2022.
+ * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
 %%INCLUDE_HEADER%%
@@ -357,7 +358,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 
 						// execute semantic rule
 						ostr_reduce << "\t\t\t// semantic rule: " << rule_descr.str() << ".\n";
-						ostr_reduce << "\t\t\tm_symbols.emplace((*m_semantics)[" << *rulenr << "](args));\n";
+						ostr_reduce << "\t\t\tm_symbols.emplace((*m_semantics)[" << *rulenr << "](true, args));\n";
 						ostr_reduce << "\t\t\tbreak;\n";
 					}
 
@@ -567,12 +568,16 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 
 	// write output files
 	std::string incl = "#include \"" + filename_h + "\"";
+	std::string time_stamp = get_timestamp();
+
 	boost::replace_all(outfile_cpp, "%%PARSER_CLASS%%", class_name);
 	boost::replace_all(outfile_h, "%%PARSER_CLASS%%", class_name);
 	boost::replace_all(outfile_cpp, "%%INCLUDE_HEADER%%", incl);
 	boost::replace_all(outfile_cpp, "%%DEFINE_CLOSURES%%", ostr_cpp.str());
 	boost::replace_all(outfile_h, "%%DECLARE_CLOSURES%%", ostr_h.str());
 	boost::replace_all(outfile_h, "%%END_ID%%", std::to_string(g_end->GetId()));
+	boost::replace_all(outfile_cpp, "%%TIME_STAMP%%", time_stamp);
+	boost::replace_all(outfile_h, "%%TIME_STAMP%%", time_stamp);
 
 	file_cpp << outfile_cpp << std::endl;
 	file_h << outfile_h << std::endl;
