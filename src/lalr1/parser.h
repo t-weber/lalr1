@@ -28,8 +28,10 @@ public:
 	void SetReduceTable(const t_table* tab) { m_tabActionReduce = tab; }
 	void SetJumpTable(const t_table* tab) { m_tabJump = tab; }
 
-	void SetPartialsRules(const t_table* tab) { m_tabPartialsRules = tab; }
-	void SetPartialsMatchLen(const t_table* tab) { m_tabPartialsMatchLen = tab; }
+	void SetPartialsRulesTerm(const t_table* tab) { m_tabPartialsRulesTerm = tab; }
+	void SetPartialsMatchLenTerm(const t_table* tab) { m_tabPartialsMatchLenTerm = tab; }
+	void SetPartialsRulesNonTerm(const t_table* tab) { m_tabPartialsRulesNonTerm = tab; }
+	void SetPartialsMatchLenNonTerm(const t_table* tab) { m_tabPartialsMatchLenNonTerm = tab; }
 
 	void SetNumRhsSymsPerRule(const t_vecIdx* vec) { m_numRhsSymsPerRule = vec; }
 	void SetLhsIndices(const t_vecIdx* vec) { m_vecLhsIndices = vec; }
@@ -48,8 +50,10 @@ private:
 	const t_table *m_tabJump{nullptr};
 
 	// lalr(1) partial matches tables
-	const t_table *m_tabPartialsRules{nullptr};
-	const t_table *m_tabPartialsMatchLen{nullptr};
+	const t_table *m_tabPartialsRulesTerm{nullptr};
+	const t_table *m_tabPartialsMatchLenTerm{nullptr};
+	const t_table *m_tabPartialsRulesNonTerm{nullptr};
+	const t_table *m_tabPartialsMatchLenNonTerm{nullptr};
 
 	// number of symbols on right hand side of a rule
 	const t_vecIdx *m_numRhsSymsPerRule{nullptr};

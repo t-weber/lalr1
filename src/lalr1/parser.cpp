@@ -27,8 +27,10 @@ Parser& Parser::operator=(const Parser& parser)
 	m_tabActionShift = parser.m_tabActionShift;
 	m_tabActionReduce = parser.m_tabActionReduce;
 	m_tabJump = parser.m_tabJump;
-	m_tabPartialsRules = parser.m_tabPartialsRules;
-	m_tabPartialsMatchLen = parser.m_tabPartialsMatchLen;
+	m_tabPartialsRulesTerm = parser.m_tabPartialsRulesTerm;
+	m_tabPartialsMatchLenTerm = parser.m_tabPartialsMatchLenTerm;
+	m_tabPartialsRulesNonTerm = parser.m_tabPartialsRulesNonTerm;
+	m_tabPartialsMatchLenNonTerm = parser.m_tabPartialsMatchLenNonTerm;
 	m_numRhsSymsPerRule = parser.m_numRhsSymsPerRule;
 	m_vecLhsIndices = parser.m_vecLhsIndices;
 	m_semantics = parser.m_semantics;
@@ -109,6 +111,10 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			<< std::endl;
 	};
 
+	const bool has_partial_tables =
+		m_tabPartialsRulesTerm && m_tabPartialsMatchLenTerm &&
+		m_tabPartialsRulesNonTerm && m_tabPartialsMatchLenNonTerm;
+
 	while(true)
 	{
 		// current state and rule
@@ -118,18 +124,62 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 
 		// partial match
 		std::optional<std::size_t> partialrule, partialmatchlen;
-		if(m_tabPartialsRules && m_tabPartialsMatchLen)
+
+		auto get_partial_rules = [this, &has_partial_tables,
+			&partialrule, &partialmatchlen, &topstate, &curtok, &symbols]()
 		{
-			partialrule = (*m_tabPartialsRules)(topstate, curtok->GetTableIdx());
-			partialmatchlen = (*m_tabPartialsMatchLen)(topstate, curtok->GetTableIdx());
-		}
+			if(has_partial_tables)
+			{
+				// look for terminal transitions
+				partialrule = (*m_tabPartialsRulesTerm)(topstate, curtok->GetTableIdx());
+				partialmatchlen = (*m_tabPartialsMatchLenTerm)(topstate, curtok->GetTableIdx());
+
+				// otherwise look for nonterminal transitions
+				if(partialrule == ERROR_VAL && symbols.size() && !symbols.top()->IsTerminal())
+				{
+					partialrule = (*m_tabPartialsRulesNonTerm)(topstate, symbols.top()->GetTableIdx());
+					partialmatchlen = (*m_tabPartialsMatchLenNonTerm)(topstate, symbols.top()->GetTableIdx());
+				}
+			}
+		};
+
+		auto apply_partial_rules = [this, &partialrule, &partialmatchlen, &symbols]()
+		{
+			if(!partialrule || *partialrule == ERROR_VAL)
+				return;
+			if(m_debug)
+			{
+				std::cout << "\tPartially matched rule " << *partialrule
+					<< " of length " << *partialmatchlen
+					<< "." << std::endl;
+			}
+
+			// take the symbols from the stack and create an
+			// argument vector for the semantic rule
+			std::stack<t_lalrastbaseptr> symbols_cp = symbols;
+			std::vector<t_lalrastbaseptr> args;
+			args.reserve(*partialmatchlen);
+			for(std::size_t arg=0; arg<*partialmatchlen; ++arg)
+			{
+				args.emplace_back(std::move(symbols_cp.top()));
+				symbols_cp.pop();
+			}
+
+			// execute partial semantic rule
+			(*m_semantics)[*partialrule](false, args);
+		};
+
+
+		auto print_active_state = [this, &topstate, &print_input_token, &print_stacks]
+			(std::ostream& ostr)
+		{
+			ostr << "\nState " << topstate << " active." << std::endl;
+			print_input_token(ostr);
+			print_stacks(ostr);
+		};
 
 		if(m_debug)
-		{
-			std::cout << "\nState " << topstate << " active." << std::endl;
-			print_input_token(std::cout);
-			print_stacks(std::cout);
-		}
+			print_active_state(std::cout);
 
 		// neither a shift nor a reduce defined
 		if(newstate == ERROR_VAL && newrule == ERROR_VAL)
@@ -164,37 +214,14 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		else if(newrule == ACCEPT_VAL)
 		{
 			if(m_debug)
-			{
 				std::cout << "\tAccepting." << std::endl;
-			}
 
 			return symbols.top();
 		}
 
-		// partial match
-		if(partialrule && *partialrule != ERROR_VAL)
-		{
-			if(m_debug)
-			{
-				std::cout << "\tPartially matched rule " << *partialrule
-					<< " of length " << *partialmatchlen
-					<< "." << std::endl;
-			}
-
-			// take the symbols from the stack and create an
-			// argument vector for the semantic rule
-			std::stack<t_lalrastbaseptr> symbols_cp = symbols;
-			std::vector<t_lalrastbaseptr> args;
-			args.reserve(*partialmatchlen);
-			for(std::size_t arg=0; arg<*partialmatchlen; ++arg)
-			{
-				args.emplace_back(std::move(symbols_cp.top()));
-				symbols_cp.pop();
-			}
-
-                        // execute partial semantic rule
-			(*m_semantics)[*partialrule](false, args);
-		}
+		// partial rules
+		get_partial_rules();
+		apply_partial_rules();
 
 		// shift
 		if(newstate != ERROR_VAL)
@@ -206,9 +233,6 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 					<< "." << std::endl;
 			}
 
-			states.push(newstate);
-			symbols.push(curtok);
-
 			if(inputidx >= input.size())
 			{
 				std::ostringstream ostrErr;
@@ -217,6 +241,9 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 					<< ".";
 				throw std::runtime_error(ostrErr.str());
 			}
+
+			states.push(newstate);
+			symbols.emplace(std::move(curtok));
 
 			// next token
 			curtok = input[inputidx++];
@@ -253,17 +280,18 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			// execute semantic rule
 			t_lalrastbaseptr reducedSym = (*m_semantics)[newrule](true, args);
 			reducedSym->SetTableIdx((*m_vecLhsIndices)[newrule]);
-			symbols.push(reducedSym);
 
 			topstate = states.top();
 			if(m_debug)
-			{
-				std::cout << "\nState " << topstate << " active." << std::endl;
-				print_input_token(std::cout);
-				print_stacks(std::cout);
-			}
+				print_active_state(std::cout);
 
 			std::size_t jumpstate = (*m_tabJump)(topstate, reducedSym->GetTableIdx());
+			symbols.emplace(std::move(reducedSym));
+
+			// partial rules
+			get_partial_rules();
+			apply_partial_rules();
+
 			states.push(jumpstate);
 
 			if(m_debug)
