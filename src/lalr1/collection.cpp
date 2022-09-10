@@ -223,6 +223,8 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 	{
 		const SymbolPtr& trans_sym = std::get<0>(tup);
 		const ClosurePtr& closure_to = std::get<1>(tup);
+		const Closure::t_elements& elems_from = std::get<2>(tup);
+
 		std::size_t hash_to = closure_to->hash(true);
 		auto cacheIter = m_closure_cache->find(hash_to);
 		bool new_closure = (cacheIter == m_closure_cache->end());
@@ -240,7 +242,8 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 			// new unique closure
 			m_closure_cache->emplace(std::make_pair(hash_to, closure_to));
 			m_collection.push_back(closure_to);
-			m_transitions.emplace(std::make_tuple(closure_from, closure_to, trans_sym));
+			m_transitions.emplace(std::make_tuple(
+				closure_from, closure_to, trans_sym, elems_from));
 
 			DoTransitions(closure_to);
 		}
@@ -253,7 +256,8 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 			closure_to_existing->AddLookaheadDependencies(closure_to);
 
 			// add the transition from the closure
-			m_transitions.emplace(std::make_tuple(closure_from, closure_to_existing, trans_sym));
+			m_transitions.emplace(std::make_tuple(
+				closure_from, closure_to_existing, trans_sym, elems_from));
 		}
 	}
 }
@@ -806,11 +810,17 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 			<< " " << g_options.GetArrowChar() << " " << std::get<1>(tup)->GetId()
 			<< " via " << symTrans->GetStrId()
 			<< "\n";
-
 		if(use_colour)
-		{
 			ostr << no_col;
-		}
+
+		/*const Collection::t_elements& from_elems = std::get<3>(tup);
+		ostr << "Coming from element(s):\n";
+		std::size_t elem_idx = 0;
+		for(const ElementPtr& from_elem : from_elems)
+		{
+			ostr << "\t(" << elem_idx << ") " << *from_elem << "\n";
+			++elem_idx;
+		}*/
 	}
 	ostr << "\n\n";
 

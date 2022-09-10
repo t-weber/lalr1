@@ -31,21 +31,4 @@ using t_mapIdIdx = std::unordered_map<std::size_t, std::size_t>;
 using t_vecIdx = std::vector<std::size_t>;
 
 
-/**
- * partial match of a rule
- */
-struct PartialMatch
-{
-	std::size_t matched_len{0};         // number of already matched symbols in the rule
-	bool next_sym_is_term{true};        // is the next symbol in the rule a terminal?
-	std::size_t next_sym_idx{0};        // terminal or nonterminal index of the next symbol in the rule
-	std::vector<std::size_t> la_idx{};  // indices of the lr element's lookaheads
-};
-
-
-// partial match per rule number
-using t_partialmatch = std::unordered_map<std::size_t, PartialMatch>;
-using t_partialmatches = std::vector<t_partialmatch>;
-
-
 #endif

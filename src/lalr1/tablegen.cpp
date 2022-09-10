@@ -31,32 +31,44 @@
 bool Collection::SaveParseTables(const std::string& file) const
 {
 	const std::size_t numStates = m_collection.size();
+	const std::size_t numTerminals = m_mapTermIdx.size();
+	const std::size_t numNonTerminals = m_mapNonTermIdx.size();
+
 
 	// create lalr(1) tables
 	bool ok = true;
 	std::vector<std::size_t> numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
 	std::vector<std::size_t> ruleLhsIdx{};        // nonterminal index of the rule's result type
 
-	// partial match per rule number
-	t_partialmatches partials{};                  // partial matches per closure
-	partials.resize(numStates);
-
 	// lalr(1) tables
-	std::vector<std::vector<std::size_t>> _action_shift, _action_reduce, _jump;
-	_action_shift.resize(numStates);
-	_action_reduce.resize(numStates);
-	_jump.resize(numStates);
+	std::vector<std::vector<std::size_t>> action_shift, action_reduce, jump;
+	action_shift.resize(numStates);
+	action_reduce.resize(numStates);
+	jump.resize(numStates);
+
+	// tables for partial matches for terminal and non-terminal transition symbols
+	std::vector<std::vector<std::size_t>> partials_rule_term, partials_rule_nonterm;
+	std::vector<std::vector<std::size_t>> partials_matchlen_term, partials_matchlen_nonterm;
+	partials_rule_term.resize(numStates);
+	partials_rule_nonterm.resize(numStates);
+	partials_matchlen_term.resize(numStates);
+	partials_matchlen_nonterm.resize(numStates);
 
 	for(std::size_t state=0; state<numStates; ++state)
 	{
-		_action_shift[state].reserve(m_mapTermIdx.size());
-		_action_reduce[state].reserve(m_mapTermIdx.size());
-		_jump[state].reserve(m_mapNonTermIdx.size());
+		action_shift[state].resize(numTerminals, ERROR_VAL);
+		action_reduce[state].resize(numTerminals, ERROR_VAL);
+		jump[state].resize(numNonTerminals, ERROR_VAL);
+
+		partials_rule_term[state].resize(numTerminals, ERROR_VAL);
+		partials_rule_nonterm[state].resize(numTerminals, ERROR_VAL);
+		partials_matchlen_term[state].resize(numTerminals, 0);
+		partials_matchlen_nonterm[state].resize(numTerminals, 0);
 	}
 
 
 	// set a table item
-	auto set_item = [](std::vector<std::size_t>& vec, std::size_t idx,
+	auto set_tab_elem = [](std::vector<std::size_t>& vec, std::size_t idx,
 		std::size_t val, std::size_t filler = ERROR_VAL) -> void
 	{
 		if(vec.size() <= idx)
@@ -69,18 +81,15 @@ bool Collection::SaveParseTables(const std::string& file) const
 	std::unordered_map<std::size_t, TerminalPtr> seen_terminals{};
 
 
-	for(const t_transition& tup : m_transitions)
+	for(const t_transition& transition : m_transitions)
 	{
-		const SymbolPtr& symTrans = std::get<2>(tup);
+		const SymbolPtr& symTrans = std::get<2>(transition);
 		if(symTrans->IsEps())
 			continue;
 
 		// terminal transitions -> shift table
-		// nonterminal transition -> jump table
+		// nonterminal transitions -> jump table
 		const bool symIsTerm = symTrans->IsTerminal();
-
-		std::vector<std::vector<std::size_t>>* tab =
-			symIsTerm ? &_action_shift : &_jump;
 
 		std::size_t symIdx = GetTableIndex(symTrans->GetId(), symIsTerm);
 		if(symIsTerm)
@@ -89,105 +98,108 @@ bool Collection::SaveParseTables(const std::string& file) const
 				symIdx, std::dynamic_pointer_cast<Terminal>(symTrans)));
 		}
 
-		const ClosurePtr& stateFrom = std::get<0>(tup);
-		const ClosurePtr& stateTo = std::get<1>(tup);
-		set_item((*tab)[stateFrom->GetId()], symIdx, stateTo->GetId());
+		// set table elements
+		std::vector<std::vector<std::size_t>>* tab =
+			symIsTerm ? &action_shift : &jump;
+
+		const ClosurePtr& stateFrom = std::get<0>(transition);
+		const ClosurePtr& stateTo = std::get<1>(transition);
+		set_tab_elem((*tab)[stateFrom->GetId()], symIdx, stateTo->GetId());
+
+		// set partial match table elements
+		std::vector<std::vector<std::size_t>>* partials_rule_tab =
+			symIsTerm ? &partials_rule_term : &partials_rule_nonterm;
+		std::vector<std::vector<std::size_t>>* partials_matchlen_tab =
+			symIsTerm ? &partials_matchlen_term : &partials_matchlen_nonterm;
+
+		const Collection::t_elements& elemsFrom = std::get<3>(transition);
+		std::unordered_map<std::size_t, ElementPtr> matching_rules;
+
+		for(const ElementPtr& elemFrom : elemsFrom)
+		{
+			std::size_t match_len = elemFrom->GetCursor();
+			std::optional<std::size_t> rulenr = elemFrom->GetSemanticRule();
+
+			if(match_len == 0 || !rulenr)
+				continue;
+
+			if(auto iter_match = matching_rules.find(*rulenr);
+				iter_match != matching_rules.end())
+			{
+				// longer match with the same rule?
+				if(match_len > iter_match->second->GetCursor())
+					iter_match->second = elemFrom;
+			}
+			else
+			{
+				// insert new match
+				matching_rules.emplace(std::make_pair(*rulenr, elemFrom));
+			}
+		}
+
+		if(matching_rules.size() == 1)
+		{
+			// unique partial match
+			set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], symIdx,
+				matching_rules.begin()->first);
+			set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], symIdx,
+				matching_rules.begin()->second->GetCursor(), 0);
+		}
 	}
 
 	for(const ClosurePtr& closure : m_collection)
 	{
 		for(const ElementPtr& elem : closure->GetElements())
 		{
+			// cursor at end -> reduce a completely parsed rule
+			if(!elem->IsCursorAtEnd())
+				continue;
+
 			std::optional<std::size_t> rulenr = elem->GetSemanticRule();
 
-			// cursor at end -> reduce a completely parsed rule
-			if(elem->IsCursorAtEnd())
+			if(!rulenr)  // no semantic rule assigned
 			{
-				if(!rulenr)  // no semantic rule assigned
-				{
-					std::cerr << "Error: No semantic rule assigned to element "
-						<< (*elem) << "." << std::endl;
-					continue;
-				}
-
-				set_item(numRhsSymsPerRule, *rulenr, elem->GetRhs()->NumSymbols(false), 0);
-				set_item(ruleLhsIdx, *rulenr, GetTableIndex(elem->GetLhs()->GetId(), false), 0);
-
-				auto& _reduce_row = _action_reduce[closure->GetId()];
-				for(const TerminalPtr& la : elem->GetLookaheads())
-				{
-					std::size_t laIdx = GetTableIndex(la->GetId(), true);
-
-					// in extended grammar, first production (rule 0) is of the form start -> ...
-					if(*rulenr == 0)
-						*rulenr = ACCEPT_VAL;
-
-					// semantic rule number -> reduce table
-					set_item(_reduce_row, laIdx, *rulenr);
-				}
+				std::cerr << "Error: No semantic rule assigned to element "
+					<< (*elem) << "." << std::endl;
+				continue;
 			}
 
-			// cursor not at end -> partially parsed rule
-			else
+			set_tab_elem(numRhsSymsPerRule, *rulenr, elem->GetRhs()->NumSymbols(false), 0);
+			set_tab_elem(ruleLhsIdx, *rulenr, GetTableIndex(elem->GetLhs()->GetId(), false), 0);
+
+			auto& _reduce_row = action_reduce[closure->GetId()];
+			for(const TerminalPtr& la : elem->GetLookaheads())
 			{
-				if(!rulenr)  // no semantic rule assigned
-					continue;
+				std::size_t laIdx = GetTableIndex(la->GetId(), true);
 
-				if(partials.size() <= closure->GetId())
-					partials.resize(closure->GetId() + 1);
-				t_partialmatch& partial = partials[closure->GetId()];
+				// in extended grammar, first production (rule 0) is of the form start -> ...
+				if(*rulenr == 0)
+					*rulenr = ACCEPT_VAL;
 
-				auto update_match = [this, &elem](PartialMatch& match) -> void
-				{
-					const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
-
-					match.matched_len = elem->GetCursor();
-					match.la_idx.clear();
-					match.la_idx.reserve(lookaheads.size());
-
-					for(const TerminalPtr& la : lookaheads)
-						match.la_idx.push_back(GetTableIndex(la->GetId(), true));
-
-					if(SymbolPtr next_sym = elem->GetSymbolAtCursor(); next_sym)
-					{
-						match.next_sym_is_term = next_sym->IsTerminal();
-						match.next_sym_idx = GetTableIndex(next_sym->GetId(), match.next_sym_is_term);
-					}
-					else
-					{
-						std::cerr << "Error: Not expected to be at end of element " << *elem << ".";
-					}
-				};
-
-				if(auto iter = partial.find(*rulenr); iter != partial.end())
-				{
-					// update existing partial match for this closure and rule
-					PartialMatch& match = iter->second;
-
-					// longer match with the same rule?
-					if(elem->GetCursor() > match.matched_len)
-						update_match(match);
-				}
-				else
-				{
-					// add a new partial match
-					PartialMatch match;
-					update_match(match);
-
-					if(match.matched_len > 0)
-						partial.emplace(std::make_pair(*rulenr, std::move(match)));
-				}
+				// semantic rule number -> reduce table
+				set_tab_elem(_reduce_row, laIdx, *rulenr);
 			}
 		}
 	}
 
 
-	const std::size_t numTerminals = m_mapTermIdx.size();
-	const std::size_t numNonTerminals = m_mapNonTermIdx.size();
+	// lalr(1) tables
+	t_table tabActionShift = t_table{action_shift,
+		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numTerminals};
+	t_table tabActionReduce = t_table{action_reduce,
+		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numTerminals};
+	t_table tabJump = t_table{jump,
+		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numNonTerminals};
 
-	t_table tabActionShift = t_table{_action_shift, ERROR_VAL, ACCEPT_VAL, numStates, numTerminals};
-	t_table tabActionReduce = t_table{_action_reduce, ERROR_VAL, ACCEPT_VAL, numStates, numTerminals};
-	t_table tabJump = t_table{_jump, ERROR_VAL, ACCEPT_VAL, numStates, numNonTerminals};
+	// partial match tables
+	t_table tabPartialRule = t_table{partials_rule_term,
+		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numTerminals};
+	t_table tabPartialRuleNonterm = t_table{partials_rule_nonterm,
+		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numTerminals};
+	t_table tabPartialMatchLen = t_table{partials_matchlen_term,
+		ERROR_VAL, ACCEPT_VAL, 0, numStates, numTerminals};
+	t_table tabPartialMatchLenNonterm = t_table{partials_matchlen_nonterm,
+		ERROR_VAL, ACCEPT_VAL, 0, numStates, numTerminals};
 
 	// check for and try to resolve shift/reduce conflicts
 	std::size_t state = 0;
@@ -200,6 +212,12 @@ bool Collection::SaveParseTables(const std::string& file) const
 			// get table entries
 			std::size_t& shiftEntry = tabActionShift(state, termidx);
 			std::size_t& reduceEntry = tabActionReduce(state, termidx);
+
+			// partial match tables
+			std::size_t& partialRuleEntry = tabPartialRule(state, termidx);
+			std::size_t& partialRuleNonTermEntry = tabPartialRuleNonterm(state, termidx);
+			std::size_t& partialMatchLenEntry = tabPartialMatchLen(state, termidx);
+			std::size_t& partialMatchLenNonTermEntry = tabPartialMatchLenNonterm(state, termidx);
 
 			// get potentially conflicting element
 			std::optional<std::string> termid;
@@ -225,7 +243,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 					std::ostringstream ostrErr;
 					ostrErr << "Shift/reduce conflict detected"
-						<< " for closure " << state;
+						<< " for state " << state;
 					if(conflictelem)
 						ostrErr << ":\n\t" << *conflictelem << "\n";
 					if(lookbacks->size())
@@ -244,7 +262,7 @@ bool Collection::SaveParseTables(const std::string& file) const
 						ostrErr << " and look-ahead terminal " << (*termid);
 					else
 						ostrErr << "and terminal index " << termidx;
-					ostrErr << " (can either shift to closure " << shiftEntry
+					ostrErr << " (can either shift to state " << shiftEntry
 						<< " or reduce using rule " << reduceEntry
 						<< ")." << std::endl;
 
@@ -252,6 +270,20 @@ bool Collection::SaveParseTables(const std::string& file) const
 						throw std::runtime_error(ostrErr.str());
 					else
 						std::cerr << ostrErr.str() << std::endl;
+				}
+				else
+				{
+					// also solve conflict in partial matches
+					if(shiftEntry == ERROR_VAL)
+					{
+						partialRuleEntry = ERROR_VAL;
+						partialMatchLenEntry = 0;
+					}
+					if(reduceEntry == ERROR_VAL)
+					{
+						partialRuleNonTermEntry = ERROR_VAL;
+						partialMatchLenNonTermEntry = 0;
+					}
 				}
 			}
 		}
@@ -285,9 +317,16 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "\tconst std::size_t end = " << END_IDENT << ";\n";
 	ofstr << "\n";
 
+	// save lalr(1) tables
 	tabActionShift.SaveCXXDefinition(ofstr, "tab_action_shift", "state", "terminal");
 	tabActionReduce.SaveCXXDefinition(ofstr, "tab_action_reduce", "state", "lookahead");
 	tabJump.SaveCXXDefinition(ofstr, "tab_jump", "state", "nonterminal");
+
+	// save partial match tables
+	tabPartialRule.MergeTable(tabPartialRuleNonterm);
+	tabPartialMatchLen.MergeTable(tabPartialMatchLenNonterm, false);
+	tabPartialRule.SaveCXXDefinition(ofstr, "tab_partials_rule", "state", "terminal");
+	tabPartialMatchLen.SaveCXXDefinition(ofstr, "tab_partials_matchlen", "state", "terminal");
 
 	// terminal symbol indices
 	ofstr << "const t_mapIdIdx map_term_idx\n{{\n";
@@ -322,29 +361,6 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "const t_vecIdx vec_lhs_idx{{ ";
 	for(const auto& val : ruleLhsIdx)
 		ofstr << val << ", ";
-	ofstr << "}};\n\n";
-
-	// partial matches
-	ofstr << "const t_partialmatches vec_partials\n{{\n";
-	std::size_t closure_idx = 0;
-	for(const t_partialmatch& partial : partials)
-	{
-		ofstr << "\tt_partialmatch // state " << closure_idx << "\n\t{\n";
-		for(const auto& [rulenr, partialmatch] : partial)
-		{
-			ofstr << "\t\tstd::make_pair(" << rulenr << ", ";
-			ofstr << "PartialMatch{ .matched_len=" << partialmatch.matched_len << ", ";
-			ofstr << ".next_sym_is_term=" << partialmatch.next_sym_is_term << ", ";
-			ofstr << ".next_sym_idx=" << partialmatch.next_sym_idx << ", ";
-			ofstr << ".la_idx={{ ";
-			for(std::size_t laidx : partialmatch.la_idx)
-				ofstr << laidx << ", ";
-			ofstr << "}}";
-			ofstr << " }),\n";
-		}
-		ofstr << "\t},\n";
-		++closure_idx;
-	}
 	ofstr << "}};\n\n";
 
 	ofstr << "}\n\n\n";

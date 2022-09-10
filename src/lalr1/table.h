@@ -12,6 +12,7 @@
 #include <optional>
 #include <iostream>
 #include <iomanip>
+#include <cmath>
 
 
 template<
@@ -29,11 +30,10 @@ public:
 
 
 	Table(const t_cont<t_cont<T>>& cont,
-		  T errorval = 0xffffffff, T acceptval = 0xfffffffe,
-		  std::optional<std::size_t> ROWS = std::nullopt,
-	   std::optional<std::size_t> COLS=std::nullopt)
-		: m_data{}, m_rowsize{}, m_colsize{},
-			m_errorval{errorval}, m_acceptval{acceptval}
+		T errorval = 0xffffffff, T acceptval = 0xfffffffe, T fillval = 0xffffffff,
+		std::optional<std::size_t> ROWS = std::nullopt,
+		std::optional<std::size_t> COLS = std::nullopt)
+		: m_errorval{errorval}, m_acceptval{acceptval}, m_fillval{fillval}
 	{
 		m_rowsize = ROWS ? *ROWS : cont.size();
 		m_colsize = COLS ? *COLS : 0;
@@ -43,7 +43,7 @@ public:
 			for(const auto& controw : cont)
 				m_colsize = std::max(controw.size(), m_colsize);
 		}
-		m_data.resize(m_rowsize * m_colsize, errorval);
+		m_data.resize(m_rowsize * m_colsize, fillval);
 
 		for(std::size_t row=0; row<m_rowsize; ++row)
 		{
@@ -61,10 +61,10 @@ public:
 	{}
 
 	Table(std::size_t ROWS, std::size_t COLS,
-		T errorval = 0xffffffff, T acceptval = 0xfffffffe,
+		T errorval = 0xffffffff, T acceptval = 0xfffffffe, T fillval = 0xffffffff,
 		const std::initializer_list<T>& lst = {})
 		: m_data{lst}, m_rowsize{ROWS}, m_colsize{COLS},
-			m_errorval{errorval}, m_acceptval{acceptval}
+			m_errorval{errorval}, m_acceptval{acceptval}, m_fillval{fillval}
 	{}
 
 
@@ -84,6 +84,38 @@ public:
 
 
 	/**
+	 * merge the values of another table into this one
+	 */
+	void MergeTable(const Table<T, t_cont>& tab, bool show_conflict = true)
+	{
+		std::size_t rows = std::min(this->size1(), tab.size1());
+		std::size_t cols = std::min(this->size2(), tab.size2());
+
+		for(std::size_t row=0; row<rows; ++row)
+		{
+			for(std::size_t col=0; col<cols; ++col)
+			{
+				const T& val = tab(row, col);
+				if(val != m_errorval && val != m_fillval)
+				{
+					T& oldval = (*this)(row, col);
+
+					if(show_conflict && oldval != m_errorval && oldval != m_fillval)
+					{
+						std::cerr << "Warning: row " << row
+							<< " and column " << col
+							<< " are already occupied."
+							<< std::endl;
+					}
+
+					oldval = val;
+				}
+			}
+		}
+	}
+
+
+	/**
 	 * export table to C++ code
 	 */
 	void SaveCXXDefinition(std::ostream& ostr, const std::string& var,
@@ -96,7 +128,14 @@ public:
 		ostr << ", " << size2();
 		if(col_label.size())
 			ostr << " /*" << col_label << "*/";
-		ostr << ", " << "err, acc,\n";
+		ostr << ", " << "err, acc, ";
+		if(m_fillval == m_errorval)
+			ostr << "err, ";
+		else if(m_fillval == m_acceptval)
+			ostr << "acc, ";
+		else
+			ostr << m_fillval << ", ";
+		ostr << "\n";
 
 		ostr << "{\n";
 		for(std::size_t row=0; row<size1(); ++row)
@@ -150,6 +189,7 @@ private:
 
 	T m_errorval{0};
 	T m_acceptval{0};
+	T m_fillval{0};
 };
 
 

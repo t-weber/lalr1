@@ -34,8 +34,10 @@
 class Collection : public std::enable_shared_from_this<Collection>
 {
 public:
-	// transition [ from closure, to closure, symbol ]
-	using t_transition = std::tuple<ClosurePtr, ClosurePtr, SymbolPtr>;
+	using t_elements = Closure::t_elements;
+
+	// transition [ from closure, to closure, symbol, from elements ]
+	using t_transition = std::tuple<ClosurePtr, ClosurePtr, SymbolPtr, t_elements>;
 
 	// hash transitions
 	struct HashTransition

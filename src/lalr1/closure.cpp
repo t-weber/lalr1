@@ -214,9 +214,11 @@ void Closure::ResolveLookaheads()
 /**
  * perform a transition and get the corresponding lalr(1) closure
  */
-ClosurePtr Closure::DoTransition(const SymbolPtr& transsym) const
+std::tuple<ClosurePtr, Closure::t_elements>
+Closure::DoTransition(const SymbolPtr& transsym) const
 {
-	ClosurePtr newclosure = std::make_shared<Closure>();
+	ClosurePtr new_closure = std::make_shared<Closure>();
+	t_elements from_elems;
 
 	// look for elements with that transition
 	for(const ElementPtr& theelem : m_elems)
@@ -225,14 +227,17 @@ ClosurePtr Closure::DoTransition(const SymbolPtr& transsym) const
 		if(!sym || *sym != *transsym)
 			continue;
 
+		// save the element from which this transition comes from
+		from_elems.push_back(theelem);
+
 		// copy element and perform transition
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
 		newelem->AdvanceCursor();
 		newelem->AddLookaheadDependency(theelem, false);
-		newclosure->AddElement(newelem);
+		new_closure->AddElement(newelem);
 	}
 
-	return newclosure;
+	return std::make_tuple(new_closure, from_elems);
 }
 
 
@@ -255,8 +260,9 @@ const Closure::t_transitions& Closure::DoTransitions() const
 
 		for(const SymbolPtr& transition : possible_transitions)
 		{
-			ClosurePtr closure = DoTransition(transition);
-			transitions.emplace_back(std::make_tuple(transition, closure));
+			auto [new_closure, from_elems] = DoTransition(transition);
+			transitions.emplace_back(std::make_tuple(transition,
+				new_closure, from_elems));
 		}
 
 		std::tie(iter, std::ignore) = m_cached_transitions.emplace(

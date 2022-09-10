@@ -35,11 +35,12 @@ using ClosurePtr = std::shared_ptr<Closure>;
 class Closure : public std::enable_shared_from_this<Closure>
 {
 public:
-	// [ transition terminal, to closure ]
-	using t_transition = std::tuple<SymbolPtr, ClosurePtr>;
-	using t_transitions = std::vector<t_transition>;
-	using t_elements = std::list<ElementPtr>;
 	using t_symbolset = std::unordered_set<SymbolPtr, Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
+	using t_elements = std::list<ElementPtr>;
+
+	// [ transition terminal, to closure, from elements ]
+	using t_transition = std::tuple<SymbolPtr, ClosurePtr, t_elements>;
+	using t_transitions = std::vector<t_transition>;
 
 
 public:
@@ -59,7 +60,7 @@ public:
 	ElementPtr GetElementWithCursorAtSymbol(const SymbolPtr& sym) const;
 
 	const t_symbolset& GetPossibleTransitionSymbols() const;
-	ClosurePtr DoTransition(const SymbolPtr& transsym) const;
+	std::tuple<ClosurePtr, t_elements> DoTransition(const SymbolPtr& transsym) const;
 	const t_transitions& DoTransitions() const;
 
 	void AddLookaheadDependencies(const ClosurePtr& closure);
