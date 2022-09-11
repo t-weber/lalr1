@@ -11,7 +11,10 @@
 
 #include "parser.h"
 
+#include <deque>
+#include <vector>
 #include <stack>
+#include <tuple>
 #include <optional>
 #include <sstream>
 
@@ -60,10 +63,41 @@ std::string get_line_numbers(const t_toknode& node)
 }
 
 
+/**
+ * stack class for parse states and symbols
+ */
+template<class t_elem, class t_cont = std::deque<t_elem>>
+class ParseStack : public std::stack<t_elem, t_cont>
+{
+protected:
+	// the underlying container
+	using std::stack<t_elem, t_cont>::c;
+
+public:
+	/**
+	 * get the top N elements on stack
+	 */
+	template<template<class...> class t_cont_ret>
+	t_cont_ret<t_elem> topN(std::size_t N)
+	{
+		t_cont_ret<t_elem> cont;
+
+		for(auto iter = c.rbegin(); iter != c.rend(); std::advance(iter, 1))
+		{
+			cont.push_back(*iter);
+			if(cont.size() == N)
+				break;
+		}
+
+		return cont;
+	}
+};
+
+
 t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 {
-	std::stack<std::size_t> states;
-	std::stack<t_lalrastbaseptr> symbols;
+	ParseStack<std::size_t> states;
+	ParseStack<t_lalrastbaseptr> symbols;
 
 	// debug output of the stacks
 	auto print_stacks = [&states, &symbols](std::ostream& ostr)
@@ -84,7 +118,16 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		auto _symbols = symbols;
 		while(!_symbols.empty())
 		{
-			ostr << _symbols.top()->GetTableIdx();
+			t_lalrastbaseptr sym = _symbols.top();
+			if(sym->IsTerminal())
+				ostr << "term ";
+			else
+				ostr << "nonterm ";
+
+			ostr << sym->GetTableIndex();
+			if(sym->IsTerminal() && std::isprint(sym->GetId()))
+				ostr << " ('" << char(sym->GetId()) << "')";
+
 			_symbols.pop();
 
 			if(_symbols.size() > 0)
@@ -107,7 +150,7 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			<< ": " << curtok->GetId();
 		if(std::isprint(curtok->GetId()))
 			ostr << " = '" << char(curtok->GetId()) << "'";
-		ostr << " (table index " << curtok->GetTableIdx() << ")."
+		ostr << " (terminal index " << curtok->GetTableIndex() << ")."
 			<< std::endl;
 	};
 
@@ -119,32 +162,43 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 	{
 		// current state and rule
 		std::size_t topstate = states.top();
-		std::size_t newstate = (*m_tabActionShift)(topstate, curtok->GetTableIdx());
-		std::size_t newrule = (*m_tabActionReduce)(topstate, curtok->GetTableIdx());
+		std::size_t newstate = (*m_tabActionShift)(topstate, curtok->GetTableIndex());
+		std::size_t newrule = (*m_tabActionReduce)(topstate, curtok->GetTableIndex());
 
 		// partial match
-		std::optional<std::size_t> partialrule, partialmatchlen;
-
 		auto get_partial_rules = [this, &has_partial_tables,
-			&partialrule, &partialmatchlen, &topstate, &curtok, &symbols]()
+			&topstate, &curtok, &symbols](bool term)
+			-> std::tuple<std::optional<std::size_t>, std::optional<std::size_t>>
 		{
-			if(has_partial_tables)
+			if(!has_partial_tables)
+				return std::make_tuple(std::nullopt, std::nullopt);
+
+			std::optional<std::size_t> partialrule, partialmatchlen;
+
+			if(term)
 			{
 				// look for terminal transitions
-				partialrule = (*m_tabPartialsRulesTerm)(topstate, curtok->GetTableIdx());
-				partialmatchlen = (*m_tabPartialsMatchLenTerm)(topstate, curtok->GetTableIdx());
-
+				partialrule = (*m_tabPartialsRulesTerm)(topstate, curtok->GetTableIndex());
+				partialmatchlen = (*m_tabPartialsMatchLenTerm)(topstate, curtok->GetTableIndex());
+			}
+			else
+			{
 				// otherwise look for nonterminal transitions
-				if(partialrule == ERROR_VAL && symbols.size() && !symbols.top()->IsTerminal())
+				if(symbols.size() && !symbols.top()->IsTerminal())
 				{
-					partialrule = (*m_tabPartialsRulesNonTerm)(topstate, symbols.top()->GetTableIdx());
-					partialmatchlen = (*m_tabPartialsMatchLenNonTerm)(topstate, symbols.top()->GetTableIdx());
+					const std::size_t idx = symbols.top()->GetTableIndex();
+					partialrule = (*m_tabPartialsRulesNonTerm)(topstate, idx);
+					partialmatchlen = (*m_tabPartialsMatchLenNonTerm)(topstate, idx);
 				}
 			}
+
+			return std::make_tuple(partialrule, partialmatchlen);
 		};
 
-		auto apply_partial_rules = [this, &partialrule, &partialmatchlen, &symbols]()
+		auto apply_partial_rules = [this, &symbols, &get_partial_rules](bool term)
 		{
+			auto [partialrule, partialmatchlen] = get_partial_rules(term);
+
 			if(!partialrule || *partialrule == ERROR_VAL)
 				return;
 			if(m_debug)
@@ -154,23 +208,12 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 					<< "." << std::endl;
 			}
 
-			// take the symbols from the stack and create an
-			// argument vector for the semantic rule
-			std::stack<t_lalrastbaseptr> symbols_cp = symbols;
-			std::vector<t_lalrastbaseptr> args;
-			args.reserve(*partialmatchlen);
-			for(std::size_t arg=0; arg<*partialmatchlen; ++arg)
-			{
-				args.emplace_back(std::move(symbols_cp.top()));
-				symbols_cp.pop();
-			}
-
 			// execute partial semantic rule
-			(*m_semantics)[*partialrule](false, args);
+			(*m_semantics)[*partialrule](false, symbols.topN<std::vector>(*partialmatchlen));
 		};
 
 
-		auto print_active_state = [this, &topstate, &print_input_token, &print_stacks]
+		auto print_active_state = [&topstate, &print_input_token, &print_stacks]
 			(std::ostream& ostr)
 		{
 			ostr << "\nState " << topstate << " active." << std::endl;
@@ -220,8 +263,7 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		}
 
 		// partial rules
-		get_partial_rules();
-		apply_partial_rules();
+		apply_partial_rules(true);
 
 		// shift
 		if(newstate != ERROR_VAL)
@@ -279,18 +321,17 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 
 			// execute semantic rule
 			t_lalrastbaseptr reducedSym = (*m_semantics)[newrule](true, args);
-			reducedSym->SetTableIdx((*m_vecLhsIndices)[newrule]);
+			reducedSym->SetTableIndex((*m_vecLhsIndices)[newrule]);
 
 			topstate = states.top();
 			if(m_debug)
 				print_active_state(std::cout);
 
-			std::size_t jumpstate = (*m_tabJump)(topstate, reducedSym->GetTableIdx());
+			std::size_t jumpstate = (*m_tabJump)(topstate, reducedSym->GetTableIndex());
 			symbols.emplace(std::move(reducedSym));
 
 			// partial rules
-			get_partial_rules();
-			apply_partial_rules();
+			apply_partial_rules(false);
 
 			states.push(jumpstate);
 

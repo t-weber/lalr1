@@ -34,8 +34,8 @@ public:
 	std::size_t GetId() const { return m_id; }
 	void SetId(std::size_t id) { m_id = id; }
 
-	std::size_t GetTableIdx() const { return *m_tableidx; }
-	void SetTableIdx(std::size_t tableidx) { m_tableidx = tableidx; }
+	std::size_t GetTableIndex() const { return *m_tableidx; }
+	void SetTableIndex(std::size_t tableidx) { m_tableidx = tableidx; }
 
 	virtual bool IsTerminal() const
 	{
