@@ -11,12 +11,11 @@
 
 #include "parser.h"
 
-#include <deque>
-#include <vector>
-#include <stack>
-#include <tuple>
-#include <optional>
 #include <sstream>
+#include <unordered_set>
+#include <functional>
+
+#include <boost/functional/hash.hpp>
 
 
 Parser::Parser(const Parser& parser)
@@ -64,77 +63,125 @@ std::string get_line_numbers(const t_toknode& node)
 
 
 /**
- * stack class for parse states and symbols
+ * debug output of the stacks
  */
-template<class t_elem, class t_cont = std::deque<t_elem>>
-class ParseStack : public std::stack<t_elem, t_cont>
+static void print_stacks(const ParseStack<std::size_t>& states,
+	const ParseStack<t_lalrastbaseptr>& symbols,
+	std::ostream& ostr)
 {
-protected:
-	// the underlying container
-	using std::stack<t_elem, t_cont>::c;
-
-public:
-	/**
-	 * get the top N elements on stack
-	 */
-	template<template<class...> class t_cont_ret>
-	t_cont_ret<t_elem> topN(std::size_t N)
+	ostr << "\tState stack: ";
+	auto _states = states;
+	while(!_states.empty())
 	{
-		t_cont_ret<t_elem> cont;
+		ostr << _states.top();
+		_states.pop();
 
-		for(auto iter = c.rbegin(); iter != c.rend(); std::advance(iter, 1))
-		{
-			cont.push_back(*iter);
-			if(cont.size() == N)
-				break;
-		}
-
-		return cont;
+		if(_states.size() > 0)
+			ostr << ", ";
 	}
+	ostr << "." << std::endl;
+
+	ostr << "\tSymbol stack: ";
+	auto _symbols = symbols;
+	while(!_symbols.empty())
+	{
+		t_lalrastbaseptr sym = _symbols.top();
+		if(sym->IsTerminal())
+			ostr << "term ";
+		else
+			ostr << "nonterm ";
+
+		ostr << sym->GetTableIndex();
+		if(sym->IsTerminal() && std::isprint(sym->GetId()))
+			ostr << " ('" << char(sym->GetId()) << "')";
+
+		_symbols.pop();
+
+		if(_symbols.size() > 0)
+			ostr << ", ";
+	}
+	ostr << "." << std::endl;
+}
+
+
+/**
+ * debug output of current token
+ */
+static void print_input_token(std::size_t inputidx, const t_toknode& curtok,
+	std::ostream& ostr)
+{
+	ostr << "\tCurrent token [" << inputidx-1 << "]"
+		<< ": " << curtok->GetId();
+	if(std::isprint(curtok->GetId()))
+		ostr << " = '" << char(curtok->GetId()) << "'";
+	ostr << " (terminal index " << curtok->GetTableIndex() << ")."
+		<< std::endl;
 };
 
 
+/**
+ * get the rule number and the matching length of a partial match
+ */
+std::tuple<std::optional<std::size_t>, std::optional<std::size_t>>
+Parser::GetPartialRules(std::size_t topstate, const t_toknode& curtok,
+	const ParseStack<t_lalrastbaseptr>& symbols, bool term) const
+{
+	const bool has_partial_tables =
+		m_tabPartialsRulesTerm && m_tabPartialsMatchLenTerm &&
+		m_tabPartialsRulesNonTerm && m_tabPartialsMatchLenNonTerm;
+	if(!has_partial_tables)
+		return std::make_tuple(std::nullopt, std::nullopt);
+
+	std::optional<std::size_t> partialrule, partialmatchlen;
+
+	if(term)
+	{
+		// look for terminal transitions
+		partialrule = (*m_tabPartialsRulesTerm)(topstate, curtok->GetTableIndex());
+		partialmatchlen = (*m_tabPartialsMatchLenTerm)(topstate, curtok->GetTableIndex());
+	}
+	else
+	{
+		// otherwise look for nonterminal transitions
+		if(symbols.size() && !symbols.top()->IsTerminal())
+		{
+			const std::size_t idx = symbols.top()->GetTableIndex();
+			partialrule = (*m_tabPartialsRulesNonTerm)(topstate, idx);
+			partialmatchlen = (*m_tabPartialsMatchLenNonTerm)(topstate, idx);
+		}
+	}
+
+	return std::make_tuple(partialrule, partialmatchlen);
+}
+
+
+/**
+ * get a unique identifier for a partial rule
+ */
+std::size_t Parser::GetPartialRuleHash(std::size_t rule, std::size_t len,
+	const ParseStack<std::size_t>& states, const ParseStack<t_lalrastbaseptr>& symbols) const
+{
+	std::size_t total_hash = std::hash<std::size_t>{}(rule);
+	boost::hash_combine(total_hash, std::hash<std::size_t>{}(len));
+
+	for(std::size_t state : states)
+		boost::hash_combine(total_hash, std::hash<std::size_t>{}(state));
+
+	for(const auto& symbol : symbols)
+		boost::hash_combine(total_hash, symbol->hash());
+
+	return total_hash;
+}
+
+
+/**
+ * parse the input tokens using the lalr(1) tables
+ */
 t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 {
+	// parser stacks
 	ParseStack<std::size_t> states;
 	ParseStack<t_lalrastbaseptr> symbols;
-
-	// debug output of the stacks
-	auto print_stacks = [&states, &symbols](std::ostream& ostr)
-	{
-		ostr << "\tState stack: ";
-		auto _states = states;
-		while(!_states.empty())
-		{
-			ostr << _states.top();
-			_states.pop();
-
-			if(_states.size() > 0)
-				ostr << ", ";
-		}
-		ostr << "." << std::endl;
-
-		ostr << "\tSymbol stack: ";
-		auto _symbols = symbols;
-		while(!_symbols.empty())
-		{
-			t_lalrastbaseptr sym = _symbols.top();
-			if(sym->IsTerminal())
-				ostr << "term ";
-			else
-				ostr << "nonterm ";
-
-			ostr << sym->GetTableIndex();
-			if(sym->IsTerminal() && std::isprint(sym->GetId()))
-				ostr << " ('" << char(sym->GetId()) << "')";
-
-			_symbols.pop();
-
-			if(_symbols.size() > 0)
-				ostr << ", ";
-		}
-		ostr << "." << std::endl;
-	};
 
 	// starting state
 	states.push(0);
@@ -143,21 +190,10 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 	// next token
 	t_toknode curtok = input[inputidx++];
 
-	// debug output of current token
-	auto print_input_token = [&inputidx, &curtok](std::ostream& ostr)
-	{
-		ostr << "\tCurrent token [" << inputidx-1 << "]"
-			<< ": " << curtok->GetId();
-		if(std::isprint(curtok->GetId()))
-			ostr << " = '" << char(curtok->GetId()) << "'";
-		ostr << " (terminal index " << curtok->GetTableIndex() << ")."
-			<< std::endl;
-	};
+	// already seen partial rules
+	std::unordered_set<std::size_t> already_seen_partials;
 
-	const bool has_partial_tables =
-		m_tabPartialsRulesTerm && m_tabPartialsMatchLenTerm &&
-		m_tabPartialsRulesNonTerm && m_tabPartialsMatchLenNonTerm;
-
+	// run the shift-reduce parser
 	while(true)
 	{
 		// current state and rule
@@ -165,60 +201,40 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		std::size_t newstate = (*m_tabActionShift)(topstate, curtok->GetTableIndex());
 		std::size_t newrule = (*m_tabActionReduce)(topstate, curtok->GetTableIndex());
 
-		// partial match
-		auto get_partial_rules = [this, &has_partial_tables,
-			&topstate, &curtok, &symbols](bool term)
-			-> std::tuple<std::optional<std::size_t>, std::optional<std::size_t>>
+		// debug-pring the current parser state
+		auto print_active_state = [&topstate, &inputidx, &curtok,
+			&states, &symbols](std::ostream& ostr)
 		{
-			if(!has_partial_tables)
-				return std::make_tuple(std::nullopt, std::nullopt);
-
-			std::optional<std::size_t> partialrule, partialmatchlen;
-
-			if(term)
-			{
-				// look for terminal transitions
-				partialrule = (*m_tabPartialsRulesTerm)(topstate, curtok->GetTableIndex());
-				partialmatchlen = (*m_tabPartialsMatchLenTerm)(topstate, curtok->GetTableIndex());
-			}
-			else
-			{
-				// otherwise look for nonterminal transitions
-				if(symbols.size() && !symbols.top()->IsTerminal())
-				{
-					const std::size_t idx = symbols.top()->GetTableIndex();
-					partialrule = (*m_tabPartialsRulesNonTerm)(topstate, idx);
-					partialmatchlen = (*m_tabPartialsMatchLenNonTerm)(topstate, idx);
-				}
-			}
-
-			return std::make_tuple(partialrule, partialmatchlen);
+			ostr << "\nState " << topstate << " active." << std::endl;
+			print_input_token(inputidx, curtok, ostr);
+			print_stacks(states, symbols, ostr);
 		};
 
-		auto apply_partial_rules = [this, &symbols, &get_partial_rules](bool term)
+		// run a partial rule related to either a terminal or a nonterminal transition
+		auto apply_partial_rules = [this, &topstate, &curtok, &symbols, &states,
+			&already_seen_partials](bool term)
 		{
-			auto [partialrule, partialmatchlen] = get_partial_rules(term);
+			auto [partialrule, partialmatchlen] = this->GetPartialRules(
+				topstate, curtok, symbols, term);
 
 			if(!partialrule || *partialrule == ERROR_VAL)
 				return;
-			if(m_debug)
+
+			if(std::size_t hash_partial = GetPartialRuleHash(*partialrule, *partialmatchlen, states, symbols);
+			   !already_seen_partials.contains(hash_partial))
 			{
-				std::cout << "\tPartially matched rule " << *partialrule
+				// execute partial semantic rule if this hasn't been done before
+				(*m_semantics)[*partialrule](false, symbols.topN<std::vector>(*partialmatchlen));
+
+				already_seen_partials.insert(hash_partial);
+
+				if(m_debug)
+				{
+					std::cout << "\tPartially matched rule " << *partialrule
 					<< " of length " << *partialmatchlen
 					<< "." << std::endl;
+				}
 			}
-
-			// execute partial semantic rule
-			(*m_semantics)[*partialrule](false, symbols.topN<std::vector>(*partialmatchlen));
-		};
-
-
-		auto print_active_state = [&topstate, &print_input_token, &print_stacks]
-			(std::ostream& ostr)
-		{
-			ostr << "\nState " << topstate << " active." << std::endl;
-			print_input_token(ostr);
-			print_stacks(ostr);
 		};
 
 		if(m_debug)
@@ -345,5 +361,8 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		}
 	}
 
+	// parsing failed
+	if(m_debug)
+		std::cout << "\tNot accepting." << std::endl;
 	return nullptr;
 }

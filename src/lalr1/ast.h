@@ -10,8 +10,10 @@
 
 #include <memory>
 #include <vector>
-#include <functional>
 #include <optional>
+#include <functional>
+
+#include <boost/functional/hash.hpp>
 
 
 
@@ -33,6 +35,15 @@ public:
 
 	std::size_t GetId() const { return m_id; }
 	void SetId(std::size_t id) { m_id = id; }
+
+	std::size_t hash() const
+	{
+		std::size_t hashTerm = std::hash<bool>{}(IsTerminal());
+		std::size_t hashId = std::hash<std::size_t>{}(GetId());
+
+		boost::hash_combine(hashId, hashTerm);
+		return hashId;
+	}
 
 	std::size_t GetTableIndex() const { return *m_tableidx; }
 	void SetTableIndex(std::size_t tableidx) { m_tableidx = tableidx; }
