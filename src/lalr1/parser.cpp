@@ -70,22 +70,21 @@ static void print_stacks(const ParseStack<std::size_t>& states,
 	std::ostream& ostr)
 {
 	ostr << "\tState stack: ";
-	auto _states = states;
-	while(!_states.empty())
+	std::size_t i = 0;
+	for(auto iter = states.rbegin(); iter != states.rend(); std::advance(iter, 1))
 	{
-		ostr << _states.top();
-		_states.pop();
-
-		if(_states.size() > 0)
+		ostr << (*iter);
+		if(i < states.size() - 1)
 			ostr << ", ";
+		++i;
 	}
 	ostr << "." << std::endl;
 
 	ostr << "\tSymbol stack: ";
-	auto _symbols = symbols;
-	while(!_symbols.empty())
+	i = 0;
+	for(auto iter = symbols.rbegin(); iter != symbols.rend(); std::advance(iter, 1))
 	{
-		t_lalrastbaseptr sym = _symbols.top();
+		const t_lalrastbaseptr& sym = (*iter);
 		if(sym->IsTerminal())
 			ostr << "term ";
 		else
@@ -95,10 +94,9 @@ static void print_stacks(const ParseStack<std::size_t>& states,
 		if(sym->IsTerminal() && std::isprint(sym->GetId()))
 			ostr << " ('" << char(sym->GetId()) << "')";
 
-		_symbols.pop();
-
-		if(_symbols.size() > 0)
+		if(i < symbols.size() - 1)
 			ostr << ", ";
+		++i;
 	}
 	ostr << "." << std::endl;
 }

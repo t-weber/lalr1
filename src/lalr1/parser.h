@@ -34,6 +34,8 @@ public:
 	using value_type = typename std::stack<t_elem, t_cont>::value_type;
 	using iterator = typename t_cont::iterator;
 	using const_iterator = typename t_cont::const_iterator;
+	using reverse_iterator = typename t_cont::reverse_iterator;
+	using const_reverse_iterator = typename t_cont::const_reverse_iterator;
 
 
 public:
@@ -41,6 +43,11 @@ public:
 	iterator end() { return c.end(); }
 	const_iterator begin() const { return c.begin(); }
 	const_iterator end() const { return c.end(); }
+
+	reverse_iterator rbegin() { return c.rbegin(); }
+	reverse_iterator rend() { return c.rend(); }
+	const_reverse_iterator rbegin() const { return c.rbegin(); }
+	const_reverse_iterator rend() const { return c.rend(); }
 
 	/**
 	 * get the top N elements on stack
