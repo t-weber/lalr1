@@ -325,10 +325,17 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 		{
 			const ClosurePtr& closure_to = std::get<1>(transition);
 			const SymbolPtr& symTrans = std::get<2>(transition);
-			//const Collection::t_elements& elemsFrom = std::get<3>(transition);
+			const Collection::t_elements& elemsFrom = std::get<3>(transition);
 
+			// transition symbol has to be a terminal
 			if(symTrans->IsEps() || !symTrans->IsTerminal())
 				continue;
+
+			// partial match
+			if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+			{
+				// TODO
+			}
 
 			std::ostringstream ostr_shift;
 			if(symTrans->GetId() == g_end->GetId())
@@ -357,88 +364,78 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 
 
 		// reduce actions
-		std::vector<std::unordered_set<SymbolPtr>> reduces_lookaheads;
-		std::vector<std::string> reduces;
+		std::vector<std::unordered_set<SymbolPtr>> reduces_lookaheads{};
+		std::vector<std::string> reduces{};
 
 		for(const ElementPtr& elem : closure->GetElements())
 		{
-			std::optional<std::size_t> rulenr = elem->GetSemanticRule();
-
 			// cursor at end -> reduce a completely parsed rule
-			if(elem->IsCursorAtEnd())
+			if(!elem->IsCursorAtEnd())
+				continue;
+
+			std::optional<std::size_t> rulenr = elem->GetSemanticRule();
+			if(!rulenr)
 			{
-				if(!rulenr)
-				{
-					std::cerr << "Error: No semantic rule assigned to element "
-						<< (*elem) << "." << std::endl;
-					continue;
-				}
-
-				const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
-				if(lookaheads.size())
-				{
-					std::ostringstream ostr_reduce;
-
-					std::unordered_set<SymbolPtr> reduce_lookaheads;
-					for(const TerminalPtr& la : lookaheads)
-						reduce_lookaheads.insert(la);
-					reduces_lookaheads.emplace_back(std::move(reduce_lookaheads));
-					ostr_reduce << "\t\t{\n";
-
-					// in extended grammar, first production (rule 0) is of the form start -> ...
-					if(*rulenr == 0)
-					{
-						ostr_reduce << "\t\t\tm_accepted = true;\n";
-						ostr_reduce << "\t\t\tbreak;\n";
-					}
-					else
-					{
-						std::ostringstream rule_descr;
-						rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
-
-						std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
-						ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
-
-						if(m_genDebugCode)
-						{
-							ostr_reduce << "\t\t\tif(m_debug)\n";
-							ostr_reduce << "\t\t\t\tDebugMessageReduce("
-								<< num_rhs << ", "
-								<< *rulenr << ", "
-								<< "\"" << rule_descr.str() << "\");\n";
-						}
-
-
-						// take the symbols from the stack and create an argument vector for the semantic rule
-						ostr_reduce << "\t\t\tstd::vector<t_symbol> args(" << num_rhs << ");\n";
-						if(num_rhs)
-						{
-							ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
-							ostr_reduce << "\t\t\t{\n";
-							ostr_reduce << "\t\t\t\targs[" << num_rhs << "-arg-1] = std::move(m_symbols.top());\n";
-							ostr_reduce << "\t\t\t\tm_symbols.pop();\n";
-							ostr_reduce << "\t\t\t}\n";  // end for
-						}
-
-						// execute semantic rule
-						ostr_reduce << "\t\t\t// semantic rule: " << rule_descr.str() << ".\n";
-						ostr_reduce << "\t\t\tm_symbols.emplace((*m_semantics)[" << *rulenr << "](true, args));\n";
-						ostr_reduce << "\t\t\tbreak;\n";
-					}
-
-					ostr_reduce << "\t\t}\n";  // end case
-
-					reduces.emplace_back(ostr_reduce.str());
-				}
+				std::cerr << "Error: No semantic rule assigned to element "
+					<< (*elem) << "." << std::endl;
+				continue;
 			}
 
-			// cursor not at end -> partially parsed rule
-			else
+			const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
+			if(lookaheads.size())
 			{
-				if(!rulenr)  // no semantic rule assigned
-					continue;
+				std::ostringstream ostr_reduce;
 
-				// TODO
+				std::unordered_set<SymbolPtr> reduce_lookaheads;
+				for(const TerminalPtr& la : lookaheads)
+					reduce_lookaheads.insert(la);
+				reduces_lookaheads.emplace_back(std::move(reduce_lookaheads));
+				ostr_reduce << "\t\t{\n";
+
+				// in extended grammar, first production (rule 0) is of the form start -> ...
+				if(*rulenr == 0)
+				{
+					ostr_reduce << "\t\t\tm_accepted = true;\n";
+					ostr_reduce << "\t\t\tbreak;\n";
+				}
+				else
+				{
+					std::ostringstream rule_descr;
+					rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
+
+					std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
+					ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
+
+					if(m_genDebugCode)
+					{
+						ostr_reduce << "\t\t\tif(m_debug)\n";
+						ostr_reduce << "\t\t\t\tDebugMessageReduce("
+							<< num_rhs << ", "
+							<< *rulenr << ", "
+							<< "\"" << rule_descr.str() << "\");\n";
+					}
+
+
+					// take the symbols from the stack and create an argument vector for the semantic rule
+					ostr_reduce << "\t\t\tstd::vector<t_symbol> args(" << num_rhs << ");\n";
+					if(num_rhs)
+					{
+						ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
+						ostr_reduce << "\t\t\t{\n";
+						ostr_reduce << "\t\t\t\targs[" << num_rhs << "-arg-1] = std::move(m_symbols.top());\n";
+						ostr_reduce << "\t\t\t\tm_symbols.pop();\n";
+						ostr_reduce << "\t\t\t}\n";  // end for
+					}
+
+					// execute semantic rule
+					ostr_reduce << "\t\t\t// semantic rule: " << rule_descr.str() << ".\n";
+					ostr_reduce << "\t\t\tm_symbols.emplace((*m_semantics)[" << *rulenr << "](true, args));\n";
+					ostr_reduce << "\t\t\tbreak;\n";
+				}
+
+				ostr_reduce << "\t\t}\n";  // end case
+
+				reduces.emplace_back(ostr_reduce.str());
 			}
 		}
 
@@ -581,10 +578,17 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 		{
 			const ClosurePtr& closure_to = std::get<1>(transition);
 			const SymbolPtr& symTrans = std::get<2>(transition);
-			//const Collection::t_elements& elemsFrom = std::get<3>(transition);
+			const Collection::t_elements& elemsFrom = std::get<3>(transition);
 
+			// transition symbol has to be a non-terminal
 			if(symTrans->IsEps() || symTrans->IsTerminal())
 				continue;
+
+			// partial match
+			if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+			{
+				// TODO
+			}
 
 			ostr_cpp_while << "\t\t\tcase " << symTrans->GetId() << ":\n";
 			ostr_cpp_while << "\t\t\t\tstate_" << closure_to->GetId() << "();\n";

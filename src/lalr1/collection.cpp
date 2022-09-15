@@ -327,8 +327,8 @@ void Collection::Simplify()
 		});
 
 	// cleanup closure ids
-	std::unordered_map<std::size_t, std::size_t> idmap;
-	std::unordered_set<std::size_t> already_seen;
+	std::unordered_map<std::size_t, std::size_t> idmap{};
+	std::unordered_set<std::size_t> already_seen{};
 	std::size_t newid = 0;
 
 	for(const ClosurePtr& closure : m_collection)
@@ -408,6 +408,48 @@ std::set<std::size_t> Collection::HasShiftReduceConflicts() const
 	}
 
 	return conflicting_closures;
+}
+
+
+/**
+ * get the rule number and length of a partial match
+ */
+std::tuple<bool, std::size_t /*rule #*/, std::size_t /*match length*/>
+Collection::GetUniquePartialMatch(const Collection::t_elements& elemsFrom)
+{
+	std::unordered_map<std::size_t, ElementPtr> matching_rules{};
+
+	for(const ElementPtr& elemFrom : elemsFrom)
+	{
+		std::size_t match_len = elemFrom->GetCursor();
+		std::optional<std::size_t> rulenr = elemFrom->GetSemanticRule();
+
+		if(match_len == 0 || !rulenr)
+			continue;
+
+		if(auto iter_match = matching_rules.find(*rulenr);
+			iter_match != matching_rules.end())
+		{
+			// longer match with the same rule?
+			if(match_len > iter_match->second->GetCursor())
+				iter_match->second = elemFrom;
+		}
+		else
+		{
+			// insert new match
+			matching_rules.emplace(std::make_pair(*rulenr, elemFrom));
+		}
+	}
+
+	// unique partial match?
+	if(matching_rules.size() == 1)
+	{
+		return std::make_tuple(true,                      // partial match found
+			matching_rules.begin()->first,                // rule number
+			matching_rules.begin()->second->GetCursor()); // length of partial rule match
+	}
+
+	return std::make_tuple(false, 0, 0);
 }
 
 

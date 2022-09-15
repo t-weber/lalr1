@@ -101,51 +101,25 @@ bool Collection::SaveParseTables(const std::string& file) const
 		}
 
 		// set table elements
-		std::vector<std::vector<std::size_t>>* tab =
-			symIsTerm ? &action_shift : &jump;
+		std::vector<std::vector<std::size_t>>* tab = symIsTerm ? &action_shift : &jump;
 
 		const ClosurePtr& stateFrom = std::get<0>(transition);
 		const ClosurePtr& stateTo = std::get<1>(transition);
+		const Collection::t_elements& elemsFrom = std::get<3>(transition);
+
 		set_tab_elem((*tab)[stateFrom->GetId()], symIdx, stateTo->GetId());
 
-		// set partial match table elements
-		std::vector<std::vector<std::size_t>>* partials_rule_tab =
-			symIsTerm ? &partials_rule_term : &partials_rule_nonterm;
-		std::vector<std::vector<std::size_t>>* partials_matchlen_tab =
-			symIsTerm ? &partials_matchlen_term : &partials_matchlen_nonterm;
-
-		const Collection::t_elements& elemsFrom = std::get<3>(transition);
-		std::unordered_map<std::size_t, ElementPtr> matching_rules;
-
-		for(const ElementPtr& elemFrom : elemsFrom)
-		{
-			std::size_t match_len = elemFrom->GetCursor();
-			std::optional<std::size_t> rulenr = elemFrom->GetSemanticRule();
-
-			if(match_len == 0 || !rulenr)
-				continue;
-
-			if(auto iter_match = matching_rules.find(*rulenr);
-				iter_match != matching_rules.end())
-			{
-				// longer match with the same rule?
-				if(match_len > iter_match->second->GetCursor())
-					iter_match->second = elemFrom;
-			}
-			else
-			{
-				// insert new match
-				matching_rules.emplace(std::make_pair(*rulenr, elemFrom));
-			}
-		}
-
 		// unique partial match?
-		if(matching_rules.size() == 1)
+		if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
 		{
-			set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], symIdx,
-				matching_rules.begin()->first);
-			set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], symIdx,
-				matching_rules.begin()->second->GetCursor(), 0);
+			// set partial match table elements
+			std::vector<std::vector<std::size_t>>* partials_rule_tab =
+				symIsTerm ? &partials_rule_term : &partials_rule_nonterm;
+			std::vector<std::vector<std::size_t>>* partials_matchlen_tab =
+				symIsTerm ? &partials_matchlen_term : &partials_matchlen_nonterm;
+
+			set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], symIdx, rulenr);
+			set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], symIdx, rulelen, 0);
 		}
 	}
 
@@ -160,7 +134,6 @@ bool Collection::SaveParseTables(const std::string& file) const
 				continue;
 
 			std::optional<std::size_t> rulenr = elem->GetSemanticRule();
-
 			if(!rulenr)  // no semantic rule assigned
 			{
 				std::cerr << "Error: No semantic rule assigned to element "

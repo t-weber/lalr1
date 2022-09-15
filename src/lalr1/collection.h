@@ -113,6 +113,7 @@ protected:
 	std::size_t GetTableIndex(std::size_t id, bool is_term) const;
 
 	static std::size_t hash_transition(const t_transition& trans);
+	static std::tuple<bool, std::size_t, std::size_t> GetUniquePartialMatch(const t_elements& elemsFrom);
 
 
 private:
