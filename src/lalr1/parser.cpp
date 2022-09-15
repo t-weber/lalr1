@@ -69,7 +69,7 @@ static void print_stacks(const ParseStack<std::size_t>& states,
 	const ParseStack<t_lalrastbaseptr>& symbols,
 	std::ostream& ostr)
 {
-	ostr << "\tState stack: ";
+	ostr << "\tState stack [" << states.size() << "]: ";
 	std::size_t i = 0;
 	for(auto iter = states.rbegin(); iter != states.rend(); std::advance(iter, 1))
 	{
@@ -80,19 +80,20 @@ static void print_stacks(const ParseStack<std::size_t>& states,
 	}
 	ostr << "." << std::endl;
 
-	ostr << "\tSymbol stack: ";
+	ostr << "\tSymbol stack [" << symbols.size() << "]: ";
 	i = 0;
 	for(auto iter = symbols.rbegin(); iter != symbols.rend(); std::advance(iter, 1))
 	{
 		const t_lalrastbaseptr& sym = (*iter);
-		if(sym->IsTerminal())
-			ostr << "term ";
-		else
-			ostr << "nonterm ";
 
 		ostr << sym->GetTableIndex();
 		if(sym->IsTerminal() && std::isprint(sym->GetId()))
 			ostr << " ('" << char(sym->GetId()) << "')";
+
+		if(sym->IsTerminal())
+			ostr << " [t]";
+		else
+			ostr << " [nt]";
 
 		if(i < symbols.size() - 1)
 			ostr << ", ";

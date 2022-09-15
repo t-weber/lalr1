@@ -112,12 +112,25 @@ void %%PARSER_CLASS%%::PrintSymbols() const
 {
 	std::stack<t_symbol> symbols = m_symbols;
 
-	std::cout << symbols.size() << " symbols: ";
+	std::cout << "Symbol stack [" << symbols.size() << "]: ";
 	while(symbols.size())
 	{
-		std::cout << symbols.top()->GetId() << ", ";
+		t_lalrastbaseptr sym = std::move(symbols.top());
 		symbols.pop();
+
+		std::cout << sym->GetId();
+		if(sym->IsTerminal() && std::isprint(sym->GetId()))
+			std::cout << " ('" << char(sym->GetId()) << "')";
+
+		if(sym->IsTerminal())
+			std::cout << " [t]";
+		else
+			std::cout << " [nt]";
+
+		if(symbols.size() > 0)
+			std::cout << ", ";
 	}
+
 	std::cout << std::endl;
 }
 
@@ -143,41 +156,34 @@ void %%PARSER_CLASS%%::SetDebug(bool b)
 
 void %%PARSER_CLASS%%::DebugMessageState(std::size_t state_id, const char* state_name) const
 {
-	if(m_debug)
+	std::cout << "\nRunning state " << state_id
+		<< " function \"" << state_name << "\"..."
+		<< std::endl;
+	if(m_lookahead)
 	{
-		std::cout << "\nRunning state " << state_id
-			<< " function \"" << state_name << "\"..."
-			<< std::endl;
-		if(m_lookahead)
-		{
-			std::cout << "Lookahead [\"" << m_lookahead_idx << "\"]: \""
-				<< m_lookahead_id
-				<< std::endl;
-		}
-		PrintSymbols();
+		std::cout << "Lookahead [" << m_lookahead_idx << "]: " << m_lookahead_id;
+		if(std::isprint(m_lookahead_id))
+			std::cout << " = '" << char(m_lookahead_id) << "'";
+		std::cout << "." << std::endl;
 	}
+
+	PrintSymbols();
 }
 
 void %%PARSER_CLASS%%::DebugMessageReturn(std::size_t state_id) const
 {
-	if(m_debug)
-	{
-		std::cout << "Returning from state " << state_id
-			<< ", distance to jump: " << m_dist_to_jump << "."
-			<< std::endl;
-	}
+	std::cout << "Returning from state " << state_id
+		<< ", distance to jump: " << m_dist_to_jump << "."
+		<< std::endl;
 }
 
 void %%PARSER_CLASS%%::DebugMessageReduce(std::size_t num_rhs,
 	std::size_t rulenr, const char* rule_descr) const
 {
-	if(m_debug)
-	{
-		std::cout << "Reducing " << num_rhs
-			<< " symbol(s) using rule " << rulenr
-			<< " (" << rule_descr << ")."
-			<< std::endl;
-	}
+	std::cout << "Reducing " << num_rhs
+		<< " symbol(s) using rule " << rulenr
+		<< " (" << rule_descr << ")."
+		<< std::endl;
 }
 
 void %%PARSER_CLASS%%::TransitionError(std::size_t state_id) const
@@ -195,7 +201,7 @@ void %%PARSER_CLASS%%::TransitionError(std::size_t state_id) const
 			<< " " << sym_id << ", ";
 	}
 
-	ostr << "and look-ahead terminal " << m_lookahead_id << ".";
+	ostr << "and lookahead terminal " << m_lookahead_id << ".";
 
 	throw std::runtime_error(ostr.str());
 }
@@ -494,7 +500,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 								++i;
 							}
 						}
-						ostrErr << " and look-ahead terminal " << la->GetId();
+						ostrErr << " and lookahead terminal " << la->GetId();
 						ostrErr << ".";
 
 						if(m_stopOnConflicts)
