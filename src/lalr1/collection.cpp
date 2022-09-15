@@ -19,7 +19,7 @@
 
 #include <sstream>
 #include <fstream>
-#include <vector>
+#include <deque>
 #include <algorithm>
 
 #include <boost/functional/hash.hpp>
@@ -834,8 +834,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 		ostr << no_col;
 
 	// sort transitions
-	std::vector<Collection::t_transition> transitions;
-	transitions.reserve(coll.m_transitions.size());
+	std::deque<Collection::t_transition> transitions;
 	std::copy(coll.m_transitions.begin(), coll.m_transitions.end(), std::back_inserter(transitions));
 	std::stable_sort(transitions.begin(), transitions.end(), Collection::CompareTransitionsLess{});
 

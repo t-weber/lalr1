@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <deque>
 #include <list>
 #include <unordered_map>
 #include <unordered_set>
@@ -152,7 +153,7 @@ using t_map_first = std::unordered_map<
 	SymbolPtr, Terminal::t_terminalset,
 	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
 using t_map_first_perrule = std::unordered_map<
-	SymbolPtr, std::vector<Terminal::t_terminalset>,
+	SymbolPtr, std::deque<Terminal::t_terminalset>,
 	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
 using t_map_follow = std::unordered_map<
 	SymbolPtr, Terminal::t_terminalset,
@@ -196,7 +197,7 @@ public:
 	WordPtr GetRuleFromSemanticIndex(std::size_t semantic_idx) const;
 
 	// gets a vector of all rules having a semantic index
-	static std::vector<WordPtr> GetRulesWithSemanticIndex(
+	static std::deque<WordPtr> GetRulesWithSemanticIndex(
 		const std::vector<NonTerminalPtr>& nonterms,
 		std::size_t num_rules);
 

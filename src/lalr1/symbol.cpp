@@ -286,14 +286,13 @@ WordPtr NonTerminal::GetRuleFromSemanticIndex(std::size_t semantic_idx) const
 
 
 /**
- * gets a vector of all rules having a semantic index
+ * gets all rules having a semantic index
  */
-std::vector<WordPtr> NonTerminal::GetRulesWithSemanticIndex(
+std::deque<WordPtr> NonTerminal::GetRulesWithSemanticIndex(
 	const std::vector<NonTerminalPtr>& nonterms,
 	std::size_t num_rules)
 {
-	std::vector<WordPtr> rules;
-	rules.reserve(num_rules);
+	std::deque<WordPtr> rules;
 
 	// iterate semantic indices
 	for(std::size_t semantic_idx = 0; semantic_idx < num_rules; ++semantic_idx)
@@ -343,10 +342,8 @@ NonTerminalPtr NonTerminal::RemoveLeftRecursion(
 	std::size_t newIdBegin, const std::string& primerule,
 	std::size_t* semanticruleidx)
 {
-	std::vector<WordPtr> rulesWithLeftRecursion;
-	std::vector<WordPtr> rulesWithoutLeftRecursion;
-	rulesWithLeftRecursion.reserve(NumRules());
-	rulesWithoutLeftRecursion.reserve(NumRules());
+	std::deque<WordPtr> rulesWithLeftRecursion;
+	std::deque<WordPtr> rulesWithoutLeftRecursion;
 
 	for(std::size_t ruleidx=0; ruleidx<NumRules(); ++ruleidx)
 	{
@@ -475,7 +472,7 @@ void NonTerminal::CalcFirst(t_map_first& _first, t_map_first_perrule* _first_per
 		return;
 
 	Terminal::t_terminalset first;
-	std::vector<Terminal::t_terminalset> first_perrule;
+	std::deque<Terminal::t_terminalset> first_perrule;
 	first_perrule.resize(nonterm->NumRules());
 
 	// iterate rules

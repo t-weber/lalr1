@@ -60,6 +60,11 @@ public:
 	%%PARSER_CLASS%%& operator=(const %%PARSER_CLASS%%&) = delete;
 
 	void SetDebug(bool b);
+	void DebugMessageState(std::size_t state_id, const char* state_func) const;
+	void DebugMessageReturn(std::size_t state_id) const;
+	void DebugMessageReduce(std::size_t num_rhs, std::size_t rulenr, const char* rule_descr) const;
+	void TransitionError(std::size_t state_id) const;
+
 	void SetSemanticRules(const std::vector<t_semanticrule>* rules);
 	t_symbol Parse(const std::vector<t_token>& input);
 
@@ -101,6 +106,7 @@ private:
 #include <exception>
 #include <string>
 #include <iostream>
+#include <sstream>
 
 void %%PARSER_CLASS%%::PrintSymbols() const
 {
@@ -135,6 +141,65 @@ void %%PARSER_CLASS%%::SetDebug(bool b)
 	m_debug = b;
 }
 
+void %%PARSER_CLASS%%::DebugMessageState(std::size_t state_id, const char* state_name) const
+{
+	if(m_debug)
+	{
+		std::cout << "\nRunning state " << state_id
+			<< " function \"" << state_name << "\"..."
+			<< std::endl;
+		if(m_lookahead)
+		{
+			std::cout << "Lookahead [\"" << m_lookahead_idx << "\"]: \""
+				<< m_lookahead_id
+				<< std::endl;
+		}
+		PrintSymbols();
+	}
+}
+
+void %%PARSER_CLASS%%::DebugMessageReturn(std::size_t state_id) const
+{
+	if(m_debug)
+	{
+		std::cout << "Returning from state " << state_id
+			<< ", distance to jump: " << m_dist_to_jump << "."
+			<< std::endl;
+	}
+}
+
+void %%PARSER_CLASS%%::DebugMessageReduce(std::size_t num_rhs,
+	std::size_t rulenr, const char* rule_descr) const
+{
+	if(m_debug)
+	{
+		std::cout << "Reducing " << num_rhs
+			<< " symbol(s) using rule " << rulenr
+			<< " (" << rule_descr << ")."
+			<< std::endl;
+	}
+}
+
+void %%PARSER_CLASS%%::TransitionError(std::size_t state_id) const
+{
+	std::ostringstream ostr;
+	ostr << "No transition from state " << state_id << ", ";
+
+	if(m_symbols.size())
+	{
+		const t_symbol& topsym = m_symbols.top();
+		bool is_term = topsym->IsTerminal();
+		std::size_t sym_id = topsym->GetId();
+
+		ostr << "top-level " << (is_term ? "terminal" : "non-terminal")
+			<< " " << sym_id << ", ";
+	}
+
+	ostr << "and look-ahead terminal " << m_lookahead_id << ".";
+
+	throw std::runtime_error(ostr.str());
+}
+
 void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules)
 {
 	m_semantics = rules;
@@ -152,7 +217,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 		m_symbols.pop();
 
 	GetNextLookahead();
-	closure_0();
+	state_0();
 
 	if(m_symbols.size() && m_accepted)
 		return m_symbols.top();
@@ -208,7 +273,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 				const ClosurePtr& closure_to = std::get<1>(transition);
 				const SymbolPtr& symTrans = std::get<2>(transition);
 
-				ostr_cpp << "\t- to closure " << closure_to->GetId()
+				ostr_cpp << "\t- to state " << closure_to->GetId()
 					<< " via symbol " << symTrans->GetStrId()
 					<< " (id = " << symTrans->GetId() << ")"
 					<< "\n";
@@ -225,7 +290,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 				const ClosurePtr& closure_to = std::get<1>(transition);
 				const SymbolPtr& symTrans = std::get<2>(transition);
 
-				ostr_cpp << "\t- to closure " << closure_to->GetId()
+				ostr_cpp << "\t- to state " << closure_to->GetId()
 					<< " via symbol " << symTrans->GetStrId()
 					<< " (id = " << symTrans->GetId() << ")"
 					<< "\n";
@@ -236,21 +301,14 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 
 
 		// write closure function
-		ostr_cpp << "void " << class_name << "::closure_" << closure->GetId() << "()\n";
+		ostr_cpp << "void " << class_name << "::state_" << closure->GetId() << "()\n";
 		ostr_cpp << "{\n";
-
 
 		if(m_genDebugCode)
 		{
-			// debug infos
 			ostr_cpp << "\tif(m_debug)\n";
-			ostr_cpp << "\t{\n";
-			ostr_cpp << "\t\tstd::cout << \"\\nRunning \" << __PRETTY_FUNCTION__ << \"...\" << std::endl;\n";
-			ostr_cpp << "\t\tif(m_lookahead)\n";
-			ostr_cpp << "\t\t\tstd::cout << \"Lookahead [\"  << m_lookahead_idx << \"]: \""
-				" << m_lookahead_id << std::endl;\n";
-			ostr_cpp << "\t\tPrintSymbols();\n";
-			ostr_cpp << "\t}\n";  // end if
+			ostr_cpp << "\t\tDebugMessageState(" << closure->GetId()
+				<< ", __PRETTY_FUNCTION__);\n";
 		}
 
 
@@ -261,6 +319,8 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 		{
 			const ClosurePtr& closure_to = std::get<1>(transition);
 			const SymbolPtr& symTrans = std::get<2>(transition);
+			//const Collection::t_elements& elemsFrom = std::get<3>(transition);
+
 			if(symTrans->IsEps() || !symTrans->IsTerminal())
 				continue;
 
@@ -282,7 +342,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 			ostr_shift << "\t\t{\n";
 			ostr_shift << "\t\t\tm_symbols.push(m_lookahead);\n";
 			ostr_shift << "\t\t\tGetNextLookahead();\n";
-			ostr_shift << "\t\t\tclosure_" << closure_to->GetId() << "();\n";
+			ostr_shift << "\t\t\tstate_" << closure_to->GetId() << "();\n";
 			ostr_shift << "\t\t\tbreak;\n";
 			ostr_shift << "\t\t}\n";  // end case
 
@@ -335,13 +395,11 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 
 						if(m_genDebugCode)
 						{
-							// debug infos
 							ostr_reduce << "\t\t\tif(m_debug)\n";
-							ostr_reduce << "\t\t\t{\n";
-							ostr_reduce << "\t\t\t\tstd::cout << \"Reducing \" << " << num_rhs
-								<< " << \" symbol(s) using rule \" << " << *rulenr
-								<< " << \" (" << rule_descr.str() << ").\" << std::endl;\n";
-							ostr_reduce << "\t\t\t}\n";  // end if
+							ostr_reduce << "\t\t\t\tDebugMessageReduce("
+								<< num_rhs << ", "
+								<< *rulenr << ", "
+								<< "\"" << rule_descr.str() << "\");\n";
 						}
 
 
@@ -397,7 +455,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 					continue;
 				}
 
-				if(ElementPtr conflictelem = closure-> GetElementWithCursorAtSymbol(la); conflictelem)
+				if(ElementPtr conflictelem = closure->GetElementWithCursorAtSymbol(la); conflictelem)
 				{
 					if(!lookbacks)
 						lookbacks = GetLookbackTerminals(closure);
@@ -421,7 +479,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 					{
 						std::ostringstream ostrErr;
 						ostrErr << "Shift/reduce conflict detected"
-							<< " in closure " << closure->GetId();
+							<< " in state " << closure->GetId();
 						if(conflictelem)
 							ostrErr << ":\n\t" << *conflictelem << "\n";
 						if(lookbacks->size())
@@ -493,10 +551,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 			// default: error
 			ostr_cpp << "\t\tdefault:\n";
 			ostr_cpp << "\t\t{\n";
-			// don't write the full string directly so the compiler can optimise duplicate string parts
-			ostr_cpp << "\t\t\tthrow std::runtime_error(\"No transition from closure \""
-				<< " + std::to_string(" << closure->GetId() << ") + \" and look-ahead terminal \""
-				<< " + std::to_string(m_lookahead_id) + \".\");\n";
+			ostr_cpp << "\t\t\tTransitionError(" << closure->GetId() << ");\n";
 			ostr_cpp << "\t\t\tbreak;\n";
 			ostr_cpp << "\t\t}\n";
 		}
@@ -520,11 +575,13 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 		{
 			const ClosurePtr& closure_to = std::get<1>(transition);
 			const SymbolPtr& symTrans = std::get<2>(transition);
+			//const Collection::t_elements& elemsFrom = std::get<3>(transition);
+
 			if(symTrans->IsEps() || symTrans->IsTerminal())
 				continue;
 
 			ostr_cpp_while << "\t\t\tcase " << symTrans->GetId() << ":\n";
-			ostr_cpp_while << "\t\t\t\tclosure_" << closure_to->GetId() << "();\n";
+			ostr_cpp_while << "\t\t\t\tstate_" << closure_to->GetId() << "();\n";
 			ostr_cpp_while << "\t\t\t\tbreak;\n";
 
 			while_has_entries = true;
@@ -533,10 +590,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 		if(m_genErrorCode)
 		{
 			ostr_cpp_while << "\t\t\tdefault:\n";
-			ostr_cpp_while << "\t\t\t\tthrow std::runtime_error(\"No transition from closure \""
-				<< " + std::to_string(" << closure->GetId() << ") + \", look-ahead terminal \""
-				<< " + std::to_string(m_lookahead_id) + \", and top non-terminal \""
-				<< " + std::to_string(topsym->GetId()) + \".\");\n";
+			ostr_cpp_while << "\t\t\t\tTransitionError(" << closure->GetId() << ");\n";
 			ostr_cpp_while << "\t\t\t\tbreak;\n";
 		}
 
@@ -551,18 +605,14 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 
 		if(m_genDebugCode)
 		{
-			// debug infos
 			ostr_cpp << "\tif(m_debug)\n";
-			ostr_cpp << "\t{\n";
-			ostr_cpp << "\t\tstd::cout << \"Returning from closure \" << " << closure->GetId()
-				<< " << \", distance to jump: \" " << "<< m_dist_to_jump << \".\" << std::endl;\n";
-			ostr_cpp << "\t}\n";  // end if
+			ostr_cpp << "\t\tDebugMessageReturn(" << closure->GetId() << ");\n";
 		}
 
 		// end closure function
 		ostr_cpp << "}\n\n";
 
-		ostr_h << "\tvoid closure_" << closure->GetId() << "();\n";
+		ostr_h << "\tvoid state_" << closure->GetId() << "();\n";
 	}
 
 

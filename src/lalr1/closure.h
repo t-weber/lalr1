@@ -18,7 +18,7 @@
 
 #include "element.h"
 
-#include <vector>
+#include <deque>
 #include <list>
 #include <memory>
 #include <functional>
@@ -40,7 +40,7 @@ public:
 
 	// [ transition terminal, to closure, from elements ]
 	using t_transition = std::tuple<SymbolPtr, ClosurePtr, t_elements>;
-	using t_transitions = std::vector<t_transition>;
+	using t_transitions = std::deque<t_transition>;
 
 
 public:

@@ -15,6 +15,7 @@
 
 #include "closure.h"
 
+#include <deque>
 #include <sstream>
 #include <algorithm>
 
@@ -256,7 +257,6 @@ const Closure::t_transitions& Closure::DoTransitions() const
 	{
 		const t_symbolset& possible_transitions = GetPossibleTransitionSymbols();
 		t_transitions transitions;
-		transitions.reserve(possible_transitions.size());
 
 		for(const SymbolPtr& transition : possible_transitions)
 		{
@@ -311,8 +311,7 @@ std::size_t Closure::hash(bool only_core) const
 		return *m_hash_core;
 
 	// sort element hashes before combining them
-	std::vector<std::size_t> hashes;
-	hashes.reserve(m_elems.size());
+	std::deque<std::size_t> hashes;
 
 	for(const ElementPtr& elem : m_elems)
 		hashes.emplace_back(elem->hash(only_core));
