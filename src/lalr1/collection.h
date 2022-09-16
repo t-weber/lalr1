@@ -92,6 +92,7 @@ public:
 	void SetUseOpChar(bool b = true);
 	void SetGenDebugCode(bool b = true);
 	void SetGenErrorCode(bool b = true);
+	void SetGenPartialMatches(bool b = true);
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
@@ -129,6 +130,7 @@ private:
 	bool m_useOpChar{true};                     // use printable character for operators if possible
 	bool m_genDebugCode{true};                  // generate debug code in parser output
 	bool m_genErrorCode{true};                  // generate error handling code in parser output
+	bool m_genPartialMatches{true};             // generates code for handling partial rule matches
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

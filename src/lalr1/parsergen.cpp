@@ -72,6 +72,9 @@ protected:
 	void PrintSymbols() const;
 	void GetNextLookahead();
 
+	static std::vector<t_symbol> GetArguments(std::stack<t_symbol>& symbols, std::size_t num_rhs);
+	std::vector<t_symbol> GetCopyArguments(std::size_t num_rhs) const;
+
 %%DECLARE_CLOSURES%%
 
 private:
@@ -147,6 +150,29 @@ void %%PARSER_CLASS%%::GetNextLookahead()
 		m_lookahead = (*m_input)[m_lookahead_idx];
 		m_lookahead_id = m_lookahead->GetId();
 	}
+}
+
+/**
+ * take the symbols from the stack and create an argument vector for the semantic rule
+ */
+std::vector<%%PARSER_CLASS%%::t_symbol> %%PARSER_CLASS%%::GetArguments(std::stack<t_symbol>& symbols, std::size_t num_rhs)
+{
+	num_rhs = std::min(symbols.size(), num_rhs);
+	std::vector<t_symbol> args(num_rhs);
+
+	for(std::size_t arg=0; arg<num_rhs; ++arg)
+	{
+		args[num_rhs-arg-1] = std::move(symbols.top());
+		symbols.pop();
+	}
+
+	return args;
+}
+
+std::vector<%%PARSER_CLASS%%::t_symbol> %%PARSER_CLASS%%::GetCopyArguments(std::size_t num_rhs) const
+{
+	std::stack<t_symbol> symbols = m_symbols;
+	return GetArguments(symbols, num_rhs);
 }
 
 void %%PARSER_CLASS%%::SetDebug(bool b)
@@ -331,10 +357,19 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 			if(symTrans->IsEps() || !symTrans->IsTerminal())
 				continue;
 
-			// partial match
-			if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+			// unique partial match
+			bool has_partial = false;
+			std::ostringstream ostr_partial;
+			if(m_genPartialMatches)
 			{
-				// TODO
+				if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch && rulelen > 0)
+				{
+					// execute partial semantic rule
+					ostr_partial << "\t\t\t// partial semantic rule " << rulenr << " with " << rulelen << " arguments\n";
+					ostr_partial << "\t\t\tstd::vector<t_symbol> args = GetCopyArguments(" << rulelen << ");\n";
+					ostr_partial << "\t\t\t(*m_semantics)[" << rulenr << "](false, args);\n";
+					has_partial = true;
+				}
 			}
 
 			std::ostringstream ostr_shift;
@@ -353,6 +388,8 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 					<< symTrans->GetStrId() << "\n";
 			}
 			ostr_shift << "\t\t{\n";
+			if(has_partial)
+				ostr_shift << ostr_partial.str() << "\n";
 			ostr_shift << "\t\t\tm_symbols.push(m_lookahead);\n";
 			ostr_shift << "\t\t\tGetNextLookahead();\n";
 			ostr_shift << "\t\t\tstate_" << closure_to->GetId() << "();\n";
@@ -415,20 +452,9 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 							<< "\"" << rule_descr.str() << "\");\n";
 					}
 
-
-					// take the symbols from the stack and create an argument vector for the semantic rule
-					ostr_reduce << "\t\t\tstd::vector<t_symbol> args(" << num_rhs << ");\n";
-					if(num_rhs)
-					{
-						ostr_reduce << "\t\t\tfor(std::size_t arg=0; arg<" << num_rhs << "; ++arg)\n";
-						ostr_reduce << "\t\t\t{\n";
-						ostr_reduce << "\t\t\t\targs[" << num_rhs << "-arg-1] = std::move(m_symbols.top());\n";
-						ostr_reduce << "\t\t\t\tm_symbols.pop();\n";
-						ostr_reduce << "\t\t\t}\n";  // end for
-					}
-
 					// execute semantic rule
-					ostr_reduce << "\t\t\t// semantic rule: " << rule_descr.str() << ".\n";
+					ostr_reduce << "\t\t\t// semantic rule " << *rulenr << ": " << rule_descr.str() << "\n";
+					ostr_reduce << "\t\t\tstd::vector<t_symbol> args = GetArguments(m_symbols, " << num_rhs << ");\n";
 					ostr_reduce << "\t\t\tm_symbols.emplace((*m_semantics)[" << *rulenr << "](true, args));\n";
 					ostr_reduce << "\t\t\tbreak;\n";
 				}
@@ -584,15 +610,28 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 			if(symTrans->IsEps() || symTrans->IsTerminal())
 				continue;
 
-			// partial match
-			if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+			// unique partial match
+			bool has_partial = false;
+			std::ostringstream ostr_partial;
+			if(m_genPartialMatches)
 			{
-				// TODO
+				if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+				{
+					// execute partial semantic rule
+					ostr_partial << "\t\t\t\t// partial semantic rule " << rulenr << " with " << rulelen << " arguments\n";
+					ostr_partial << "\t\t\t\tstd::vector<t_symbol> args = GetCopyArguments(" << rulelen << ");\n";
+					ostr_partial << "\t\t\t\t(*m_semantics)[" << rulenr << "](false, args);\n";
+					has_partial = true;
+				}
 			}
 
 			ostr_cpp_while << "\t\t\tcase " << symTrans->GetId() << ":\n";
+			ostr_cpp_while << "\t\t\t{\n";
+			if(has_partial)
+				ostr_cpp_while << ostr_partial.str() << "\n";
 			ostr_cpp_while << "\t\t\t\tstate_" << closure_to->GetId() << "();\n";
 			ostr_cpp_while << "\t\t\t\tbreak;\n";
+			ostr_cpp_while << "\t\t\t}\n";
 
 			while_has_entries = true;
 		}
@@ -600,8 +639,10 @@ void %%PARSER_CLASS%%::SetSemanticRules(const std::vector<t_semanticrule>* rules
 		if(m_genErrorCode)
 		{
 			ostr_cpp_while << "\t\t\tdefault:\n";
+			ostr_cpp_while << "\t\t\t{\n";
 			ostr_cpp_while << "\t\t\t\tTransitionError(" << closure->GetId() << ");\n";
 			ostr_cpp_while << "\t\t\t\tbreak;\n";
+			ostr_cpp_while << "\t\t\t}\n";
 		}
 
 		ostr_cpp_while << "\t\t}\n";  // end switch

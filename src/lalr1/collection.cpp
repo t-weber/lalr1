@@ -103,6 +103,7 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_useOpChar = coll.m_useOpChar;
 	this->m_genDebugCode = coll.m_genDebugCode;
 	this->m_genErrorCode = coll.m_genErrorCode;
+	this->m_genPartialMatches = coll.m_genPartialMatches;
 	this->m_progress_observer = coll.m_progress_observer;
 
 	return *this;
@@ -556,6 +557,15 @@ void Collection::SetGenDebugCode(bool b)
 void Collection::SetGenErrorCode(bool b)
 {
 	m_genErrorCode = b;
+}
+
+
+/**
+ * generate code for handling partial matches
+ */
+void Collection::SetGenPartialMatches(bool b)
+{
+	m_genPartialMatches = b;
 }
 
 

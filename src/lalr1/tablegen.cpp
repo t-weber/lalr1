@@ -109,17 +109,20 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 		set_tab_elem((*tab)[stateFrom->GetId()], symIdx, stateTo->GetId());
 
-		// unique partial match?
-		if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+		if(m_genPartialMatches)
 		{
-			// set partial match table elements
-			std::vector<std::vector<std::size_t>>* partials_rule_tab =
-				symIsTerm ? &partials_rule_term : &partials_rule_nonterm;
-			std::vector<std::vector<std::size_t>>* partials_matchlen_tab =
-				symIsTerm ? &partials_matchlen_term : &partials_matchlen_nonterm;
+			// unique partial match?
+			if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+			{
+				// set partial match table elements
+				std::vector<std::vector<std::size_t>>* partials_rule_tab =
+					symIsTerm ? &partials_rule_term : &partials_rule_nonterm;
+				std::vector<std::vector<std::size_t>>* partials_matchlen_tab =
+					symIsTerm ? &partials_matchlen_term : &partials_matchlen_nonterm;
 
-			set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], symIdx, rulenr);
-			set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], symIdx, rulelen, 0);
+				set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], symIdx, rulenr);
+				set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], symIdx, rulelen, 0);
+			}
 		}
 	}
 
@@ -295,10 +298,13 @@ bool Collection::SaveParseTables(const std::string& file) const
 	tabJump.SaveCXXDefinition(ofstr, "tab_jump", "state", "nonterminal");
 
 	// save partial match tables
-	tabPartialRuleTerm.SaveCXXDefinition(ofstr, "tab_partials_rule_term", "state", "terminal");
-	tabPartialMatchLenTerm.SaveCXXDefinition(ofstr, "tab_partials_matchlen_term", "state", "terminal");
-	tabPartialRuleNonterm.SaveCXXDefinition(ofstr, "tab_partials_rule_nonterm", "state", "nonterminal");
-	tabPartialMatchLenNonterm.SaveCXXDefinition(ofstr, "tab_partials_matchlen_nonterm", "state", "nonterminal");
+	if(m_genPartialMatches)
+	{
+		tabPartialRuleTerm.SaveCXXDefinition(ofstr, "tab_partials_rule_term", "state", "terminal");
+		tabPartialMatchLenTerm.SaveCXXDefinition(ofstr, "tab_partials_matchlen_term", "state", "terminal");
+		tabPartialRuleNonterm.SaveCXXDefinition(ofstr, "tab_partials_rule_nonterm", "state", "nonterminal");
+		tabPartialMatchLenNonterm.SaveCXXDefinition(ofstr, "tab_partials_matchlen_nonterm", "state", "nonterminal");
+	}
 
 	// terminal symbol indices
 	ofstr << "const t_mapIdIdx map_term_idx\n{{\n";
@@ -352,8 +358,16 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "\tconst t_table*, const t_table*>\n";
 	ofstr << "get_lalr1_partials_tables()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n";
-	ofstr << "\t\t&_lalr1_tables::tab_partials_rule_term, &_lalr1_tables::tab_partials_matchlen_term,\n";
-	ofstr << "\t\t&_lalr1_tables::tab_partials_rule_nonterm, &_lalr1_tables::tab_partials_matchlen_nonterm);\n";
+	if(m_genPartialMatches)
+	{
+		ofstr << "\t\t&_lalr1_tables::tab_partials_rule_term, &_lalr1_tables::tab_partials_matchlen_term,\n";
+		ofstr << "\t\t&_lalr1_tables::tab_partials_rule_nonterm, &_lalr1_tables::tab_partials_matchlen_nonterm);\n";
+	}
+	else
+	{
+		ofstr << "\t\tnullptr, nullptr,\n";
+		ofstr << "\t\tnullptr, nullptr);\n";
+	}
 	ofstr << "}\n\n";
 
 	// index maps getter
