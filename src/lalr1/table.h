@@ -9,6 +9,7 @@
 #define __LALR1_TABLE_H__
 
 
+#include <vector>
 #include <optional>
 #include <iostream>
 #include <iomanip>

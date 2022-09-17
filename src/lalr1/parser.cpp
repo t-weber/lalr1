@@ -210,7 +210,7 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		};
 
 		// run a partial rule related to either a terminal or a nonterminal transition
-		auto apply_partial_rules = [this, &topstate, &curtok, &symbols, &states,
+		auto apply_partial_rule = [this, &topstate, &curtok, &symbols, &states,
 			&already_seen_partials](bool term)
 		{
 			auto [partialrule, partialmatchlen] = this->GetPartialRules(
@@ -230,8 +230,8 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 				if(m_debug)
 				{
 					std::cout << "\tPartially matched rule " << *partialrule
-					<< " of length " << *partialmatchlen
-					<< "." << std::endl;
+						<< " of length " << *partialmatchlen
+						<< "." << std::endl;
 				}
 			}
 		};
@@ -278,7 +278,7 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		}
 
 		// partial rules
-		apply_partial_rules(true);
+		apply_partial_rule(true);
 
 		// shift
 		if(newstate != ERROR_VAL)
@@ -346,7 +346,7 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			symbols.emplace(std::move(reducedSym));
 
 			// partial rules
-			apply_partial_rules(false);
+			apply_partial_rule(false);
 
 			states.push(jumpstate);
 
