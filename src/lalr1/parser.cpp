@@ -220,10 +220,22 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 				return;
 
 			if(std::size_t hash_partial = GetPartialRuleHash(*partialrule, *partialmatchlen, states, symbols);
-			   !already_seen_partials.contains(hash_partial))
+				!already_seen_partials.contains(hash_partial))
 			{
+				if(!m_semantics || partialrule >= m_semantics->size())
+				{
+					throw std::runtime_error("No semantic rule #" +
+						std::to_string(*partialrule) + " defined.");
+				}
+
 				// execute partial semantic rule if this hasn't been done before
-				(*m_semantics)[*partialrule](false, symbols.topN<std::vector>(*partialmatchlen));
+				const t_semanticrule& rule = (*m_semantics)[*partialrule];
+				if(!rule)
+				{
+					throw std::runtime_error("Invalid semantic rule #" +
+						std::to_string(*partialrule) + ".");
+				}
+				rule(false, symbols.topN<std::vector>(*partialmatchlen));
 
 				already_seen_partials.insert(hash_partial);
 
@@ -334,8 +346,22 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			if(args.size() > 1)
 				std::reverse(args.begin(), args.end());
 
+			if(!m_semantics || newrule >= m_semantics->size())
+			{
+				throw std::runtime_error("No semantic rule #" +
+					std::to_string(newrule) + " defined.");
+			}
+
 			// execute semantic rule
-			t_lalrastbaseptr reducedSym = (*m_semantics)[newrule](true, args);
+			const t_semanticrule& rule = (*m_semantics)[newrule];
+			if(!rule)
+			{
+				throw std::runtime_error("Invalid semantic rule #" +
+					std::to_string(newrule) + ".");
+			}
+			t_lalrastbaseptr reducedSym = rule(true, args);
+
+			// set return symbol type
 			reducedSym->SetTableIndex((*m_vecLhsIndices)[newrule]);
 
 			topstate = states.top();
