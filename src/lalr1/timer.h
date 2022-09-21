@@ -12,6 +12,20 @@
 #include <chrono>
 #include <sstream>
 #include <iomanip>
+#include <ctime>
+
+#if __has_include(<time.h>)
+	// TODO: find a better way to test if localtime_r exists
+	#define __LOCTIME_FUNC 0
+	//#pragma message("Using localtime_r.")
+#elif __has_include(<boost/date_time.hpp>)
+	#include <boost/date_time.hpp>
+	#define __LOCTIME_FUNC 1
+	//#pragma message("Using boost localtime.")
+#else
+	#define __LOCTIME_FUNC 2
+	#pragma message("Using unsafe localtime.")
+#endif
 
 
 using t_clock = std::chrono::steady_clock;
@@ -51,13 +65,30 @@ get_elapsed_time(const t_timepoint& start_time)
 }
 
 
+static inline std::tm* safe_localtime(const std::time_t* tm, std::tm* loctime)
+{
+#if __LOCTIME_FUNC == 0
+	loctime = localtime_r(tm, loctime);
+#elif __LOCTIME_FUNC == 1
+	// normally also just calls localtime_r
+	loctime = boost::date_time::c_time::localtime(tm, loctime);
+#elif __LOCTIME_FUNC == 2
+	// not thread-safe!
+	loctime = std::localtime(tm);
+#endif
+
+	return loctime;
+}
+
+
 template<class t_clock = std::chrono::system_clock>
 std::string get_timestamp()
 {
 	std::time_t now{t_clock::to_time_t(t_clock::now())};
+	std::tm loctime{};
 
 	std::ostringstream ostr;
-	ostr << std::put_time(std::localtime(&now), "%d/%m/%Y %Hh%M");
+	ostr << std::put_time(safe_localtime(&now, &loctime), "%d/%m/%Y %Hh%M");
 	return ostr.str();
 }
 
