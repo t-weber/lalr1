@@ -99,7 +99,15 @@ static void lr1_create_parser()
 #if USE_RECASC != 0
 		collsLALR.SaveParser("expr_parser.cpp", "ExprParser");
 #else
-		collsLALR.SaveParseTables("expr.tab");
+		bool tables_ok = false;
+		if(collsLALR.CreateParseTables())
+		{
+			tables_ok = collsLALR.SaveParseTablesCXX("expr.tab");
+			//collsLALR.SaveParseTablesJSON("expr.json");
+		}
+
+		if(!tables_ok)
+			std::cerr << "Error: Parsing tables could not be created." << std::endl;
 #endif
 	}
 	catch(const std::exception& err)

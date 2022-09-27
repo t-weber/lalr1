@@ -105,6 +105,15 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_genErrorCode = coll.m_genErrorCode;
 	this->m_genPartialMatches = coll.m_genPartialMatches;
 	this->m_progress_observer = coll.m_progress_observer;
+	this->m_tabActionShift = coll.m_tabActionShift;
+	this->m_tabActionReduce = coll.m_tabActionReduce;
+	this->m_tabJump = coll.m_tabJump;
+	this->m_tabPartialRuleTerm = coll.m_tabPartialRuleTerm;
+	this->m_tabPartialMatchLenTerm = coll.m_tabPartialMatchLenTerm;
+	this->m_tabPartialRuleNonterm = coll.m_tabPartialRuleNonterm;
+	this->m_tabPartialMatchLenNonterm = coll.m_tabPartialMatchLenNonterm;
+	this->m_numRhsSymsPerRule = coll.m_numRhsSymsPerRule;
+	this->m_ruleLhsIdx = coll.m_ruleLhsIdx;
 
 	return *this;
 }

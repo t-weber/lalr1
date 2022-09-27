@@ -161,6 +161,40 @@ public:
 
 
 	/**
+	 * export table to json
+	 */
+	void SaveJSON(std::ostream& ostr, const std::string& var,
+		const std::string& row_label = "", const std::string& col_label = "") const
+	{
+		ostr << "\"" << var << "\" : {\n";
+		ostr << "\t\"rows\" : " << size1() << ",\n";
+		ostr << "\t\"cols\" : " << size2() << ",\n";
+		ostr << "\t\"row_label\" : \"" << row_label << "\",\n";
+		ostr << "\t\"col_label\" : \"" << col_label << "\",\n";
+
+		ostr << "\t\"elems\" : [\n";
+		for(std::size_t row=0; row<size1(); ++row)
+		{
+			ostr << "\t\t[ ";
+			for(std::size_t col=0; col<size2(); ++col)
+			{
+				ostr << operator()(row, col);
+				if(col < size2()-1)
+					ostr << ",";
+				ostr << " ";
+			}
+			ostr << "]";
+			if(row < size1()-1)
+				ostr << ",";
+			ostr << "\n";
+		}
+		ostr << "\t]\n";
+
+		ostr << "}";
+	}
+
+
+	/**
 	 * print table
 	 */
 	friend std::ostream& operator<<(std::ostream& ostr, const Table<T, t_cont>& tab)

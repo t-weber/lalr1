@@ -111,11 +111,17 @@ static bool lr1_create_parser(
 
 		if(create_tables)
 		{
-			const char* lalr_tables = "script.tab";
-			collsLALR.SaveParseTables(lalr_tables);
+			bool tables_ok = false;
+			if(collsLALR.CreateParseTables())
+			{
+				const char* lalr_tables = "script.tab";
+				tables_ok = collsLALR.SaveParseTablesCXX(lalr_tables);
+				std::cout << "Created LALR(1) tables \""
+					<< lalr_tables << "\"." << std::endl;
+			}
 
-			std::cout << "Created LALR(1) tables \""
-				<< lalr_tables << "\"." << std::endl;
+			if(!tables_ok)
+				std::cerr << "Error: Parsing tables could not be created." << std::endl;
 		}
 	}
 	catch(const std::exception& err)

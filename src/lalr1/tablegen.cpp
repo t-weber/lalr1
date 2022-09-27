@@ -27,19 +27,15 @@
 
 
 /**
- * export lalr(1) tables to C++ code
+ * create lalr(1) parse tables to C++ code
  */
-bool Collection::SaveParseTables(const std::string& file) const
+bool Collection::CreateParseTables()
 {
 	const std::size_t numStates = m_collection.size();
 	const std::size_t numTerminals = m_mapTermIdx.size();
 	const std::size_t numNonTerminals = m_mapNonTermIdx.size();
 
-
-	// create lalr(1) tables
 	bool ok = true;
-	std::vector<std::size_t> numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
-	std::vector<std::size_t> ruleLhsIdx{};        // nonterminal index of the rule's result type
 
 	// lalr(1) tables
 	std::vector<std::vector<std::size_t>> action_shift, action_reduce, jump;
@@ -144,8 +140,8 @@ bool Collection::SaveParseTables(const std::string& file) const
 				continue;
 			}
 
-			set_tab_elem(numRhsSymsPerRule, *rulenr, elem->GetRhs()->NumSymbols(false), 0);
-			set_tab_elem(ruleLhsIdx, *rulenr, GetTableIndex(elem->GetLhs()->GetId(), false), 0);
+			set_tab_elem(m_numRhsSymsPerRule, *rulenr, elem->GetRhs()->NumSymbols(false), 0);
+			set_tab_elem(m_ruleLhsIdx, *rulenr, GetTableIndex(elem->GetLhs()->GetId(), false), 0);
 
 			auto& _reduce_row = action_reduce[closure->GetId()];
 			for(const TerminalPtr& la : elem->GetLookaheads())
@@ -164,21 +160,21 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 
 	// lalr(1) tables
-	t_table tabActionShift = t_table{action_shift,
+	m_tabActionShift = t_table{action_shift,
 		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numTerminals};
-	t_table tabActionReduce = t_table{action_reduce,
+	m_tabActionReduce = t_table{action_reduce,
 		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numTerminals};
-	t_table tabJump = t_table{jump,
+	m_tabJump = t_table{jump,
 		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numNonTerminals};
 
 	// partial match tables
-	t_table tabPartialRuleTerm = t_table{partials_rule_term,
+	m_tabPartialRuleTerm = t_table{partials_rule_term,
 		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numTerminals};
-	t_table tabPartialMatchLenTerm = t_table{partials_matchlen_term,
+	m_tabPartialMatchLenTerm = t_table{partials_matchlen_term,
 		ERROR_VAL, ACCEPT_VAL, 0, numStates, numTerminals};
-	t_table tabPartialRuleNonterm = t_table{partials_rule_nonterm,
+	m_tabPartialRuleNonterm = t_table{partials_rule_nonterm,
 		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numNonTerminals};
-	t_table tabPartialMatchLenNonterm = t_table{partials_matchlen_nonterm,
+	m_tabPartialMatchLenNonterm = t_table{partials_matchlen_nonterm,
 		ERROR_VAL, ACCEPT_VAL, 0, numStates, numNonTerminals};
 
 
@@ -191,12 +187,12 @@ bool Collection::SaveParseTables(const std::string& file) const
 		for(std::size_t termidx=0; termidx<numTerminals; ++termidx)
 		{
 			// get table entries
-			std::size_t& shiftEntry = tabActionShift(state, termidx);
-			std::size_t& reduceEntry = tabActionReduce(state, termidx);
+			std::size_t& shiftEntry = m_tabActionShift(state, termidx);
+			std::size_t& reduceEntry = m_tabActionReduce(state, termidx);
 
 			// partial match tables
-			std::size_t& partialRuleEntry = tabPartialRuleTerm(state, termidx);
-			std::size_t& partialMatchLenEntry = tabPartialMatchLenTerm(state, termidx);
+			std::size_t& partialRuleEntry = m_tabPartialRuleTerm(state, termidx);
+			std::size_t& partialMatchLenEntry = m_tabPartialMatchLenTerm(state, termidx);
 
 			// get potentially conflicting element
 			std::optional<std::string> termid;
@@ -265,11 +261,15 @@ bool Collection::SaveParseTables(const std::string& file) const
 		++state;
 	}
 
-	if(!ok)
-		return false;
+	return ok;
+}
 
 
-	// save lalr(1) tables
+/**
+ * save the parsing tables to C++ code
+ */
+bool Collection::SaveParseTablesCXX(const std::string& file) const
+{
 	std::ofstream ofstr{file};
 	if(!ofstr)
 		return false;
@@ -293,17 +293,17 @@ bool Collection::SaveParseTables(const std::string& file) const
 	ofstr << "\n";
 
 	// save lalr(1) tables
-	tabActionShift.SaveCXXDefinition(ofstr, "tab_action_shift", "state", "terminal");
-	tabActionReduce.SaveCXXDefinition(ofstr, "tab_action_reduce", "state", "lookahead");
-	tabJump.SaveCXXDefinition(ofstr, "tab_jump", "state", "nonterminal");
+	m_tabActionShift.SaveCXXDefinition(ofstr, "tab_action_shift", "state", "terminal");
+	m_tabActionReduce.SaveCXXDefinition(ofstr, "tab_action_reduce", "state", "lookahead");
+	m_tabJump.SaveCXXDefinition(ofstr, "tab_jump", "state", "nonterminal");
 
 	// save partial match tables
 	if(m_genPartialMatches)
 	{
-		tabPartialRuleTerm.SaveCXXDefinition(ofstr, "tab_partials_rule_term", "state", "terminal");
-		tabPartialMatchLenTerm.SaveCXXDefinition(ofstr, "tab_partials_matchlen_term", "state", "terminal");
-		tabPartialRuleNonterm.SaveCXXDefinition(ofstr, "tab_partials_rule_nonterm", "state", "nonterminal");
-		tabPartialMatchLenNonterm.SaveCXXDefinition(ofstr, "tab_partials_matchlen_nonterm", "state", "nonterminal");
+		m_tabPartialRuleTerm.SaveCXXDefinition(ofstr, "tab_partials_rule_term", "state", "terminal");
+		m_tabPartialMatchLenTerm.SaveCXXDefinition(ofstr, "tab_partials_matchlen_term", "state", "terminal");
+		m_tabPartialRuleNonterm.SaveCXXDefinition(ofstr, "tab_partials_rule_nonterm", "state", "nonterminal");
+		m_tabPartialMatchLenNonterm.SaveCXXDefinition(ofstr, "tab_partials_matchlen_nonterm", "state", "nonterminal");
 	}
 
 	// terminal symbol indices
@@ -331,13 +331,13 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 	// number of symbols on right-hand side of rule
 	ofstr << "const t_vecIdx vec_num_rhs_syms{{ ";
-	for(const auto& val : numRhsSymsPerRule)
+	for(const auto& val : m_numRhsSymsPerRule)
 		ofstr << val << ", ";
 	ofstr << "}};\n\n";
 
 	// index of lhs nonterminal in rule
 	ofstr << "const t_vecIdx vec_lhs_idx{{ ";
-	for(const auto& val : ruleLhsIdx)
+	for(const auto& val : m_ruleLhsIdx)
 		ofstr << val << ", ";
 	ofstr << "}};\n\n";
 
@@ -379,5 +379,109 @@ bool Collection::SaveParseTables(const std::string& file) const
 
 
 	ofstr << "\n#endif" << std::endl;
+	return true;
+}
+
+
+/**
+ * save the parsing tables to json
+ * @see https://en.wikipedia.org/wiki/JSON
+ */
+bool Collection::SaveParseTablesJSON(const std::string& file) const
+{
+	std::ofstream ofstr{file};
+	if(!ofstr)
+		return false;
+
+	ofstr << "{\n";
+
+	// meta infos
+	ofstr << "\"infos\" : ";
+	ofstr << "\"Parsing tables created on " << get_timestamp();
+	ofstr << " using liblalr1 by Tobias Weber, 2020-2022";
+	ofstr << " (DOI: https://doi.org/10.5281/zenodo.6987396).\",\n";
+
+	// constants
+	ofstr << "\n\"consts\" : {\n";
+	ofstr << "\t\"err\" : " << ERROR_VAL << ",\n";
+	ofstr << "\t\"acc\" : " << ACCEPT_VAL << ",\n";
+	ofstr << "\t\"eps\" : " << EPS_IDENT << ",\n";
+	ofstr << "\t\"end\" : " << END_IDENT << "\n";
+	ofstr << "},\n\n";
+
+	// lalr(1) tables
+	m_tabActionShift.SaveJSON(ofstr, "shift", "state", "terminal");
+	ofstr << ",\n\n";
+	m_tabActionReduce.SaveJSON(ofstr, "reduce", "state", "lookahead");
+	ofstr << ",\n\n";
+	m_tabJump.SaveJSON(ofstr, "jump", "state", "nonterminal");
+	ofstr << ",\n\n";
+
+	// partial match tables
+	if(m_genPartialMatches)
+	{
+		m_tabPartialRuleTerm.SaveJSON(ofstr, "partials_rule_term", "state", "terminal");
+		ofstr << ",\n\n";
+		m_tabPartialMatchLenTerm.SaveJSON(ofstr, "partials_matchlen_term", "state", "terminal");
+		ofstr << ",\n\n";
+		m_tabPartialRuleNonterm.SaveJSON(ofstr, "partials_rule_nonterm", "state", "nonterminal");
+		ofstr << ",\n\n";
+		m_tabPartialMatchLenNonterm.SaveJSON(ofstr, "partials_matchlen_nonterm", "state", "nonterminal");
+		ofstr << ",\n";
+	}
+
+	// terminal symbol indices
+	ofstr << "\n\"term_idx\" : [\n";
+	for(auto iter = m_mapTermIdx.begin(); iter != m_mapTermIdx.end(); std::advance(iter, 1))
+	{
+		const auto& [id, idx] = *iter;
+
+		ofstr << "\t[ ";
+		if(m_useOpChar && std::isprint(id))
+			ofstr << "\"" << char(id) << "\"";
+		else
+			ofstr << id;
+		ofstr << ", " << idx << " ]";
+		if(std::next(iter, 1) != m_mapTermIdx.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "],\n";
+
+	// non-terminal symbol indices
+	ofstr << "\n\"nonterm_idx\" : [\n";
+	for(auto iter = m_mapNonTermIdx.begin(); iter != m_mapNonTermIdx.end(); std::advance(iter, 1))
+	{
+		const auto& [id, idx] = *iter;
+		ofstr << "\t[ " << id << ", " << idx << " ]";
+		if(std::next(iter, 1) != m_mapNonTermIdx.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "],\n";
+
+	// number of symbols on right-hand side of rule
+	ofstr << "\n\"num_rhs_syms\" : [ ";
+	for(auto iter = m_numRhsSymsPerRule.begin(); iter != m_numRhsSymsPerRule.end(); std::advance(iter, 1))
+	{
+		ofstr << *iter;
+		if(std::next(iter, 1) != m_numRhsSymsPerRule.end())
+			ofstr << ",";
+		ofstr << " ";
+	}
+	ofstr << "],\n";
+
+	// index of lhs nonterminal in rule
+	ofstr << "\n\"lhs_idx\" : [ ";
+	for(auto iter = m_ruleLhsIdx.begin(); iter != m_ruleLhsIdx.end(); std::advance(iter, 1))
+	{
+		ofstr << *iter;
+		if(std::next(iter, 1) != m_ruleLhsIdx.end())
+			ofstr << ",";
+		ofstr << " ";
+	}
+	ofstr << "]\n";
+
+	ofstr << "}" << std::endl;
 	return true;
 }

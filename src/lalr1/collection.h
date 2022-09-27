@@ -82,7 +82,9 @@ public:
 	// get terminal or non-terminal transitions originating from the given closure
 	t_transitions GetTransitions(const ClosurePtr& closure, bool term = true) const;
 
-	bool SaveParseTables(const std::string& file) const;
+	bool CreateParseTables();
+	bool SaveParseTablesCXX(const std::string& file) const;
+	bool SaveParseTablesJSON(const std::string& file) const;
 	bool SaveParser(const std::string& file, const std::string& class_name = "ParserRecAsc") const;
 
 	bool SaveGraph(std::ostream& ostr, bool write_full_coll = true) const;
@@ -131,6 +133,18 @@ private:
 	bool m_genDebugCode{true};                  // generate debug code in parser output
 	bool m_genErrorCode{true};                  // generate error handling code in parser output
 	bool m_genPartialMatches{true};             // generates code for handling partial rule matches
+
+	t_table m_tabActionShift{};                 // lalr(1) tables
+	t_table m_tabActionReduce{};
+	t_table m_tabJump{};
+
+	t_table m_tabPartialRuleTerm{};             // partial match tables
+	t_table m_tabPartialMatchLenTerm{};
+	t_table m_tabPartialRuleNonterm{};
+	t_table m_tabPartialMatchLenNonterm{};
+
+	std::vector<std::size_t> m_numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
+	std::vector<std::size_t> m_ruleLhsIdx{};        // nonterminal index of the rule's result type
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 
