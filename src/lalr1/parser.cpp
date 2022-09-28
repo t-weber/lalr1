@@ -200,7 +200,7 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		std::size_t newstate = (*m_tabActionShift)(topstate, curtok->GetTableIndex());
 		std::size_t newrule = (*m_tabActionReduce)(topstate, curtok->GetTableIndex());
 
-		// debug-pring the current parser state
+		// debug-print the current parser state
 		auto print_active_state = [&topstate, &inputidx, &curtok,
 			&states, &symbols](std::ostream& ostr)
 		{
