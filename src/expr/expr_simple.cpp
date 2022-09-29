@@ -66,7 +66,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[0];
@@ -78,7 +78,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -93,7 +93,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -108,7 +108,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace_back(
-		[](bool full_match, const std::vector<t_lalrastbaseptr>& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 

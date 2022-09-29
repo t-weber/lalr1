@@ -14,33 +14,21 @@ import json
 
 
 #
-# get the internal table index of a token id
+# get the internal table index of a token or nonterminal id
 #
-def get_terminal_index(termidx_tab, token_id):
-	for [term_id, term_idx] in termidx_tab:
-		if term_id == token_id:
-			return term_idx
+def get_table_index(idx_tab, id):
+	for [theid, theidx] in idx_tab:
+		if theid == id:
+			return theidx
 
-	raise IndexError("No table index for terminal id {0}.".format(token_id))
-	return None
-
-
-#
-# get the internal table index of a nonterminal id
-#
-def get_nonterminal_index(nontermidx_tab, id):
-	for [nonterm_id, nonterm_idx] in nontermidx_tab:
-		if nonterm_id == id:
-			return nonterm_idx
-
-	raise IndexError("No table index for non-terminal id {0}.".format(id))
+	raise IndexError("No table index for id {0}.".format(id))
 	return None
 
 
 #
 # run LR(1) parser
 #
-def lr1parse(tables, input_tokens):
+def lr1parse(tables, input_tokens, semantics):
 	# tables
 	shift_tab = tables["shift"]["elems"]
 	reduce_tab = tables["reduce"]["elems"]
@@ -56,27 +44,30 @@ def lr1parse(tables, input_tokens):
 	err_token = tables["consts"]["err"]
 
 	# stacks
-	states = [ 0 ]
-	symbols = []
+	states = [ 0 ]  # parser states
+	symbols = [ ]   # array of [ is_terminal, index, lvalue for terminals, ast for nonterminals ]
 
 	input_index = 0
 	cur_tok = input_tokens[input_index]
-	cur_tok_idx = get_terminal_index(termidx_tab, cur_tok[0])
+	cur_tok_idx = get_table_index(termidx_tab, cur_tok[0])
 
 	while True:
 		top_state = states[-1]
 		new_state = shift_tab[top_state][cur_tok_idx]
 		new_rule = reduce_tab[top_state][cur_tok_idx]
-		print(f"States: {states}, new state: {new_state}, rule: {new_rule}.")
+		print(f"States: {states},\nsymbols: {symbols},\nnew state: {new_state}, rule: {new_rule}.\n")
 
 		if new_state == err_token and new_rule == err_token:
 			raise RuntimeError("No shift or reduce action defined.")
 		elif new_state != err_token and new_rule != err_token:
 			raise RuntimeError("Shift/reduce conflict.")
 		elif new_rule == acc_token:
-			# TODO: accept
+			# accept
 			print("Accepting.")
-			return True
+			top_sym = None
+			if len(symbols) >= 1:
+				top_sym = symbols[-1]
+			return [ True, top_sym ]
 
 		if new_state != err_token:
 			# shift
@@ -85,12 +76,12 @@ def lr1parse(tables, input_tokens):
 
 			input_index += 1
 			cur_tok = input_tokens[input_index]
-			cur_tok_idx = get_terminal_index(termidx_tab, cur_tok[0])
+			cur_tok_idx = get_table_index(termidx_tab, cur_tok[0])
 
 		elif new_rule != err_token:
 			# reduce
 			num_syms = numrhs_tab[new_rule]
-			lhs_idx = get_nonterminal_index(nontermidx_tab, lhsidx_tab[new_rule])
+			lhs_idx = get_table_index(nontermidx_tab, lhsidx_tab[new_rule])
 
 			print(f"Reducing {num_syms} symbols.")
 
@@ -98,14 +89,19 @@ def lr1parse(tables, input_tokens):
 			symbols = symbols[0 : len(symbols)-num_syms]
 			states = states[0 : len(states)-num_syms]
 
-			# TODO: apply semantic rule
+			# apply semantic rule if available
 			rule_ret = None
+			if semantics != None and new_rule < len(semantics):
+				rule_ret = semantics[new_rule](args)
+
+			# push reduced nonterminal symbol
 			symbols.append([False, lhs_idx, rule_ret])
 
 			top_state = states[-1]
 			states.append(jump_tab[top_state][lhs_idx])
 
-	return True
+	# input not accepted
+	return [ False, None ]
 
 
 #
@@ -126,7 +122,7 @@ def main(args):
 
 		input_tokens = [ [1001, 1], ["+"], [1001, 2], ["*"], [1001, 3], [end_token] ]
 
-		if not lr1parse(tables, input_tokens):
+		if not lr1parse(tables, input_tokens, []):
 			print("Error while parsing.")
 			return -1
 

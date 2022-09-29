@@ -235,7 +235,7 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 					throw std::runtime_error("Invalid semantic rule #" +
 						std::to_string(*partialrule) + ".");
 				}
-				rule(false, symbols.topN<std::vector>(*partialmatchlen));
+				rule(false, symbols.topN<std::deque>(*partialmatchlen));
 
 				already_seen_partials.insert(hash_partial);
 
@@ -333,18 +333,17 @@ t_lalrastbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 
 			// take the symbols from the stack and create an
 			// argument vector for the semantic rule
-			std::vector<t_lalrastbaseptr> args;
-			args.reserve(numSyms);
+			t_semanticargs args;
+			//args.reserve(numSyms);
 			for(std::size_t arg=0; arg<numSyms; ++arg)
 			{
-				args.emplace_back(std::move(symbols.top()));
+				args.emplace_front(std::move(symbols.top()));
 
 				symbols.pop();
 				states.pop();
 			}
-
-			if(args.size() > 1)
-				std::reverse(args.begin(), args.end());
+			//if(args.size() > 1)
+			//	std::reverse(args.begin(), args.end());
 
 			if(!m_semantics || newrule >= m_semantics->size())
 			{

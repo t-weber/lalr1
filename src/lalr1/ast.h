@@ -9,16 +9,15 @@
 #define __LALR1_ASTBASE_H__
 
 #include <memory>
-#include <vector>
+#include <deque>
 #include <optional>
 #include <functional>
 
 #include <boost/functional/hash.hpp>
 
 
-
 /**
- * syntax tree LALR(1) base
+ * syntax tree base
  */
 class ASTLALR1Base
 {
@@ -81,13 +80,15 @@ private:
 };
 
 
+// symbol type for semantic rules
 using t_lalrastbaseptr = std::shared_ptr<ASTLALR1Base>;
-
+// argument vector type to pass to semantic rules
+using t_semanticargs = std::deque<t_lalrastbaseptr>;
 
 // semantic rule: returns an ast pointer and gets a vector of ast pointers
 using t_semanticrule = std::function<
 	t_lalrastbaseptr(bool /*full_match*/,
-	const std::vector<t_lalrastbaseptr>& /*args*/)>;
+	const t_semanticargs& /*args*/)>;
 
 
 #endif

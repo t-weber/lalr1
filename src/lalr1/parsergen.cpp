@@ -70,8 +70,8 @@ protected:
 	void PrintSymbols() const;
 	void GetNextLookahead();
 
-	static std::vector<t_symbol> GetArguments(t_stack& symbols, std::size_t num_rhs);
-	std::vector<t_symbol> GetCopyArguments(std::size_t num_rhs) const;
+	static t_semanticargs GetArguments(t_stack& symbols, std::size_t num_rhs);
+	t_semanticargs GetCopyArguments(std::size_t num_rhs) const;
 
 	std::size_t GetPartialRuleHash(std::size_t rule, std::size_t len, std::size_t state_hash) const;
 	void ApplyPartialRule(std::size_t rule_nr, std::size_t rule_len, std::size_t state_hash);
@@ -171,10 +171,10 @@ void %%PARSER_CLASS%%::GetNextLookahead()
 /**
  * take the symbols from the stack and create an argument vector for the semantic rule
  */
-std::vector<%%PARSER_CLASS%%::t_symbol> %%PARSER_CLASS%%::GetArguments(t_stack& symbols, std::size_t num_rhs)
+t_semanticargs %%PARSER_CLASS%%::GetArguments(t_stack& symbols, std::size_t num_rhs)
 {
 	num_rhs = std::min(symbols.size(), num_rhs);
-	std::vector<t_symbol> args(num_rhs);
+	t_semanticargs args(num_rhs);
 
 	for(std::size_t arg=0; arg<num_rhs; ++arg)
 	{
@@ -188,11 +188,11 @@ std::vector<%%PARSER_CLASS%%::t_symbol> %%PARSER_CLASS%%::GetArguments(t_stack& 
 /**
  * get a vector of the elements on the symbol stack, leaving the stack unchanged
  */
-std::vector<%%PARSER_CLASS%%::t_symbol> %%PARSER_CLASS%%::GetCopyArguments(std::size_t num_rhs) const
+t_semanticargs %%PARSER_CLASS%%::GetCopyArguments(std::size_t num_rhs) const
 {
 	//t_stack symbols = m_symbols;
 	//return GetArguments(symbols, num_rhs);
-	return m_symbols.topN<std::vector>(num_rhs);
+	return m_symbols.topN<std::deque>(num_rhs);
 }
 
 /**
@@ -349,7 +349,7 @@ void %%PARSER_CLASS%%::ApplyPartialRule(std::size_t rule_nr, std::size_t rule_le
 			return;
 		}
 
-		std::vector<t_symbol> args = GetCopyArguments(rule_len);
+		t_semanticargs args = GetCopyArguments(rule_len);
 		rule(false, args);
 	}
 }
@@ -372,7 +372,7 @@ void %%PARSER_CLASS%%::ApplyRule(std::size_t rule_nr, std::size_t rule_len)
 		return;
 	}
 
-	std::vector<t_symbol> args = GetArguments(m_symbols, rule_len);
+	t_semanticargs args = GetArguments(m_symbols, rule_len);
 	m_symbols.emplace(rule(true, args));
 }
 

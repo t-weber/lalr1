@@ -103,7 +103,7 @@ static void lr1_create_parser()
 		if(collsLALR.CreateParseTables())
 		{
 			tables_ok = collsLALR.SaveParseTablesCXX("expr.tab");
-			//collsLALR.SaveParseTablesJSON("expr.json");
+			collsLALR.SaveParseTablesJSON("expr.json");
 		}
 
 		if(!tables_ok)
