@@ -11,7 +11,18 @@
 
 import sys
 import json
+import math
+
+import lexer
 import parser
+
+
+#
+# symbol table
+#
+symtab = {
+	"pi" : math.pi
+}
 
 
 #
@@ -38,10 +49,10 @@ semantics = [
 	# symbols
 	lambda sym_real : sym_real["val"],
 	lambda sym_int : sym_int["val"],
-	lambda sym_ident : 0.,
+	lambda sym_ident : symtab[sym_ident["val"]],
 
 	# unary arithmetic operations
-	lambda unary_minus, exp : -expr["val"],
+	lambda unary_minus, expr : -expr["val"],
 	lambda unary_plus, expr : +expr["val"],
 ]
 
@@ -68,14 +79,22 @@ def main(args):
 		end_token = tables["consts"]["end"]
 		#print(tables["infos"])
 
-		input_tokens = [ [real_id, 1], ["+"], [real_id, 2], ["*"], [real_id, 3], [end_token] ]
+		while True:
+			sys.stdout.write("> ")
+			sys.stdout.flush()
+			input_str = sys.stdin.readline().strip()
+			if len(input_str) == 0:
+				continue
 
-		result = parser.lr1_parse(tables, input_tokens, semantics)
-		if result != None:
-			print(result["val"])
-		else:
-			print("Error while parsing.")
-			return -1
+			input_tokens = lexer.get_tokens(input_str)
+			input_tokens.append([end_token])
+
+			result = parser.lr1_parse(tables, input_tokens, semantics)
+			if result != None:
+				print(result["val"])
+			else:
+				print("Error while parsing.")
+				return -1
 
 	except FileNotFoundError as err:
 		print(f"Error: Could not open tables file \"{tablesfile_name}\".")
