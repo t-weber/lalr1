@@ -9,9 +9,6 @@
 #	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
 #
 
-import sys
-import json
-
 
 #
 # get the internal table index of a token or nonterminal id
@@ -28,7 +25,7 @@ def get_table_index(idx_tab, id):
 #
 # run LR(1) parser
 #
-def lr1parse(tables, input_tokens, semantics):
+def lr1_parse(tables, input_tokens, semantics):
 	# tables
 	shift_tab = tables["shift"]["elems"]
 	reduce_tab = tables["reduce"]["elems"]
@@ -39,9 +36,9 @@ def lr1parse(tables, input_tokens, semantics):
 	lhsidx_tab = tables["lhs_idx"]
 
 	# special values
-	end_token = tables["consts"]["end"]
 	acc_token = tables["consts"]["acc"]
 	err_token = tables["consts"]["err"]
+	#end_token = tables["consts"]["end"]
 
 	# stacks
 	states = [ 0 ]  # parser states
@@ -55,7 +52,7 @@ def lr1parse(tables, input_tokens, semantics):
 		top_state = states[-1]
 		new_state = shift_tab[top_state][cur_tok_idx]
 		new_rule = reduce_tab[top_state][cur_tok_idx]
-		print(f"States: {states},\nsymbols: {symbols},\nnew state: {new_state}, rule: {new_rule}.\n")
+		#print(f"States: {states},\nsymbols: {symbols},\nnew state: {new_state}, rule: {new_rule}.\n")
 
 		if new_state == err_token and new_rule == err_token:
 			raise RuntimeError("No shift or reduce action defined.")
@@ -63,16 +60,14 @@ def lr1parse(tables, input_tokens, semantics):
 			raise RuntimeError("Shift/reduce conflict.")
 		elif new_rule == acc_token:
 			# accept
-			print("Accepting.")
-			top_sym = None
-			if len(symbols) >= 1:
-				top_sym = symbols[-1]
-			return [ True, top_sym ]
+			#print("Accepting.")
+			return symbols[-1] if len(symbols) >= 1 else None
 
 		if new_state != err_token:
 			# shift
 			states.append(new_state)
-			symbols.append([True] + cur_tok)
+			sym_lval = cur_tok[1] if len(cur_tok) > 1 else None
+			symbols.append({ "is_term" : True, "id" : cur_tok[0], "val" : sym_lval })
 
 			input_index += 1
 			cur_tok = input_tokens[input_index]
@@ -83,8 +78,7 @@ def lr1parse(tables, input_tokens, semantics):
 			num_syms = numrhs_tab[new_rule]
 			lhs_idx = get_table_index(nontermidx_tab, lhsidx_tab[new_rule])
 
-			print(f"Reducing {num_syms} symbols.")
-
+			#print(f"Reducing {num_syms} symbols.")
 			args = symbols[len(symbols)-num_syms : len(symbols)]
 			symbols = symbols[0 : len(symbols)-num_syms]
 			states = states[0 : len(states)-num_syms]
@@ -92,56 +86,14 @@ def lr1parse(tables, input_tokens, semantics):
 			# apply semantic rule if available
 			rule_ret = None
 			if semantics != None and new_rule < len(semantics):
-				rule_ret = semantics[new_rule](args)
+				#print(f"args: {args}")
+				rule_ret = semantics[new_rule](*args)
 
 			# push reduced nonterminal symbol
-			symbols.append([False, lhs_idx, rule_ret])
+			symbols.append({ "is_term" : False, "id" : lhs_idx, "val" : rule_ret })
 
 			top_state = states[-1]
 			states.append(jump_tab[top_state][lhs_idx])
 
 	# input not accepted
-	return [ False, None ]
-
-
-#
-# load tables from a json file and run parser
-#
-def main(args):
-	if len(sys.argv) <= 1:
-		print("Please give a LR(1) table json file.")
-		return 0
-
-	try:
-		infile_name = sys.argv[1]
-		infile = open(infile_name)
-
-		tables = json.load(infile)
-		end_token = tables["consts"]["end"]
-		#print(tables["infos"])
-
-		input_tokens = [ [1001, 1], ["+"], [1001, 2], ["*"], [1001, 3], [end_token] ]
-
-		if not lr1parse(tables, input_tokens, []):
-			print("Error while parsing.")
-			return -1
-
-
-	except FileNotFoundError as err:
-		print(f"Error: Could not open tables file \"{infile_name}\".")
-		return -1
-	except json.decoder.JSONDecodeError as err:
-		print(f"Error: Tables file \"{infile_name}\" could not be decoded as json.")
-		return -1
-	except IndexError as err:
-		print(f"Index error: {str(err)}")
-		return -1
-	except BaseException as err:
-		print(arr)
-		return -1
-
-	return 0
-
-
-if __name__ == "__main__":
-	main(sys.argv)
+	return None
