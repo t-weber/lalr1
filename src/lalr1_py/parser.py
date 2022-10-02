@@ -41,7 +41,7 @@ def lr1_parse(tables, input_tokens, semantics):
 
 	# stacks
 	states = [ 0 ]  # parser states
-	symbols = [ ]   # array of [ is_terminal, index, lvalue for terminals, ast for nonterminals ]
+	symbols = [ ]   # symbol stack
 
 	input_index = 0
 	cur_tok = input_tokens[input_index]

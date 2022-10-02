@@ -680,7 +680,8 @@ void %%PARSER_CLASS%%::ApplyRule(std::size_t rule_nr, std::size_t rule_len)
 
 
 		// write shift and reduce codes
-		ostr_cpp << "\tvoid(" << class_name << "::*next_state)(std::size_t) = nullptr;\n";
+		if(shifts.size())
+			ostr_cpp << "\tvoid(" << class_name << "::*next_state)(std::size_t) = nullptr;\n";
 
 		ostr_cpp << "\tswitch(m_lookahead_id)\n";
 		ostr_cpp << "\t{\n";
@@ -729,11 +730,14 @@ void %%PARSER_CLASS%%::ApplyRule(std::size_t rule_nr, std::size_t rule_len)
 
 		ostr_cpp << "\t}\n";        // end switch
 
-		ostr_cpp << "\tif(next_state)\n";
-		ostr_cpp << "\t{\n";
-		ostr_cpp << "\t\tPushLookahead();\n";
-		ostr_cpp << "\t\t(this->*next_state)(state_hash);\n";
-		ostr_cpp << "\t}\n";
+		if(shifts.size())
+		{
+			ostr_cpp << "\tif(next_state)\n";
+			ostr_cpp << "\t{\n";
+			ostr_cpp << "\t\tPushLookahead();\n";
+			ostr_cpp << "\t\t(this->*next_state)(state_hash);\n";
+			ostr_cpp << "\t}\n";
+		}
 
 
 		// jump to new closure
