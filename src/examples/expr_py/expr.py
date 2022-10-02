@@ -12,6 +12,7 @@
 import sys
 import json
 import math
+import random
 
 import lexer
 import parser
@@ -21,7 +22,31 @@ import parser
 # symbol table
 #
 symtab = {
-	"pi" : math.pi
+	"pi" : math.pi,
+}
+
+
+#
+# function tables
+#
+functab_0args = {
+	"rand01" : lambda : random.uniform(0., 1.)
+}
+
+functab_1arg = {
+	"sqrt" : math.sqrt,
+	"sin" : math.sin,
+	"cos" : math.cos,
+	"tan" : math.tan,
+	"asin" : math.asin,
+	"acos" : math.acos,
+	"atan" : math.atan,
+}
+
+functab_2args = {
+	"pow" : math.pow,
+	"atan2" : math.atan2,
+	"log" : lambda b, x : math.log(x) / math.log(b)
 }
 
 
@@ -42,9 +67,12 @@ semantics = [
 	lambda bracket_open, expr, bracket_close : expr["val"],
 
 	# function calls
-	lambda ident, bracket_open, bracket_close : 0.,
-	lambda ident, bracket_open, expr, bracket_close : 0.,
-	lambda ident, bracket_open, expr1, expr2, bracket_close : 0.,
+	lambda ident, bracket_open, bracket_close :
+		functab_0args[ident["val"]](),
+	lambda ident, bracket_open, expr, bracket_close :
+		functab_1arg[ident["val"]](expr["val"]),
+	lambda ident, bracket_open, expr1, comma, expr2, bracket_close :
+		functab_2args[ident["val"]](expr1["val"], expr2["val"]),
 
 	# symbols
 	lambda sym_real : sym_real["val"],

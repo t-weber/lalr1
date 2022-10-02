@@ -1,17 +1,18 @@
 /**
- * generates an lalr(1) parser from a collection
+ * generates an lalr(1) recursive ascent parser from a collection
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date aug-2022
  * @license see 'LICENSE' file
  *
- * References:
+ * Principal reference:
+ *	- https://doi.org/10.1016/0020-0190(88)90061-0
+ * Further references:
  *	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
  *	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
  *	- https://www.cs.ecu.edu/karl/5220/spr16/Notes/Bottom-up/lr1.html
  *	- https://www.cs.ecu.edu/karl/5220/spr16/Notes/Bottom-up/slr1table.html
  *	- https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  *	- https://en.wikipedia.org/wiki/LR_parser
- *	- https://doi.org/10.1016/0020-0190(88)90061-0
  */
 
 #include "collection.h"
@@ -69,6 +70,7 @@ public:
 protected:
 	void PrintSymbols() const;
 	void GetNextLookahead();
+	void PushLookahead();
 
 	static t_semanticargs GetArguments(t_stack& symbols, std::size_t num_rhs);
 	t_semanticargs GetCopyArguments(std::size_t num_rhs) const;
@@ -166,6 +168,15 @@ void %%PARSER_CLASS%%::GetNextLookahead()
 		m_lookahead = (*m_input)[m_lookahead_idx];
 		m_lookahead_id = m_lookahead->GetId();
 	}
+}
+
+/**
+ * shift the next lookahead terminal symbol onto the stack
+ */
+void %%PARSER_CLASS%%::PushLookahead()
+{
+	m_symbols.push(m_lookahead);
+	GetNextLookahead();
 }
 
 /**
@@ -520,10 +531,9 @@ void %%PARSER_CLASS%%::ApplyRule(std::size_t rule_nr, std::size_t rule_len)
 			}
 			ostr_shift << "\t\t{\n";
 			if(has_partial)
-				ostr_shift << ostr_partial.str() << "\n";
-			ostr_shift << "\t\t\tm_symbols.push(m_lookahead);\n";
-			ostr_shift << "\t\t\tGetNextLookahead();\n";
-			ostr_shift << "\t\t\tstate_" << closure_to->GetId() << "(state_hash);\n";
+				ostr_shift << ostr_partial.str();
+			ostr_shift << "\t\t\tnext_state = &" << class_name
+				<< "::state_" << closure_to->GetId() << ";\n";
 			ostr_shift << "\t\t\tbreak;\n";
 			ostr_shift << "\t\t}\n";  // end case
 
@@ -670,6 +680,8 @@ void %%PARSER_CLASS%%::ApplyRule(std::size_t rule_nr, std::size_t rule_len)
 
 
 		// write shift and reduce codes
+		ostr_cpp << "\tvoid(" << class_name << "::*next_state)(std::size_t) = nullptr;\n";
+
 		ostr_cpp << "\tswitch(m_lookahead_id)\n";
 		ostr_cpp << "\t{\n";
 
@@ -716,6 +728,12 @@ void %%PARSER_CLASS%%::ApplyRule(std::size_t rule_nr, std::size_t rule_len)
 		}
 
 		ostr_cpp << "\t}\n";        // end switch
+
+		ostr_cpp << "\tif(next_state)\n";
+		ostr_cpp << "\t{\n";
+		ostr_cpp << "\t\tPushLookahead();\n";
+		ostr_cpp << "\t\t(this->*next_state)(state_hash);\n";
+		ostr_cpp << "\t}\n";
 
 
 		// jump to new closure
@@ -766,7 +784,7 @@ void %%PARSER_CLASS%%::ApplyRule(std::size_t rule_nr, std::size_t rule_len)
 			ostr_cpp_while << "\t\t\tcase " << symTrans->GetId() << ":\n";
 			ostr_cpp_while << "\t\t\t{\n";
 			if(has_partial)
-				ostr_cpp_while << ostr_partial.str() << "\n";
+				ostr_cpp_while << ostr_partial.str();
 			ostr_cpp_while << "\t\t\t\tstate_" << closure_to->GetId() << "(state_hash);\n";
 			ostr_cpp_while << "\t\t\t\tbreak;\n";
 			ostr_cpp_while << "\t\t\t}\n";

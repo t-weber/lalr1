@@ -75,7 +75,8 @@ def get_token(str):
 	if str[0]=="+" or str[0]=="-" or \
 		str[0]=="*" or str[0]=="/" or \
 		str[0]=="%" or str[0]=="^" or \
-		str[0]=="(" or str[0]==")":
+		str[0]=="(" or str[0]==")" or \
+		str[0]==",":
 		return [ str[0], str[1:] ]
 
 	return [ None, str ]

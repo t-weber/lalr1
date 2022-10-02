@@ -38,7 +38,6 @@ def lr1_parse(tables, input_tokens, semantics):
 	# special values
 	acc_token = tables["consts"]["acc"]
 	err_token = tables["consts"]["err"]
-	#end_token = tables["consts"]["end"]
 
 	# stacks
 	states = [ 0 ]  # parser states
