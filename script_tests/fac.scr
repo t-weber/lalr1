@@ -36,7 +36,6 @@ func fibo(arg1)
 }
 
 
-
 loop(1 == 1)
 {
 	print("\nn = ");
