@@ -23,6 +23,18 @@ def get_table_index(idx_tab, id):
 
 
 #
+# get the token or terminal id of an internal table index
+#
+def get_table_id(idx_tab, idx):
+	for [theid, theidx] in idx_tab:
+		if theidx == idx:
+			return theid
+
+	raise IndexError("No id for table index {0}.".format(id))
+	return None
+
+
+#
 # run LR(1) parser
 #
 def lr1_parse(tables, input_tokens, semantics):
@@ -44,13 +56,13 @@ def lr1_parse(tables, input_tokens, semantics):
 	symbols = [ ]   # symbol stack
 
 	input_index = 0
-	cur_tok = input_tokens[input_index]
-	cur_tok_idx = get_table_index(termidx_tab, cur_tok[0])
+	lookahead = input_tokens[input_index]
+	lookahead_idx = get_table_index(termidx_tab, lookahead[0])
 
 	while True:
 		top_state = states[-1]
-		new_state = shift_tab[top_state][cur_tok_idx]
-		new_rule = reduce_tab[top_state][cur_tok_idx]
+		new_state = shift_tab[top_state][lookahead_idx]
+		new_rule = reduce_tab[top_state][lookahead_idx]
 		#print(f"States: {states},\nsymbols: {symbols},\nnew state: {new_state}, rule: {new_rule}.\n")
 
 		if new_state == err_token and new_rule == err_token:
@@ -65,17 +77,18 @@ def lr1_parse(tables, input_tokens, semantics):
 		if new_state != err_token:
 			# shift
 			states.append(new_state)
-			sym_lval = cur_tok[1] if len(cur_tok) > 1 else None
-			symbols.append({ "is_term" : True, "id" : cur_tok[0], "val" : sym_lval })
+			sym_lval = lookahead[1] if len(lookahead) > 1 else None
+			symbols.append({ "is_term" : True, "id" : lookahead[0], "val" : sym_lval })
 
 			input_index += 1
-			cur_tok = input_tokens[input_index]
-			cur_tok_idx = get_table_index(termidx_tab, cur_tok[0])
+			lookahead = input_tokens[input_index]
+			lookahead_idx = get_table_index(termidx_tab, lookahead[0])
 
 		elif new_rule != err_token:
 			# reduce
 			num_syms = numrhs_tab[new_rule]
-			lhs_idx = get_table_index(nontermidx_tab, lhsidx_tab[new_rule])
+			lhs_idx = lhsidx_tab[new_rule]
+			lhs_id = get_table_id(nontermidx_tab, lhs_idx)
 
 			#print(f"Reducing {num_syms} symbols.")
 			args = symbols[len(symbols)-num_syms : len(symbols)]
@@ -89,7 +102,7 @@ def lr1_parse(tables, input_tokens, semantics):
 				rule_ret = semantics[new_rule](*args)
 
 			# push reduced nonterminal symbol
-			symbols.append({ "is_term" : False, "id" : lhs_idx, "val" : rule_ret })
+			symbols.append({ "is_term" : False, "id" : lhs_id, "val" : rule_ret })
 
 			top_state = states[-1]
 			states.append(jump_tab[top_state][lhs_idx])

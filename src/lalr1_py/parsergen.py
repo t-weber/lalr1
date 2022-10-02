@@ -70,8 +70,6 @@ def create_parser(tables, outfile_name):
 	err_token = tables["consts"]["err"]
 	end_token = tables["consts"]["end"]
 
-	#id_to_str = lambda id : str(id) if id!=end_token else "end"
-
 	num_states = len(shift_tab)
 	if num_states == 0:
 		return False
@@ -84,24 +82,51 @@ def create_parser(tables, outfile_name):
 		"# DOI: https://doi.org/10.5281/zenodo.6987396\n#\n",
 		file=outfile)
 
-	print(f"end_id = {end_token}", file=outfile)
-	print("lookahead = None", file=outfile)
-	print("dist_to_jump = 0", file=outfile)
-	print("accepted = False", file=outfile)
-	print("symbols = []\n", file=outfile)
+	print("class Parser:", file=outfile)
+	print("\tdef __init__(self):", file=outfile)
+	print(f"\t\tend_id = {end_token}", file=outfile)
+	print("\t\tinput_tokens = []", file=outfile)
+	print("\t\tsemantics = None", file=outfile)
+	print("\t\tself.reset()\n", file=outfile)
 
-	print("def push_lookahead():", file=outfile)
-	print("\tpass\n", file=outfile)
+	print("\tdef reset(self):", file=outfile)
+	print("\t\tself.input_index = -1", file=outfile)
+	print("\t\tself.lookahead = None", file=outfile)
+	print("\t\tself.dist_to_jump = 0", file=outfile)
+	print("\t\tself.accepted = False", file=outfile)
+	print("\t\tself.symbols = []\n", file=outfile)
 
-	print("def apply_rule(rule_idx, num_rhs):", file=outfile)
-	print("\tdist_to_jump = num_rhs\n", file=outfile)
+	print("\tdef get_next_lookahead(self):", file=outfile)
+	print("\t\tself.input_index = self.input_index + 1", file=outfile)
+	print("\t\ttok = self.input_tokens[self.input_index]", file=outfile)
+	print("\t\ttok_lval = tok[1] if len(tok) > 1 else None", file=outfile)
+	print("\t\tself.lookahead = { \"is_term\" : True, \"id\" : tok[0], \"val\" : tok_lval }\n", file=outfile)
+
+	print("\tdef push_lookahead(self):", file=outfile)
+	print("\t\tself.symbols.append(self.lookahead)", file=outfile)
+	print("\t\tself.get_next_lookahead()\n", file=outfile)
+
+	print("\tdef apply_rule(self, rule_idx, num_rhs, lhs_id):", file=outfile)
+	print("\t\tself.dist_to_jump = num_rhs", file=outfile)
+	print("\t\targs = self.symbols[len(self.symbols)-num_rhs : len(self.symbols)]", file=outfile)
+	print("\t\tself.symbols = self.symbols[0 : len(self.symbols) - num_rhs]", file=outfile)
+	print("\t\trule_ret = None", file=outfile)
+	print("\t\tif self.semantics != None and rule_idx < len(self.semantics):", file=outfile)
+	print("\t\t\trule_ret = self.semantics[rule_idx](*args)", file=outfile)
+	print("\t\tself.symbols.append({ \"is_term\" : False, \"id\" : lhs_id, \"val\" : rule_ret })\n", file=outfile)
+
+	print("\tdef parse(self):", file=outfile)
+	print("\t\tself.reset()", file=outfile)
+	print("\t\tself.get_next_lookahead()", file=outfile)
+	print("\t\tself.state_0()", file=outfile)
+	print("\t\treturn self.symbols[-1] if len(self.symbols) >= 1 else None\n", file=outfile)
 
 	for state_idx in range(num_states):
-		print(f"def state_{state_idx}():", file=outfile)
+		print(f"\tdef state_{state_idx}(self):", file=outfile)
 
 		if has_table_entry(shift_tab, state_idx, err_token):
-			print("\tnext_state = None", file=outfile)
-		print("\tmatch lookahead[\"id\"]:", file=outfile)
+			print("\t\tnext_state = None", file=outfile)
+		print("\t\tmatch self.lookahead[\"id\"]:", file=outfile)
 
 		rules_term_id = {}
 		acc_term_id = []
@@ -113,8 +138,8 @@ def create_parser(tables, outfile_name):
 
 			if newstate_idx != err_token:
 				term_id_str = id_to_str(term_id, end_token)
-				print(f"\t\tcase {term_id_str}: # index={term_idx}", file=outfile)
-				print(f"\t\t\tnext_state = state_{newstate_idx}", file=outfile)
+				print(f"\t\t\tcase {term_id_str}: # index: {term_idx}", file=outfile)
+				print(f"\t\t\t\tnext_state = self.state_{newstate_idx}", file=outfile)
 
 			elif rule_idx != err_token:
 				if rule_idx == acc_token:
@@ -125,49 +150,50 @@ def create_parser(tables, outfile_name):
 					rules_term_id[rule_idx].append(term_id)
 
 		for [rule_idx, term_id] in rules_term_id.items():
-			print("\t\tcase {0}: # indices={1}".format(
+			print("\t\t\tcase {0}: # indices: {1}".format(
 				" | ".join(id_to_str(id, end_token) \
 					for id in term_id),
 				" ".join(str(get_table_index(termidx_tab, id)) \
 					for id in term_id)),
 				file=outfile)
 			num_rhs = numrhs_tab[rule_idx]
-			print(f"\t\t\tapply_rule({rule_idx}, {num_rhs})", file=outfile)
+			lhs_id = get_table_id(nontermidx_tab, lhsidx_tab[rule_idx])
+			print(f"\t\t\t\tself.apply_rule({rule_idx}, {num_rhs}, {lhs_id})", file=outfile)
 
 		if len(acc_term_id) > 0:
-			print("\t\tcase {0}: # indices={1}".format(
+			print("\t\t\tcase {0}: # indices: {1}".format(
 				" | ".join(id_to_str(id, end_token) \
 					for id in acc_term_id),
 				" ".join(str(get_table_index(termidx_tab, id)) \
 					for id in acc_term_id)),
 				file=outfile)
-			print(f"\t\t\taccept = True", file=outfile)
+			print(f"\t\t\t\tself.accept = True", file=outfile)
 
-		print("\t\tcase _:", file=outfile)
-		print(f"\t\t\traise RuntimeError(\"Invalid transition from state {state_idx}.\")", file=outfile)
+		print("\t\t\tcase _:", file=outfile)
+		print(f"\t\t\t\traise RuntimeError(\"Invalid transition from state {state_idx}.\")", file=outfile)
 
 		if has_table_entry(shift_tab, state_idx, err_token):
-			print("\tif next_state != None:", file=outfile)
-			print("\t\tpush_lookahead()", file=outfile)
-			print("\t\tnext_state()", file=outfile)
+			print("\t\tif next_state != None:", file=outfile)
+			print("\t\t\tself.push_lookahead()", file=outfile)
+			print("\t\t\tnext_state()", file=outfile)
 
 		if has_table_entry(jump_tab, state_idx, err_token):
-			print("\twhile dist_to_jump == 0 and len(symbols) > 0 and not accepted:", file=outfile)
-			print("\t\ttopsym = symbols[-1]", file=outfile)
-			print("\t\tif topsym[\"is_term\"]:", file=outfile)
-			print("\t\t\tbreak", file=outfile)
+			print("\t\twhile self.dist_to_jump == 0 and len(self.symbols) > 0 and not self.accepted:", file=outfile)
+			print("\t\t\ttopsym = self.symbols[-1]", file=outfile)
+			print("\t\t\tif topsym[\"is_term\"]:", file=outfile)
+			print("\t\t\t\tbreak", file=outfile)
 
-			print("\t\tmatch topsym[\"id\"]:", file=outfile)
+			print("\t\t\tmatch topsym[\"id\"]:", file=outfile)
 			for nonterm_idx in range(num_nonterms):
 				nonterm_id = get_table_id(nontermidx_tab, nonterm_idx)
 				jump_state_idx = jump_tab[state_idx][nonterm_idx]
 				if jump_state_idx != err_token:
-					print(f"\t\t\tcase {nonterm_id}: # index={nonterm_idx}", file=outfile)
-					print(f"\t\t\t\tstate_{jump_state_idx}()", file=outfile)
-		print("\t\t\tcase _:", file=outfile)
-		print(f"\t\t\t\traise RuntimeError(\"Invalid transition from state {state_idx}.\")", file=outfile)
+					print(f"\t\t\t\tcase {nonterm_id}: # index: {nonterm_idx}", file=outfile)
+					print(f"\t\t\t\t\tself.state_{jump_state_idx}()", file=outfile)
+			print("\t\t\t\tcase _:", file=outfile)
+			print(f"\t\t\t\t\traise RuntimeError(\"Invalid transition from state {state_idx}.\")", file=outfile)
 
-		print("\tdist_to_jump = dist_to_jump - 1", file=outfile)
+		print("\t\tself.dist_to_jump = self.dist_to_jump - 1", file=outfile)
 		print("", file=outfile)
 
 	return True
