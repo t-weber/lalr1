@@ -16,6 +16,7 @@ import random
 
 import lexer
 import parser
+#import expr_parser
 
 
 #
@@ -117,10 +118,10 @@ def main(args):
 			input_tokens = lexer.get_tokens(input_str)
 			input_tokens.append([end_token])
 
-			# parser = expr_parser.Parser()
-			# parser.input_tokens = input_tokens
-			# parser.semantics = semantics
-			# result = parser.parse()
+			#parser = expr_parser.Parser()
+			#parser.input_tokens = input_tokens
+			#parser.semantics = semantics
+			#result = parser.parse()
 			result = parser.lr1_parse(tables, input_tokens, semantics)
 			if result != None:
 				print(result["val"])

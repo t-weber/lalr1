@@ -119,7 +119,9 @@ def create_parser(tables, outfile_name):
 	print("\t\tself.reset()", file=outfile)
 	print("\t\tself.get_next_lookahead()", file=outfile)
 	print("\t\tself.state_0()", file=outfile)
-	print("\t\treturn self.symbols[-1] if len(self.symbols) >= 1 else None\n", file=outfile)
+	print("\t\tif len(self.symbols) < 1 or not self.accepted:", file=outfile)
+	print("\t\t\treturn None", file=outfile)
+	print("\t\treturn self.symbols[-1]\n", file=outfile)
 
 	for state_idx in range(num_states):
 		print(f"\tdef state_{state_idx}(self):", file=outfile)
@@ -167,7 +169,7 @@ def create_parser(tables, outfile_name):
 				" ".join(str(get_table_index(termidx_tab, id)) \
 					for id in acc_term_id)),
 				file=outfile)
-			print(f"\t\t\t\tself.accept = True", file=outfile)
+			print(f"\t\t\t\tself.accepted = True", file=outfile)
 
 		print("\t\t\tcase _:", file=outfile)
 		print(f"\t\t\t\traise RuntimeError(\"Invalid transition from state {state_idx}.\")", file=outfile)
