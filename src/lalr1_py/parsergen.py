@@ -62,6 +62,7 @@ def create_parser(tables, outfile_name):
 	jump_tab = tables["jump"]["elems"]
 	termidx_tab = tables["term_idx"]
 	nontermidx_tab = tables["nonterm_idx"]
+	semanticidx_tab = tables["semantic_idx"]
 	numrhs_tab = tables["num_rhs_syms"]
 	lhsidx_tab = tables["lhs_idx"]
 
@@ -106,13 +107,13 @@ def create_parser(tables, outfile_name):
 	print("\t\tself.symbols.append(self.lookahead)", file=outfile)
 	print("\t\tself.get_next_lookahead()\n", file=outfile)
 
-	print("\tdef apply_rule(self, rule_idx, num_rhs, lhs_id):", file=outfile)
+	print("\tdef apply_rule(self, rule_id, num_rhs, lhs_id):", file=outfile)
 	print("\t\tself.dist_to_jump = num_rhs", file=outfile)
 	print("\t\targs = self.symbols[len(self.symbols)-num_rhs : len(self.symbols)]", file=outfile)
 	print("\t\tself.symbols = self.symbols[0 : len(self.symbols) - num_rhs]", file=outfile)
 	print("\t\trule_ret = None", file=outfile)
-	print("\t\tif self.semantics != None and rule_idx < len(self.semantics):", file=outfile)
-	print("\t\t\trule_ret = self.semantics[rule_idx](*args)", file=outfile)
+	print("\t\tif self.semantics != None and rule_id in self.semantics:", file=outfile)
+	print("\t\t\trule_ret = self.semantics[rule_id](*args)", file=outfile)
 	print("\t\tself.symbols.append({ \"is_term\" : False, \"id\" : lhs_id, \"val\" : rule_ret })\n", file=outfile)
 
 	print("\tdef parse(self):", file=outfile)
@@ -160,7 +161,8 @@ def create_parser(tables, outfile_name):
 				file=outfile)
 			num_rhs = numrhs_tab[rule_idx]
 			lhs_id = get_table_id(nontermidx_tab, lhsidx_tab[rule_idx])
-			print(f"\t\t\t\tself.apply_rule({rule_idx}, {num_rhs}, {lhs_id})", file=outfile)
+			rule_id = get_table_id(semanticidx_tab, rule_idx)
+			print(f"\t\t\t\tself.apply_rule({rule_id}, {num_rhs}, {lhs_id})", file=outfile)
 
 		if len(acc_term_id) > 0:
 			print("\t\t\tcase {0}: # indices: {1}".format(
@@ -223,12 +225,6 @@ def main(args):
 		return -1
 	except json.decoder.JSONDecodeError as err:
 		print(f"Error: Tables file \"{tablesfile_name}\" could not be decoded as json.", file=sys.stderr)
-		return -1
-	except IndexError as err:
-		print(f"Index error: {str(err)}", file=sys.stderr)
-		return -1
-	except BaseException as err:
-		print(err, file=sys.stderr)
 		return -1
 
 	return 0

@@ -88,6 +88,7 @@ static void lr1_create_parser()
 		};
 
 		Collection collsLALR{ closure };
+		collsLALR.SetAcceptingRule(0);
 		collsLALR.SetProgressObserver(progress);
 		collsLALR.DoTransitions();
 

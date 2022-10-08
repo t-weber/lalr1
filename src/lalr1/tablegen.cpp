@@ -38,20 +38,20 @@ bool Collection::CreateParseTables()
 	bool ok = true;
 
 	// lalr(1) tables
-	std::vector<std::vector<std::size_t>> action_shift, action_reduce, jump;
+	std::vector<std::vector<t_index>> action_shift, action_reduce, jump;
 	action_shift.resize(numStates);
 	action_reduce.resize(numStates);
 	jump.resize(numStates);
 
 	// tables for partial matches for terminal and non-terminal transition symbols
-	std::vector<std::vector<std::size_t>> partials_rule_term, partials_rule_nonterm;
+	std::vector<std::vector<t_index>> partials_rule_term, partials_rule_nonterm;
 	std::vector<std::vector<std::size_t>> partials_matchlen_term, partials_matchlen_nonterm;
 	partials_rule_term.resize(numStates);
 	partials_rule_nonterm.resize(numStates);
 	partials_matchlen_term.resize(numStates);
 	partials_matchlen_nonterm.resize(numStates);
 
-	for(std::size_t state=0; state<numStates; ++state)
+	for(t_state_id state=0; state<numStates; ++state)
 	{
 		action_shift[state].resize(numTerminals, ERROR_VAL);
 		action_reduce[state].resize(numTerminals, ERROR_VAL);
@@ -65,7 +65,7 @@ bool Collection::CreateParseTables()
 
 
 	// set a table item
-	auto set_tab_elem = [](std::vector<std::size_t>& vec, std::size_t idx,
+	auto set_tab_elem = [](std::vector<std::size_t>& vec, t_index idx,
 		std::size_t val, std::size_t filler = ERROR_VAL) -> void
 	{
 		if(vec.size() <= idx)
@@ -75,7 +75,7 @@ bool Collection::CreateParseTables()
 
 
 	// map terminal table index to terminal symbol
-	std::unordered_map<std::size_t, TerminalPtr> seen_terminals{};
+	std::unordered_map<t_index, TerminalPtr> seen_terminals{};
 
 
 	// calculate shift and jump table entries
@@ -88,8 +88,10 @@ bool Collection::CreateParseTables()
 		// terminal transitions -> shift table
 		// nonterminal transitions -> jump table
 		const bool symIsTerm = symTrans->IsTerminal();
+		IndexTableKind tablekind = symIsTerm ?
+			IndexTableKind::TERMINAL : IndexTableKind::NONTERMINAL;
 
-		std::size_t symIdx = GetTableIndex(symTrans->GetId(), symIsTerm);
+		t_index symIdx = GetTableIndex(symTrans->GetId(), tablekind);
 		if(symIsTerm)
 		{
 			seen_terminals.emplace(std::make_pair(
@@ -97,7 +99,7 @@ bool Collection::CreateParseTables()
 		}
 
 		// set table elements
-		std::vector<std::vector<std::size_t>>* tab = symIsTerm ? &action_shift : &jump;
+		std::vector<std::vector<t_index>>* tab = symIsTerm ? &action_shift : &jump;
 
 		const ClosurePtr& stateFrom = std::get<0>(transition);
 		const ClosurePtr& stateTo = std::get<1>(transition);
@@ -108,16 +110,17 @@ bool Collection::CreateParseTables()
 		if(m_genPartialMatches)
 		{
 			// unique partial match?
-			if(auto [uniquematch, rulenr, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+			if(auto [uniquematch, rule_id, rule_len] = GetUniquePartialMatch(elemsFrom); uniquematch)
 			{
 				// set partial match table elements
-				std::vector<std::vector<std::size_t>>* partials_rule_tab =
+				std::vector<std::vector<t_index>>* partials_rule_tab =
 					symIsTerm ? &partials_rule_term : &partials_rule_nonterm;
 				std::vector<std::vector<std::size_t>>* partials_matchlen_tab =
 					symIsTerm ? &partials_matchlen_term : &partials_matchlen_nonterm;
 
-				set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], symIdx, rulenr);
-				set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], symIdx, rulelen, 0);
+				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
+				set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], symIdx, rule_idx);
+				set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], symIdx, rule_len, 0);
 			}
 		}
 	}
@@ -132,28 +135,33 @@ bool Collection::CreateParseTables()
 			if(!elem->IsCursorAtEnd())
 				continue;
 
-			std::optional<std::size_t> rulenr = elem->GetSemanticRule();
-			if(!rulenr)  // no semantic rule assigned
+			std::optional<t_semantic_id> rule_id = elem->GetSemanticRule();
+			if(!rule_id)  // no semantic rule assigned
 			{
 				std::cerr << "Error: No semantic rule assigned to element "
 					<< (*elem) << "." << std::endl;
 				continue;
 			}
 
-			set_tab_elem(m_numRhsSymsPerRule, *rulenr, elem->GetRhs()->NumSymbols(false), 0);
-			set_tab_elem(m_ruleLhsIdx, *rulenr, GetTableIndex(elem->GetLhs()->GetId(), false), 0);
+			t_index rule_idx = GetTableIndex(*rule_id, IndexTableKind::SEMANTIC);
+			set_tab_elem(m_numRhsSymsPerRule, rule_idx,
+				elem->GetRhs()->NumSymbols(false), 0);
+			set_tab_elem(m_ruleLhsIdx, rule_idx,
+				GetTableIndex(elem->GetLhs()->GetId(),
+					IndexTableKind::NONTERMINAL), 0);
 
 			auto& _reduce_row = action_reduce[closure->GetId()];
 			for(const TerminalPtr& la : elem->GetLookaheads())
 			{
-				const std::size_t laIdx = GetTableIndex(la->GetId(), true);
+				const t_index laIdx = GetTableIndex(
+					la->GetId(), IndexTableKind::TERMINAL);
 
 				// in extended grammar, first production (rule 0) is of the form start -> ...
-				if(*rulenr == 0)
-					*rulenr = ACCEPT_VAL;
+				if(*rule_id == m_accepting_rule)
+					rule_idx = ACCEPT_VAL;
 
 				// semantic rule number -> reduce table
-				set_tab_elem(_reduce_row, laIdx, *rulenr);
+				set_tab_elem(_reduce_row, laIdx, rule_idx);
 			}
 		}
 	}
@@ -179,19 +187,19 @@ bool Collection::CreateParseTables()
 
 
 	// check for and try to resolve shift/reduce conflicts
-	std::size_t state = 0;
+	t_state_id state = 0;
 	for(const ClosurePtr& closure : m_collection)
 	{
 		std::optional<Terminal::t_terminalset> lookbacks;
 
-		for(std::size_t termidx=0; termidx<numTerminals; ++termidx)
+		for(t_index termidx=0; termidx<numTerminals; ++termidx)
 		{
 			// get table entries
-			std::size_t& shiftEntry = m_tabActionShift(state, termidx);
-			std::size_t& reduceEntry = m_tabActionReduce(state, termidx);
+			t_index& shiftEntry = m_tabActionShift(state, termidx);
+			t_index& reduceEntry = m_tabActionReduce(state, termidx);
 
 			// partial match tables
-			std::size_t& partialRuleEntry = m_tabPartialRuleTerm(state, termidx);
+			t_index& partialRuleEntry = m_tabPartialRuleTerm(state, termidx);
 			std::size_t& partialMatchLenEntry = m_tabPartialMatchLenTerm(state, termidx);
 
 			// get potentially conflicting element
@@ -288,8 +296,8 @@ bool Collection::SaveParseTablesCXX(const std::string& file) const
 	// save constants
 	ofstr << "const constexpr std::size_t err = " << ERROR_VAL << ";\n";
 	ofstr << "const constexpr std::size_t acc = " << ACCEPT_VAL << ";\n";
-	ofstr << "const constexpr std::size_t eps = " << EPS_IDENT << ";\n";
-	ofstr << "const constexpr std::size_t end = " << END_IDENT << ";\n";
+	ofstr << "const constexpr t_symbol_id eps = " << EPS_IDENT << ";\n";
+	ofstr << "const constexpr t_symbol_id end = " << END_IDENT << ";\n";
 	ofstr << "\n";
 
 	// save lalr(1) tables
@@ -311,9 +319,9 @@ bool Collection::SaveParseTablesCXX(const std::string& file) const
 	for(const auto& [id, idx] : m_mapTermIdx)
 	{
 		ofstr << "\t{ ";
-		if(id == EPS_IDENT)
+		if(id == t_symbol_id(EPS_IDENT))
 			ofstr << "eps";
-		else if(id == END_IDENT)
+		else if(id == t_symbol_id(END_IDENT))
 			ofstr << "end";
 		else if(m_useOpChar && std::isprint(id))
 			ofstr << "'" << char(id) << "'";
@@ -326,6 +334,12 @@ bool Collection::SaveParseTablesCXX(const std::string& file) const
 	// non-terminal symbol indices
 	ofstr << "const t_mapIdIdx map_nonterm_idx\n{{\n";
 	for(const auto& [id, idx] : m_mapNonTermIdx)
+		ofstr << "\t{ " << id << ", " << idx << " },\n";
+	ofstr << "}};\n\n";
+
+	// semantic rule indices
+	ofstr << "const t_mapSemanticIdIdx map_semantic_idx\n{{\n";
+	for(const auto& [id, idx] : m_mapSemanticIdx)
 		ofstr << "\t{ " << id << ", " << idx << " },\n";
 	ofstr << "}};\n\n";
 
@@ -371,10 +385,10 @@ bool Collection::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "}\n\n";
 
 	// index maps getter
-	ofstr << "static\nstd::tuple<const t_mapIdIdx*, const t_mapIdIdx*>\n";
+	ofstr << "static\nstd::tuple<const t_mapIdIdx*, const t_mapIdIdx*, const t_mapSemanticIdIdx*>\n";
 	ofstr << "get_lalr1_table_indices()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n";
-	ofstr << "\t\t&_lalr1_tables::map_term_idx, &_lalr1_tables::map_nonterm_idx);\n";
+	ofstr << "\t\t&_lalr1_tables::map_term_idx, &_lalr1_tables::map_nonterm_idx, &_lalr1_tables::map_semantic_idx);\n";
 	ofstr << "}\n\n";
 
 
@@ -403,6 +417,7 @@ bool Collection::SaveParseTablesJSON(const std::string& file) const
 
 	// constants
 	ofstr << "\n\"consts\" : {\n";
+	//ofstr << "\t\"acc_rule\" : " << m_accepting_rule << ",\n";
 	ofstr << "\t\"err\" : " << ERROR_VAL << ",\n";
 	ofstr << "\t\"acc\" : " << ACCEPT_VAL << ",\n";
 	ofstr << "\t\"eps\" : " << EPS_IDENT << ",\n";
@@ -455,6 +470,18 @@ bool Collection::SaveParseTablesJSON(const std::string& file) const
 		const auto& [id, idx] = *iter;
 		ofstr << "\t[ " << id << ", " << idx << " ]";
 		if(std::next(iter, 1) != m_mapNonTermIdx.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "],\n";
+
+	// semantic rule indices
+	ofstr << "\n\"semantic_idx\" : [\n";
+	for(auto iter = m_mapSemanticIdx.begin(); iter != m_mapSemanticIdx.end(); std::advance(iter, 1))
+	{
+		const auto& [id, idx] = *iter;
+		ofstr << "\t[ " << id << ", " << idx << " ]";
+		if(std::next(iter, 1) != m_mapSemanticIdx.end())
 			ofstr << ",";
 		ofstr << "\n";
 	}

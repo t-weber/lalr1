@@ -92,6 +92,7 @@ static bool lr1_create_parser(
 		Collection collsLALR{ closure };
 		collsLALR.SetGenDebugCode(gen_debug_code);
 		collsLALR.SetGenErrorCode(gen_error_code);
+		collsLALR.SetAcceptingRule(0);
 		collsLALR.SetProgressObserver(progress);
 		collsLALR.DoTransitions();
 

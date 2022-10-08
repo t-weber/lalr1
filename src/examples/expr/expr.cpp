@@ -69,7 +69,7 @@ static void lalr1_run_parser()
 #else
 		// get created parsing tables
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
-		auto [term_idx, nonterm_idx] = get_lalr1_table_indices();
+		auto [term_idx, nonterm_idx, semantic_idx] = get_lalr1_table_indices();
 		auto [partials_rules_term, partials_matchlen_term,
 			partials_rules_nonterm, partials_matchlen_nonterm]
 				= get_lalr1_partials_tables();
@@ -78,6 +78,7 @@ static void lalr1_run_parser()
 		parser.SetShiftTable(shift_tab);
 		parser.SetReduceTable(reduce_tab);
 		parser.SetJumpTable(jump_tab);
+		parser.SetSemanticIdxMap(semantic_idx);
 		parser.SetNumRhsSymsPerRule(num_rhs);
 		parser.SetLhsIndices(lhs_idx);
 		parser.SetPartialsRulesTerm(partials_rules_term);

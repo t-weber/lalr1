@@ -41,7 +41,7 @@ static TerminalPtr op_plus, op_mult;
 static TerminalPtr sym_real;
 
 // semantic rules
-static std::vector<t_semanticrule> rules;
+static t_semanticrules rules;
 
 
 static void create_grammar(bool add_semantics = true)
@@ -59,25 +59,26 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule number
-	std::size_t semanticindex = 0;
+	t_semantic_id semanticindex = 0;
 
 	// rule 0: start -> expr
-	start->AddRule({ expr }, semanticindex++);
+	start->AddRule({ expr }, semanticindex);
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[0];
-		});
+		}));
 	}
+	++semanticindex;
 
 	// rule 1: expr -> expr + expr
-	expr->AddRule({ expr, op_plus, expr }, semanticindex++);
+	expr->AddRule({ expr, op_plus, expr }, semanticindex);
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -85,14 +86,15 @@ static void create_grammar(bool add_semantics = true)
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_plus->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 	// rule 2: expr -> expr * expr
-	expr->AddRule({ expr, op_mult, expr }, semanticindex++);
+	expr->AddRule({ expr, op_mult, expr }, semanticindex);
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -100,14 +102,15 @@ static void create_grammar(bool add_semantics = true)
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mult->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 	// rule 3: expr -> real symbol
-	expr->AddRule({ sym_real }, semanticindex++);
+	expr->AddRule({ sym_real }, semanticindex);
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -117,8 +120,9 @@ static void create_grammar(bool add_semantics = true)
 			sym->SetDataType(VMType::REAL);
 			sym->SetId(id);
 			return sym;
-		});
+		}));
 	}
+	++semanticindex;
 }
 
 
@@ -230,12 +234,13 @@ static void lalr1_run_parser()
 	{
 		// get created parsing tables
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
-		auto [term_idx, nonterm_idx] = get_lalr1_table_indices();
+		auto [term_idx, nonterm_idx, semantic_idx] = get_lalr1_table_indices();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);
 		parser.SetReduceTable(reduce_tab);
 		parser.SetJumpTable(jump_tab);
+		parser.SetSemanticIdxMap(semantic_idx);
 		parser.SetNumRhsSymsPerRule(num_rhs);
 		parser.SetLhsIndices(lhs_idx);
 		parser.SetSemanticRules(&rules);

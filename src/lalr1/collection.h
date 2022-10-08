@@ -42,7 +42,7 @@ public:
 	// hash transitions
 	struct HashTransition
 	{
-		std::size_t operator()(const t_transition& tr) const;
+		t_hash operator()(const t_transition& tr) const;
 	};
 
 	// compare transitions for equality
@@ -59,8 +59,8 @@ public:
 
 	using t_closures = std::list<ClosurePtr>;
 	using t_transitions = std::unordered_set<t_transition, HashTransition, CompareTransitionsEqual>;
-	using t_closurecache = std::shared_ptr<std::unordered_map<std::size_t, ClosurePtr>>;
-	using t_seen_closures = std::shared_ptr<std::unordered_set<std::size_t>>;
+	using t_closurecache = std::shared_ptr<std::unordered_map<t_hash, ClosurePtr>>;
+	using t_seen_closures = std::shared_ptr<std::unordered_set<t_hash>>;
 
 
 public:
@@ -71,10 +71,10 @@ public:
 	void DoTransitions();
 
 	// tests which closures of the collection have reduce/reduce conflicts
-	std::set<std::size_t> HasReduceConflicts() const;
+	std::set<t_state_id> HasReduceConflicts() const;
 
 	// tests which closures of the collection have shift/reduce conflicts
-	std::set<std::size_t> HasShiftReduceConflicts() const;
+	std::set<t_state_id> HasShiftReduceConflicts() const;
 
 	// get terminals leading to the given closure
 	Terminal::t_terminalset GetLookbackTerminals(const ClosurePtr& closure) const;
@@ -95,6 +95,7 @@ public:
 	void SetGenDebugCode(bool b = true);
 	void SetGenErrorCode(bool b = true);
 	void SetGenPartialMatches(bool b = true);
+	void SetAcceptingRule(t_semantic_id rule_id);
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
@@ -110,13 +111,14 @@ protected:
 
 	bool SolveConflict(
 		const SymbolPtr& sym_at_cursor, const Terminal::t_terminalset& lookbacks,
-		std::size_t* shiftEntry, std::size_t* reduceEntry) const;
+		t_index* shiftEntry, t_index* reduceEntry) const;
 
 	void CreateTableIndices();
-	std::size_t GetTableIndex(std::size_t id, bool is_term) const;
+	t_index GetTableIndex(t_symbol_id id, IndexTableKind table_kind) const;
 
-	static std::size_t hash_transition(const t_transition& trans);
-	static std::tuple<bool, std::size_t, std::size_t> GetUniquePartialMatch(const t_elements& elemsFrom);
+	static t_hash hash_transition(const t_transition& trans);
+	static std::tuple<bool, t_semantic_id, std::size_t> GetUniquePartialMatch(
+		const t_elements& elemsFrom);
 
 
 private:
@@ -125,6 +127,7 @@ private:
 
 	t_mapIdIdx m_mapTermIdx{};                  // maps the terminal ids to table indices
 	t_mapIdIdx m_mapNonTermIdx{};               // maps the non-terminal ids to table indices
+	t_mapIdIdx m_mapSemanticIdx{};              // maps the semantic ids to tables indices
 	t_closurecache m_closure_cache{};           // seen closures
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures
 
@@ -133,6 +136,7 @@ private:
 	bool m_genDebugCode{true};                  // generate debug code in parser output
 	bool m_genErrorCode{true};                  // generate error handling code in parser output
 	bool m_genPartialMatches{true};             // generates code for handling partial rule matches
+	t_semantic_id m_accepting_rule{0};          // rule which leads to accepting the grammar
 
 	t_table m_tabActionShift{};                 // lalr(1) tables
 	t_table m_tabActionReduce{};
@@ -144,7 +148,7 @@ private:
 	t_table m_tabPartialMatchLenNonterm{};
 
 	std::vector<std::size_t> m_numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
-	std::vector<std::size_t> m_ruleLhsIdx{};        // nonterminal index of the rule's result type
+	std::vector<t_index> m_ruleLhsIdx{};            // nonterminal index of the rule's result type
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

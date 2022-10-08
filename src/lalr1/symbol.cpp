@@ -26,7 +26,7 @@ const TerminalPtr g_end = std::make_shared<Terminal>(END_IDENT, "\xcf\x89", fals
 // symbol base class
 // ----------------------------------------------------------------------------
 
-Symbol::Symbol(std::size_t id, const std::string& strid, bool bEps, bool bEnd)
+Symbol::Symbol(t_symbol_id id, const std::string& strid, bool bEps, bool bEnd)
 	: std::enable_shared_from_this<Symbol>{},
 	  m_id{id}, m_strid{strid}, m_iseps{bEps}, m_isend{bEnd}
 {
@@ -62,7 +62,7 @@ bool Symbol::operator==(const Symbol& other) const
 }
 
 
-std::size_t Symbol::HashSymbol::operator()(const SymbolPtr& sym) const
+t_hash Symbol::HashSymbol::operator()(const SymbolPtr& sym) const
 {
 	return sym->hash();
 }
@@ -81,7 +81,7 @@ bool Symbol::CompareSymbolsEqual::operator()(
 // terminal symbol
 // ----------------------------------------------------------------------------
 
-Terminal::Terminal(std::size_t id, const std::string& strid, bool bEps, bool bEnd)
+Terminal::Terminal(t_symbol_id id, const std::string& strid, bool bEps, bool bEnd)
 	: Symbol{id, strid, bEps, bEnd}
 {}
 
@@ -99,30 +99,11 @@ Terminal::~Terminal()
 const Terminal& Terminal::operator=(const Terminal& other)
 {
 	static_cast<Symbol*>(this)->operator=(*static_cast<const Symbol*>(&other));
-	this->m_semantic = other.m_semantic;
 	this->m_precedence = other.m_precedence;
 	this->m_associativity = other.m_associativity;
 	this->m_hash = other.m_hash;
 
 	return *this;
-}
-
-
-/**
- * get the semantic rule index
- */
-std::optional<std::size_t> Terminal::GetSemanticRule() const
-{
-	return m_semantic;
-}
-
-
-/**
- * set the semantic rule index
- */
-void Terminal::SetSemanticRule(std::optional<std::size_t> semantic)
-{
-	m_semantic = semantic;
 }
 
 
@@ -166,14 +147,14 @@ void Terminal::print(std::ostream& ostr, bool /*bnf*/) const
 /**
  * calculates a unique hash for the terminal symbol
  */
-std::size_t Terminal::hash() const
+t_hash Terminal::hash() const
 {
 	if(m_hash)
 		return *m_hash;
 
-	std::size_t hashId = std::hash<std::size_t>{}(GetId());
-	std::size_t hashEps = std::hash<bool>{}(IsEps());
-	std::size_t hashEnd = std::hash<bool>{}(IsEnd());
+	t_hash hashId = std::hash<t_symbol_id>{}(GetId());
+	t_hash hashEps = std::hash<bool>{}(IsEps());
+	t_hash hashEnd = std::hash<bool>{}(IsEnd());
 
 	boost::hash_combine(hashId, hashEps);
 	boost::hash_combine(hashId, hashEnd);
@@ -189,7 +170,7 @@ std::size_t Terminal::hash() const
 // non-terminal symbol
 // ----------------------------------------------------------------------------
 
-NonTerminal::NonTerminal(std::size_t id, const std::string& strid)
+NonTerminal::NonTerminal(t_symbol_id id, const std::string& strid)
 	: Symbol{id, strid}
 {}
 
@@ -206,7 +187,8 @@ NonTerminal::~NonTerminal()
 
 const NonTerminal& NonTerminal::operator=(const NonTerminal& other)
 {
-	static_cast<Symbol*>(this)->operator=(*static_cast<const Symbol*>(&other));
+	static_cast<Symbol*>(this)->operator=(
+		*static_cast<const Symbol*>(&other));
 	this->m_rules = other.m_rules;
 	this->m_semantics = other.m_semantics;
 	this->m_hash = other.m_hash;
@@ -218,32 +200,20 @@ const NonTerminal& NonTerminal::operator=(const NonTerminal& other)
 /**
  * adds multiple alternative production rules
  */
-void NonTerminal::AddRule(const WordPtr& rule, std::optional<std::size_t> semanticruleidx)
+void NonTerminal::AddRule(const WordPtr& rule, std::optional<t_semantic_id> semantic_id)
 {
 	m_rules.emplace_back(rule);
-	m_semantics.push_back(semanticruleidx);
+	m_semantics.push_back(semantic_id);
 }
 
 
 /**
  * adds multiple alternative production rules
  */
-void NonTerminal::AddRule(const Word& _rule, std::optional<std::size_t> semanticruleidx)
+void NonTerminal::AddRule(const Word& _rule, std::optional<t_semantic_id> semantic_id)
 {
 	WordPtr rule = std::make_shared<Word>(_rule);
-	AddRule(rule, semanticruleidx);
-}
-
-
-/**
- * adds multiple alternative production rules
- */
-void NonTerminal::AddRule(const Word& rule, const std::size_t* semanticruleidx)
-{
-	if(semanticruleidx)
-		AddRule(rule, *semanticruleidx);
-	else
-		AddRule(rule);
+	AddRule(rule, semantic_id);
 }
 
 
@@ -259,60 +229,28 @@ std::size_t NonTerminal::NumRules() const
 /**
  * gets a production rule
  */
-const WordPtr& NonTerminal::GetRule(std::size_t i) const
+const WordPtr& NonTerminal::GetRule(t_index idx) const
 {
-	return m_rules[i];
+	return m_rules[idx];
 }
 
 
 /*
- * gets a production rule from a semantic index
+ * gets a production rule from a semantic id
  */
-WordPtr NonTerminal::GetRuleFromSemanticIndex(std::size_t semantic_idx) const
+WordPtr NonTerminal::GetRuleFromSemanticId(t_semantic_id semantic_id) const
 {
-	for(std::size_t ruleidx = 0; ruleidx < NumRules(); ++ruleidx)
+	for(t_index ruleidx = 0; ruleidx < NumRules(); ++ruleidx)
 	{
-		std::optional<std::size_t> semanticidx =
-			GetSemanticRule(ruleidx);
-		if(!semanticidx)
+		std::optional<t_semantic_id> id = GetSemanticRule(ruleidx);
+		if(!id)
 			continue;
 
-		if(*semanticidx == semantic_idx)
+		if(*id == semantic_id)
 			return GetRule(ruleidx);
 	}
 
 	return nullptr;
-}
-
-
-/**
- * gets all rules having a semantic index
- */
-std::deque<WordPtr> NonTerminal::GetRulesWithSemanticIndex(
-	const std::vector<NonTerminalPtr>& nonterms,
-	std::size_t num_rules)
-{
-	std::deque<WordPtr> rules;
-
-	// iterate semantic indices
-	for(std::size_t semantic_idx = 0; semantic_idx < num_rules; ++semantic_idx)
-	{
-		WordPtr ruleptr{};
-
-		// iterate non-terminals
-		for(const NonTerminalPtr& nonterm : nonterms)
-		{
-			ruleptr = nonterm->GetRuleFromSemanticIndex(semantic_idx);
-			// found the rule?
-			if(ruleptr)
-				break;
-		}
-
-		// add the rule whether it has been found or a nullptr if not
-		rules.emplace_back(std::move(ruleptr));
-	}
-
-	return rules;
 }
 
 
@@ -326,11 +264,11 @@ void NonTerminal::ClearRules()
 
 
 /**
- * gets a semantic rule index for a given rule number
+ * gets a semantic rule id for a given rule number
  */
-std::optional<std::size_t> NonTerminal::GetSemanticRule(std::size_t i) const
+std::optional<t_semantic_id> NonTerminal::GetSemanticRule(t_index idx) const
 {
-	return m_semantics[i];
+	return m_semantics[idx];
 }
 
 
@@ -339,13 +277,13 @@ std::optional<std::size_t> NonTerminal::GetSemanticRule(std::size_t i) const
  * returns possibly added non-terminal
  */
 NonTerminalPtr NonTerminal::RemoveLeftRecursion(
-	std::size_t newIdBegin, const std::string& primerule,
-	std::size_t* semanticruleidx)
+	t_symbol_id newIdBegin, const std::string& primerule,
+	std::optional<t_semantic_id> semantic_id)
 {
 	std::deque<WordPtr> rulesWithLeftRecursion;
 	std::deque<WordPtr> rulesWithoutLeftRecursion;
 
-	for(std::size_t ruleidx=0; ruleidx<NumRules(); ++ruleidx)
+	for(t_index ruleidx=0; ruleidx<NumRules(); ++ruleidx)
 	{
 		const WordPtr& rule = this->GetRule(ruleidx);
 		if(rule->NumSymbols() >= 1 && rule->GetSymbol(0)->hash() == this->hash())
@@ -363,27 +301,27 @@ NonTerminalPtr NonTerminal::RemoveLeftRecursion(
 	for(const WordPtr& _word : rulesWithLeftRecursion)
 	{
 		Word word = *_word;
-		word.RemoveSymbol(0);           // remove "this" rule causing left-recursion
-		word.AddSymbol(newNonTerm);     // make it right-recursive instead
+		word.RemoveSymbol(0);       // remove "this" rule causing left-recursion
+		word.AddSymbol(newNonTerm); // make it right-recursive instead
 
-		newNonTerm->AddRule(word, semanticruleidx);
-		if(semanticruleidx)
-			++*semanticruleidx;
+		newNonTerm->AddRule(word, semantic_id);
+		if(semantic_id)
+			++*semantic_id;
 	}
 
-	newNonTerm->AddRule({g_eps}, semanticruleidx);
-	if(semanticruleidx)
-		++*semanticruleidx;
+	newNonTerm->AddRule({ g_eps }, semantic_id);
+	if(semantic_id)
+		++*semantic_id;
 
 	this->ClearRules();
 	for(const WordPtr& _word : rulesWithoutLeftRecursion)
 	{
 		Word word = *_word;
-		word.AddSymbol(newNonTerm);     // make it right-recursive instead
+		word.AddSymbol(newNonTerm); // make it right-recursive instead
 
-		this->AddRule(word, semanticruleidx);
-		if(semanticruleidx)
-			++*semanticruleidx;
+		this->AddRule(word, semantic_id);
+		if(semantic_id)
+			++*semantic_id;
 	}
 
 	return newNonTerm;
@@ -393,15 +331,13 @@ NonTerminalPtr NonTerminal::RemoveLeftRecursion(
 /**
  * calculates a unique hash for the non-terminal symbol
  */
-std::size_t NonTerminal::hash() const
+t_hash NonTerminal::hash() const
 {
 	if(m_hash)
 		return *m_hash;
 
-	std::size_t hashId = std::hash<std::size_t>{}(GetId());
-
-	m_hash = hashId;
-	return hashId;
+	m_hash = std::hash<t_symbol_id>{}(GetId());
+	return *m_hash;
 }
 
 
@@ -412,15 +348,15 @@ void NonTerminal::print(std::ostream& ostr, bool bnf) const
 	std::string rule0sep = bnf ? " " :  "\t  ";
 
 	ostr << GetStrId() << lhsrhssep;
-	for(std::size_t i=0; i<NumRules(); ++i)
+	for(t_index i=0; i<NumRules(); ++i)
 	{
 		if(i==0)
 			ostr << rule0sep;
 		else
 			ostr << rulesep;
 
-		if(GetSemanticRule(i) && !bnf)
-			ostr << "[rule " << *GetSemanticRule(i) << "] ";
+		if(auto rule = GetSemanticRule(i); rule && !bnf)
+			ostr << "[rule " << *rule << "] ";
 
 		ostr << (*GetRule(i));
 		ostr << "\n";
@@ -458,7 +394,8 @@ t_map_first NonTerminal::CalcFirst(t_map_first_perrule* first_perrule) const
  * calculates the first set of a nonterminal
  * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
-void NonTerminal::CalcFirst(t_map_first& _first, t_map_first_perrule* _first_perrule) const
+void NonTerminal::CalcFirst(t_map_first& _first,
+	t_map_first_perrule* _first_perrule) const
 {
 	const NonTerminalPtr& nonterm =
 		std::dynamic_pointer_cast<NonTerminal>(
@@ -476,13 +413,13 @@ void NonTerminal::CalcFirst(t_map_first& _first, t_map_first_perrule* _first_per
 	first_perrule.resize(nonterm->NumRules());
 
 	// iterate rules
-	for(std::size_t rule_idx=0; rule_idx<nonterm->NumRules(); ++rule_idx)
+	for(t_index rule_idx=0; rule_idx<nonterm->NumRules(); ++rule_idx)
 	{
 		const WordPtr& rule = nonterm->GetRule(rule_idx);
 
 		// iterate RHS of rule
 		const std::size_t num_all_symbols = rule->NumSymbols();
-		for(std::size_t sym_idx=0; sym_idx<num_all_symbols; ++sym_idx)
+		for(t_index sym_idx=0; sym_idx<num_all_symbols; ++sym_idx)
 		{
 			const SymbolPtr& sym = (*rule)[sym_idx];
 
@@ -490,7 +427,8 @@ void NonTerminal::CalcFirst(t_map_first& _first, t_map_first_perrule* _first_per
 			if(sym->IsTerminal())
 			{
 				first.insert(std::dynamic_pointer_cast<Terminal>(sym));
-				first_perrule[rule_idx].insert(std::dynamic_pointer_cast<Terminal>(sym));
+				first_perrule[rule_idx].insert(
+					std::dynamic_pointer_cast<Terminal>(sym));
 				break;
 			}
 
@@ -567,18 +505,18 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 	for(const NonTerminalPtr& _nonterm : allnonterms)
 	{
 		// iterate rules
-		for(std::size_t rule_idx=0; rule_idx<_nonterm->NumRules(); ++rule_idx)
+		for(t_index rule_idx=0; rule_idx<_nonterm->NumRules(); ++rule_idx)
 		{
 			const WordPtr& rule = _nonterm->GetRule(rule_idx);
 
 			// iterate RHS of rule
-			for(std::size_t sym_idx=0; sym_idx<rule->NumSymbols(); ++sym_idx)
+			for(t_index sym_idx=0; sym_idx<rule->NumSymbols(); ++sym_idx)
 			{
 				// nonterm is in RHS of _nonterm rules
 				if(*(*rule)[sym_idx] == *nonterm)
 				{
 					// add first set of following symbols except eps
-					for(std::size_t _sym_idx=sym_idx+1; _sym_idx < rule->NumSymbols(); ++_sym_idx)
+					for(t_index _sym_idx=sym_idx+1; _sym_idx < rule->NumSymbols(); ++_sym_idx)
 					{
 						// add terminal to follow set
 						if((*rule)[_sym_idx]->IsTerminal() && !(*rule)[_sym_idx]->IsEps())
@@ -612,7 +550,7 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 					bool bLastSym = (sym_idx+1 == rule->NumSymbols());
 
 					// ... or only epsilon productions afterwards?
-					std::size_t iNextSym = sym_idx+1;
+					t_index iNextSym = sym_idx+1;
 					for(; iNextSym<rule->NumSymbols(); ++iNextSym)
 					{
 						// terminal
@@ -686,7 +624,7 @@ const Word& Word::operator=(const Word& other)
 /**
  * adds a symbol to the word
  */
-std::size_t Word::AddSymbol(const SymbolPtr& sym)
+t_index Word::AddSymbol(const SymbolPtr& sym)
 {
 	m_syms.push_back(sym);
 	m_hash = std::nullopt;
@@ -699,7 +637,7 @@ std::size_t Word::AddSymbol(const SymbolPtr& sym)
 /**
  * removes a symbol from the word
  */
-void Word::RemoveSymbol(std::size_t idx)
+void Word::RemoveSymbol(t_index idx)
 {
 	m_syms.erase(std::next(m_syms.begin(), idx));
 	m_hash = std::nullopt;
@@ -715,15 +653,15 @@ std::size_t Word::size() const
 /**
  * gets a symbol in the word
  */
-const SymbolPtr& Word::GetSymbol(const std::size_t i) const
+const SymbolPtr& Word::GetSymbol(t_index idx) const
 {
-	return *std::next(m_syms.begin(), i);
+	return *std::next(m_syms.begin(), idx);
 }
 
 
-const SymbolPtr& Word::operator[](const std::size_t i) const
+const SymbolPtr& Word::operator[](t_index idx) const
 {
-	return GetSymbol(i);
+	return GetSymbol(idx);
 }
 
 
@@ -755,16 +693,17 @@ std::size_t Word::NumSymbols(bool count_eps) const
  * calculates the first set of a symbol string
  * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
-const Terminal::t_terminalset& Word::CalcFirst(const TerminalPtr& additional_sym, std::size_t offs) const
+const Terminal::t_terminalset& Word::CalcFirst(
+	const TerminalPtr& additional_sym, t_index offs) const
 {
-	std::size_t hashval = this->hash();
+	t_hash hashval = this->hash();
 	if(additional_sym)
 	{
-		std::size_t hashSym = additional_sym->hash();
+		t_hash hashSym = additional_sym->hash();
 		boost::hash_combine(hashval, hashSym);
 	}
 
-	std::size_t hashOffs = std::hash<std::size_t>{}(offs);
+	t_hash hashOffs = std::hash<t_index>{}(offs);
 	boost::hash_combine(hashval, hashOffs);
 
 	// terminal set already cached?
@@ -784,7 +723,7 @@ const Terminal::t_terminalset& Word::CalcFirst(const TerminalPtr& additional_sym
 
 	t_map_first first_nonterms;
 
-	for(std::size_t sym_idx=offs; sym_idx<num_all_symbols; ++sym_idx)
+	for(t_index sym_idx=offs; sym_idx<num_all_symbols; ++sym_idx)
 	{
 		const SymbolPtr& sym = sym_idx < num_rule_symbols ? (*this)[sym_idx] : additional_sym;
 
@@ -842,16 +781,16 @@ bool Word::operator==(const Word& other) const
 /**
  * calculates a unique hash for the symbol string
  */
-std::size_t Word::hash() const
+t_hash Word::hash() const
 {
 	if(m_hash)
 		return *m_hash;
 
-	std::size_t hash = 0;
+	t_hash hash = 0;
 
 	for(const SymbolPtr& sym : m_syms)
 	{
-		std::size_t hashSym = sym->hash();
+		t_hash hashSym = sym->hash();
 		boost::hash_combine(hash, hashSym);
 	}
 
@@ -863,10 +802,10 @@ std::size_t Word::hash() const
 std::ostream& operator<<(std::ostream& ostr, const Word& word)
 {
 	const std::size_t num_syms = word.NumSymbols();
-	for(std::size_t i=0; i<num_syms; ++i)
+	for(t_index idx=0; idx<num_syms; ++idx)
 	{
-		ostr << word.GetSymbol(i)->GetStrId();
-		if(i < num_syms - 1)
+		ostr << word.GetSymbol(idx)->GetStrId();
+		if(idx < num_syms - 1)
 			ostr << " ";
 	}
 

@@ -11,8 +11,6 @@
 #include "common.h"
 #include "stack.h"
 
-#include <vector>
-#include <tuple>
 #include <optional>
 
 
@@ -40,22 +38,27 @@ public:
 	void SetNumRhsSymsPerRule(const t_vecIdx* vec) { m_numRhsSymsPerRule = vec; }
 	void SetLhsIndices(const t_vecIdx* vec) { m_vecLhsIndices = vec; }
 
-	void SetSemanticRules(const std::vector<t_semanticrule>* rules) { m_semantics = rules; }
+	void SetSemanticIdxMap(const t_mapSemanticIdIdx* map);
+	void SetSemanticRules(const t_semanticrules* rules) { m_semantics = rules; }
 
 	void SetDebug(bool b) { m_debug = b; }
 
-	t_lalrastbaseptr Parse(const std::vector<t_toknode>& input) const;
+	t_lalrastbaseptr Parse(const t_toknodes& input) const;
 
 
 protected:
-	// get the rule number and the matching length of a partial match
-	std::tuple<std::optional<std::size_t>, std::optional<std::size_t>>
-		GetPartialRules(std::size_t topstate, const t_toknode& curtok,
+	// get the rule index and the matching length of a partial match
+	std::tuple<std::optional<t_index>, std::optional<std::size_t>>
+		GetPartialRules(t_state_id topstate, const t_toknode& curtok,
 			const ParseStack<t_lalrastbaseptr>& symbols, bool term) const;
 
 	// get a unique identifier for a partial rule
-	std::size_t GetPartialRuleHash(std::size_t rule, std::size_t len,
-		const ParseStack<std::size_t>& states, const ParseStack<t_lalrastbaseptr>& symbols) const;
+	t_hash GetPartialRuleHash(t_index rule_idx, std::size_t len,
+		const ParseStack<t_state_id>& states,
+		const ParseStack<t_lalrastbaseptr>& symbols) const;
+
+	// get a semantic rule id from a rule index
+	t_semantic_id GetRuleId(t_index idx) const;
 
 
 private:
@@ -76,8 +79,12 @@ private:
 	// index of nonterminal on left-hand side of rule
 	const t_vecIdx *m_vecLhsIndices{nullptr};
 
+	// semantic index map (id -> idx) and its inverse (idx -> id)
+	const t_mapSemanticIdIdx* m_mapSemanticIdx{nullptr};
+	t_mapSemanticIdxId m_mapSemanticIdx_inv{};
+
 	// semantic rules
-	const std::vector<t_semanticrule> *m_semantics{nullptr};
+	const t_semanticrules *m_semantics{nullptr};
 
 	// debug output
 	bool m_debug{false};

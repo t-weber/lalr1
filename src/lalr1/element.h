@@ -43,17 +43,17 @@ public:
 
 
 public:
-	Element(const NonTerminalPtr& lhs, std::size_t rhsidx,
-		std::size_t cursor, const Terminal::t_terminalset& la);
-	Element(const NonTerminalPtr& lhs, std::size_t rhsidx, std::size_t cursor);
+	Element(const NonTerminalPtr& lhs, t_index rhsidx,
+		t_index cursor, const Terminal::t_terminalset& la);
+	Element(const NonTerminalPtr& lhs, t_index rhsidx, t_index cursor);
 	Element(const Element& elem);
 	const Element& operator=(const Element& elem);
 
 	const NonTerminalPtr& GetLhs() const;
 	const WordPtr& GetRhs() const;
-	std::optional<std::size_t> GetSemanticRule() const;
+	std::optional<t_semantic_id> GetSemanticRule() const;
 
-	std::size_t GetCursor() const;
+	t_index GetCursor() const;
 	const Terminal::t_terminalset& GetLookaheads() const;
 	SymbolPtr GetSymbolAtCursor() const;
 
@@ -73,7 +73,7 @@ public:
 	bool operator!=(const Element& other) const
 	{ return !operator==(other); }
 
-	std::size_t hash(bool only_core = false) const;
+	t_hash hash(bool only_core = false) const;
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Element& elem);
 
@@ -83,20 +83,20 @@ private:
 	WordPtr m_rhs{nullptr};                 // right-hand side of the production rule
 
 	// optional semantic rule
-	std::optional<std::size_t> m_semanticrule{std::nullopt};
+	std::optional<t_semantic_id> m_semanticrule{std::nullopt};
 
-	std::size_t m_rhsidx{0};                // rule index
-	std::size_t m_cursor{0};                // pointing before element at this index
+	t_index m_rhsidx{0};                    // rule index
+	t_index m_cursor{0};                    // pointing before element at this index
 
 	t_dependencies m_lookahead_dependencies{};                     // lookahead dependencies
 	mutable std::optional<Terminal::t_terminalset> m_lookaheads{}; // lookahead symbols
 
 	// cached hash values
-	mutable std::optional<std::size_t> m_hash{ std::nullopt };
-	mutable std::optional<std::size_t> m_hash_core{ std::nullopt };
+	mutable std::optional<t_hash> m_hash{ std::nullopt };
+	mutable std::optional<t_hash> m_hash_core{ std::nullopt };
 
 	// cached transition symbols
-	mutable std::unordered_map<std::size_t, SymbolPtr> m_transition_symbol{};
+	mutable std::unordered_map<t_hash, SymbolPtr> m_transition_symbol{};
 };
 
 

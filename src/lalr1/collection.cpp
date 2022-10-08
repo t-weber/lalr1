@@ -29,12 +29,12 @@
 /**
  * hash a transition element
  */
-std::size_t Collection::HashTransition::operator()(
+t_hash Collection::HashTransition::operator()(
 	const t_transition& trans) const
 {
-	std::size_t hashFrom = std::get<0>(trans)->hash(true);
-	std::size_t hashTo = std::get<1>(trans)->hash(true);
-	std::size_t hashSym = std::get<2>(trans)->hash();
+	t_hash hashFrom = std::get<0>(trans)->hash(true);
+	t_hash hashTo = std::get<1>(trans)->hash(true);
+	t_hash hashSym = std::get<2>(trans)->hash();
 
 	boost::hash_combine(hashFrom, hashTo);
 	boost::hash_combine(hashFrom, hashSym);
@@ -97,6 +97,7 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_transitions = coll.m_transitions;
 	this->m_mapTermIdx = coll.m_mapTermIdx;
 	this->m_mapNonTermIdx = coll.m_mapNonTermIdx;
+	this->m_mapSemanticIdx = coll.m_mapSemanticIdx;
 	this->m_closure_cache = coll.m_closure_cache;
 	this->m_seen_closures = coll.m_seen_closures;
 	this->m_stopOnConflicts = coll.m_stopOnConflicts;
@@ -166,7 +167,7 @@ Collection::t_transitions Collection::GetTransitions(
 Terminal::t_terminalset Collection::GetLookbackTerminals(
 	const ClosurePtr& closure) const
 {
-	m_seen_closures = std::make_shared<std::unordered_set<std::size_t>>();
+	m_seen_closures = std::make_shared<std::unordered_set<t_hash>>();
 	return _GetLookbackTerminals(closure);
 }
 
@@ -195,7 +196,7 @@ Terminal::t_terminalset Collection::_GetLookbackTerminals(
 		else if(closure_from)
 		{
 			// closure not yet seen?
-			std::size_t hash = closure_from->hash();
+			t_hash hash = closure_from->hash();
 			if(!m_seen_closures->contains(hash))
 			{
 				m_seen_closures->insert(hash);
@@ -219,8 +220,10 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 {
 	if(!m_closure_cache)
 	{
-		m_closure_cache = std::make_shared<std::unordered_map<std::size_t, ClosurePtr>>();
-		m_closure_cache->emplace(std::make_pair(closure_from->hash(true), closure_from));
+		m_closure_cache = std::make_shared<
+			std::unordered_map<t_hash, ClosurePtr>>();
+		m_closure_cache->emplace(std::make_pair(
+			closure_from->hash(true), closure_from));
 	}
 
 	const Closure::t_transitions& transitions = closure_from->DoTransitions();
@@ -235,7 +238,7 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 		const ClosurePtr& closure_to = std::get<1>(tup);
 		const Closure::t_elements& elems_from = std::get<2>(tup);
 
-		std::size_t hash_to = closure_to->hash(true);
+		t_hash hash_to = closure_to->hash(true);
 		auto cacheIter = m_closure_cache->find(hash_to);
 		bool new_closure = (cacheIter == m_closure_cache->end());
 
@@ -292,7 +295,8 @@ void Collection::DoTransitions()
 	ReportProgress("Simplified transitions.", true);
 
 	// reports reduce/reduce or shift/reduce conflicts
-	auto report_conflicts = [this](const std::set<std::size_t>& conflicts, const char* ty) -> void
+	auto report_conflicts = [this](
+		const std::set<t_state_id>& conflicts, const char* ty) -> void
 	{
 		if(!conflicts.size())
 			return;
@@ -303,8 +307,8 @@ void Collection::DoTransitions()
 			ostrConflicts << "s";  // plural
 		ostrConflicts << " ";
 
-		std::size_t conflict_idx = 0;
-		for(std::size_t conflict : conflicts)
+		t_index conflict_idx = 0;
+		for(t_index conflict : conflicts)
 		{
 			ostrConflicts << conflict;
 			if(conflict_idx < conflicts.size() - 1)
@@ -337,14 +341,14 @@ void Collection::Simplify()
 		});
 
 	// cleanup closure ids
-	std::unordered_map<std::size_t, std::size_t> idmap{};
-	std::unordered_set<std::size_t> already_seen{};
-	std::size_t newid = 0;
+	std::unordered_map<t_state_id, t_state_id> idmap{};
+	std::unordered_set<t_hash> already_seen{};
+	t_state_id newid{};
 
 	for(const ClosurePtr& closure : m_collection)
 	{
-		std::size_t oldid = closure->GetId();
-		std::size_t hash = closure->hash();
+		t_state_id oldid = closure->GetId();
+		t_hash hash = closure->hash();
 
 		if(already_seen.contains(hash))
 			continue;
@@ -363,9 +367,9 @@ void Collection::Simplify()
 /**
  * tests which closures of the collection have reduce/reduce conflicts
  */
-std::set<std::size_t> Collection::HasReduceConflicts() const
+std::set<t_state_id> Collection::HasReduceConflicts() const
 {
-	std::set<std::size_t> conflicting_closures;
+	std::set<t_state_id> conflicting_closures;
 
 	for(const ClosurePtr& closure : m_collection)
 	{
@@ -380,9 +384,9 @@ std::set<std::size_t> Collection::HasReduceConflicts() const
 /**
  * tests which closures of the collection have shift/reduce conflicts
  */
-std::set<std::size_t> Collection::HasShiftReduceConflicts() const
+std::set<t_state_id> Collection::HasShiftReduceConflicts() const
 {
-	std::set<std::size_t> conflicting_closures;
+	std::set<t_state_id> conflicting_closures;
 
 	for(const ClosurePtr& closure : m_collection)
 	{
@@ -424,20 +428,20 @@ std::set<std::size_t> Collection::HasShiftReduceConflicts() const
 /**
  * get the rule number and length of a partial match
  */
-std::tuple<bool, std::size_t /*rule #*/, std::size_t /*match length*/>
+std::tuple<bool, t_semantic_id /*rule #*/, std::size_t /*match length*/>
 Collection::GetUniquePartialMatch(const Collection::t_elements& elemsFrom)
 {
-	std::unordered_map<std::size_t, ElementPtr> matching_rules{};
+	std::unordered_map<t_semantic_id, ElementPtr> matching_rules{};
 
 	for(const ElementPtr& elemFrom : elemsFrom)
 	{
 		std::size_t match_len = elemFrom->GetCursor();
-		std::optional<std::size_t> rulenr = elemFrom->GetSemanticRule();
+		std::optional<t_semantic_id> rule_id = elemFrom->GetSemanticRule();
 
-		if(match_len == 0 || !rulenr)
+		if(match_len == 0 || !rule_id)
 			continue;
 
-		if(auto iter_match = matching_rules.find(*rulenr);
+		if(auto iter_match = matching_rules.find(*rule_id);
 			iter_match != matching_rules.end())
 		{
 			// longer match with the same rule?
@@ -447,7 +451,7 @@ Collection::GetUniquePartialMatch(const Collection::t_elements& elemsFrom)
 		else
 		{
 			// insert new match
-			matching_rules.emplace(std::make_pair(*rulenr, elemFrom));
+			matching_rules.emplace(std::make_pair(*rule_id, elemFrom));
 		}
 	}
 
@@ -470,7 +474,7 @@ void Collection::CreateTableIndices()
 {
 	// generate table indices for terminals
 	m_mapTermIdx.clear();
-	std::size_t curTermIdx = 0;
+	t_index curTermIdx = 0;
 
 	for(const t_transition& tup : m_transitions)
 	{
@@ -488,9 +492,11 @@ void Collection::CreateTableIndices()
 	m_mapTermIdx.try_emplace(g_end->GetId(), curTermIdx++);
 
 
-	// generate able indices for non-terminals
+	// generate table indices for non-terminals and semantic rules
 	m_mapNonTermIdx.clear();
-	std::size_t curNonTermIdx = 0;
+	m_mapSemanticIdx.clear();
+	t_index curNonTermIdx = 0;
+	t_index curSemanticIdx = 0;
 
 	for(const ClosurePtr& closure : m_collection)
 	{
@@ -499,11 +505,18 @@ void Collection::CreateTableIndices()
 			if(!elem->IsCursorAtEnd())
 				continue;
 
-			std::size_t sym_id = elem->GetLhs()->GetId();
-
+			t_symbol_id sym_id = elem->GetLhs()->GetId();
 			if(auto [iter, inserted] = m_mapNonTermIdx.try_emplace(
 				sym_id, curNonTermIdx); inserted)
 				++curNonTermIdx;
+
+			if(std::optional<t_semantic_id> semantic_id =
+				elem->GetSemanticRule(); semantic_id)
+			{
+				if(auto [iter, inserted] = m_mapSemanticIdx.try_emplace(
+					*semantic_id, curSemanticIdx); inserted)
+					++curSemanticIdx;
+			}
 		}
 	}
 }
@@ -512,19 +525,44 @@ void Collection::CreateTableIndices()
 /**
  * translates symbol id to table index
  */
-std::size_t Collection::GetTableIndex(std::size_t id, bool is_term) const
+t_index Collection::GetTableIndex(t_symbol_id id, IndexTableKind table_kind) const
 {
-	const t_mapIdIdx* map = is_term ? &m_mapTermIdx : &m_mapNonTermIdx;
+	const t_mapIdIdx* map = nullptr;
+	switch(table_kind)
+	{
+		case IndexTableKind::TERMINAL:
+			map = &m_mapTermIdx;
+			break;
+		case IndexTableKind::NONTERMINAL:
+			map = &m_mapNonTermIdx;
+			break;
+		case IndexTableKind::SEMANTIC:
+			map = &m_mapSemanticIdx;
+			break;
+	}
+	if(!map)
+		throw std::runtime_error("Unknown index table selected.");
 
 	auto iter = map->find(id);
 	if(iter == map->end())
 	{
 		std::ostringstream ostrErr;
 		ostrErr << "No table index is available for ";
-		if(is_term)
-			ostrErr << "terminal";
-		else
-			ostrErr << "non-terminal";
+		switch(table_kind)
+		{
+			case IndexTableKind::TERMINAL:
+				ostrErr << "terminal";
+				break;
+			case IndexTableKind::NONTERMINAL:
+				ostrErr << "non-terminal";
+				break;
+			case IndexTableKind::SEMANTIC:
+				ostrErr << "semantic rule";
+				break;
+			default:
+				ostrErr << "<unknown>";
+				break;
+		}
 		ostrErr << " with id " << id << ".";
 		throw std::runtime_error(ostrErr.str());
 	}
@@ -578,12 +616,18 @@ void Collection::SetGenPartialMatches(bool b)
 }
 
 
+void Collection::SetAcceptingRule(t_semantic_id rule_id)
+{
+	m_accepting_rule = rule_id;
+}
+
+
 /**
  * try to solve a shift/reduce conflict
  */
 bool Collection::SolveConflict(
 	const SymbolPtr& sym_at_cursor, const Terminal::t_terminalset& lookbacks,
-	std::size_t* shiftEntry, std::size_t* reduceEntry) const
+	t_index* shiftEntry, t_index* reduceEntry) const
 {
 	// no conflict?
 	if(*shiftEntry==ERROR_VAL || *reduceEntry==ERROR_VAL)
@@ -702,7 +746,7 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 				ofstr << elem->GetLhs()->GetStrId();
 				ofstr << " &#8594; ";
 
-				for(std::size_t rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
+				for(t_index rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
 				{
 					// write cursor symbol
 					if(elem->GetCursor() == rhs_idx)
@@ -723,7 +767,8 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 				if(use_colour)
 					set_colour();
 
-				const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
+				const Terminal::t_terminalset& lookaheads =
+					elem->GetLookaheads();
 				std::size_t lookahead_num = 0;
 				for(const auto& la : lookaheads)
 				{
@@ -741,10 +786,8 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 				if(use_colour)
 					set_colour();
 
-				if(std::optional<std::size_t> rule = elem->GetSemanticRule(); rule)
-				{
+				if(std::optional<t_semantic_id> rule = elem->GetSemanticRule(); rule)
 					ofstr << *rule;
-				}
 
 				if(use_colour)
 					ofstr << "</font>";
@@ -876,7 +919,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 
 		/*const Collection::t_elements& from_elems = std::get<3>(tup);
 		ostr << "Coming from element(s):\n";
-		std::size_t elem_idx = 0;
+		t_index elem_idx = 0;
 		for(const ElementPtr& from_elem : from_elems)
 		{
 			ostr << "\t(" << elem_idx << ") " << *from_elem << "\n";
@@ -949,11 +992,8 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 			for(const auto& la : elem->GetLookaheads())
 				ostrActionReduce << la->GetStrId() << " ";
 			ostrActionReduce << "] = ";
-			if(elem->GetSemanticRule())
-			{
-				ostrActionReduce << "[rule "
-					<< *elem->GetSemanticRule() << "] ";
-			}
+			if(auto rule = elem->GetSemanticRule(); rule)
+				ostrActionReduce << "[rule " << *rule << "] ";
 			ostrActionReduce << elem->GetLhs()->GetStrId()
 				<< " " << g_options.GetArrowChar() << " " << *elem->GetRhs();
 			ostrActionReduce << "\n";

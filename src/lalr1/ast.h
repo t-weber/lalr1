@@ -10,10 +10,13 @@
 
 #include <memory>
 #include <deque>
+#include <unordered_map>
 #include <optional>
 #include <functional>
 
 #include <boost/functional/hash.hpp>
+
+#include "types.h"
 
 
 /**
@@ -82,13 +85,17 @@ private:
 
 // symbol type for semantic rules
 using t_lalrastbaseptr = std::shared_ptr<ASTLALR1Base>;
+
 // argument vector type to pass to semantic rules
 using t_semanticargs = std::deque<t_lalrastbaseptr>;
 
-// semantic rule: returns an ast pointer and gets a vector of ast pointers
+// semantic rule: returns an ast pointer and gets an argument vector
 using t_semanticrule = std::function<
 	t_lalrastbaseptr(bool /*full_match*/,
 	const t_semanticargs& /*args*/)>;
+
+// map of semantic rules to their ids
+using t_semanticrules = std::unordered_map<t_semantic_id, t_semanticrule>;
 
 
 #endif

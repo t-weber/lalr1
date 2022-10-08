@@ -41,31 +41,33 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 
 	// rule number
-	std::size_t semanticindex = 0;
+	t_semantic_id semanticindex = 0;
 
 	// rule 0: start -> expr
 	if(add_rules)
 	{
-		start->AddRule({ expr }, semanticindex++);
+		start->AddRule({ expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[0];
-		});
+		}));
 	}
+	++semanticindex;
+
 
 	// rule 1: expr -> expr + expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_plus, expr }, semanticindex++);
+		expr->AddRule({ expr, op_plus, expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -73,18 +75,19 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_plus->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 2: expr -> expr - expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_minus, expr }, semanticindex++);
+		expr->AddRule({ expr, op_minus, expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -92,18 +95,19 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_minus->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 3: expr -> expr * expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_mult, expr }, semanticindex++);
+		expr->AddRule({ expr, op_mult, expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -111,18 +115,19 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mult->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 4: expr -> expr / expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_div, expr }, semanticindex++);
+		expr->AddRule({ expr, op_div, expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -130,18 +135,19 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_div->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 5: expr -> expr % expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_mod, expr }, semanticindex++);
+		expr->AddRule({ expr, op_mod, expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -149,18 +155,19 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mod->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 6: expr -> expr ^ expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_pow, expr }, semanticindex++);
+		expr->AddRule({ expr, op_pow, expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -169,35 +176,37 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			return std::make_shared<ASTBinary>(
 				expr->GetId(), 0, arg1, arg2, op_pow->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 7: expr -> ( expr )
 	if(add_rules)
 	{
-		expr->AddRule({ bracket_open, expr, bracket_close }, semanticindex++);
+		expr->AddRule({ bracket_open, expr, bracket_close }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[1];
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// function calls
 	// rule 8: expr -> ident()
 	if(add_rules)
 	{
-		expr->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);
+		expr->AddRule({ ident, bracket_open, bracket_close }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -209,18 +218,19 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 
 			return std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 9: expr -> ident(expr)
 	if(add_rules)
 	{
-		expr->AddRule({ ident, bracket_open, expr, bracket_close }, semanticindex++);
+		expr->AddRule({ ident, bracket_open, expr, bracket_close }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -234,19 +244,20 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			funcargs->AddChild(funcarg, false);
 
 			return std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 10: expr -> ident(expr, expr)
 	if(add_rules)
 	{
 		expr->AddRule({ ident, bracket_open, expr, comma, expr, bracket_close },
-			semanticindex++);
+			semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -262,18 +273,19 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			funcargs->AddChild(funcarg1, false);
 
 			return std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 11: expr -> real symbol
 	if(add_rules)
 	{
-		expr->AddRule({ sym_real }, semanticindex++);
+		expr->AddRule({ sym_real }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -283,18 +295,19 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			sym->SetId(expr->GetId());
 			sym->SetTerminalOverride(false);  // expression, no terminal any more
 			return sym;
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 12: expr -> int symbol
 	if(add_rules)
 	{
-		expr->AddRule({ sym_int }, semanticindex++);
+		expr->AddRule({ sym_int }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -304,18 +317,19 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			sym->SetId(expr->GetId());
 			sym->SetTerminalOverride(false);  // expression, no terminal any more
 			return sym;
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 13: expr -> ident
 	if(add_rules)
 	{
-		expr->AddRule({ ident }, semanticindex++);
+		expr->AddRule({ ident }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -325,54 +339,57 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			ident->SetId(expr->GetId());
 			ident->SetTerminalOverride(false);  // expression, no terminal any more
 			return ident;
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 14, unary-: expr -> -expr
 	if(add_rules)
 	{
-		expr->AddRule({ op_minus, expr }, semanticindex++);
+		expr->AddRule({ op_minus, expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
 			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			return std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_minus->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 15, unary+: expr -> +expr
 	if(add_rules)
 	{
-		expr->AddRule({ op_plus, expr }, semanticindex++);
+		expr->AddRule({ op_plus, expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
 			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			return std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_plus->GetId());
-		});
+		}));
 	}
+	++semanticindex;
 
 
 	// rule 16, assignment: expr -> ident = expr
 	/*if(add_rules)
 	{
-		expr->AddRule({ ident, op_assign, expr }, semanticindex++);
+		expr->AddRule({ ident, op_assign, expr }, semanticindex);
 	}
 	if(add_semantics)
 	{
-		rules.emplace_back(
+		rules.emplace(std::make_pair(semanticindex,
 		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
@@ -392,6 +409,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			symname->SetDataType(rhsexpr->GetDataType());
 
 			return std::make_shared<ASTBinary>(expr->GetId(), 0, rhsexpr, symname, op_assign->GetId());
-		});
-	}*/
+		}));
+	}
+	++semanticindex;*/
 }

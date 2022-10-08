@@ -30,7 +30,7 @@ def get_table_id(idx_tab, idx):
 		if theidx == idx:
 			return theid
 
-	raise IndexError("No id for table index {0}.".format(id))
+	raise IndexError("No id for table index {0}.".format(idx))
 	return None
 
 
@@ -44,6 +44,7 @@ def lr1_parse(tables, input_tokens, semantics):
 	jump_tab = tables["jump"]["elems"]
 	termidx_tab = tables["term_idx"]
 	nontermidx_tab = tables["nonterm_idx"]
+	semanticidx_tab = tables["semantic_idx"]
 	numrhs_tab = tables["num_rhs_syms"]
 	lhsidx_tab = tables["lhs_idx"]
 
@@ -62,14 +63,14 @@ def lr1_parse(tables, input_tokens, semantics):
 	while True:
 		top_state = states[-1]
 		new_state = shift_tab[top_state][lookahead_idx]
-		new_rule = reduce_tab[top_state][lookahead_idx]
-		#print(f"States: {states},\nsymbols: {symbols},\nnew state: {new_state}, rule: {new_rule}.\n")
+		rule_idx = reduce_tab[top_state][lookahead_idx]
+		#print(f"States: {states},\nsymbols: {symbols},\nnew state: {new_state}, rule: {rule_idx}.\n")
 
-		if new_state == err_token and new_rule == err_token:
+		if new_state == err_token and rule_idx == err_token:
 			raise RuntimeError("No shift or reduce action defined.")
-		elif new_state != err_token and new_rule != err_token:
+		elif new_state != err_token and rule_idx != err_token:
 			raise RuntimeError("Shift/reduce conflict.")
-		elif new_rule == acc_token:
+		elif rule_idx == acc_token:
 			# accept
 			#print("Accepting.")
 			return symbols[-1] if len(symbols) >= 1 else None
@@ -84,10 +85,12 @@ def lr1_parse(tables, input_tokens, semantics):
 			lookahead = input_tokens[input_index]
 			lookahead_idx = get_table_index(termidx_tab, lookahead[0])
 
-		elif new_rule != err_token:
+		elif rule_idx != err_token:
+			rule_id = get_table_id(semanticidx_tab, rule_idx)
+
 			# reduce
-			num_syms = numrhs_tab[new_rule]
-			lhs_idx = lhsidx_tab[new_rule]
+			num_syms = numrhs_tab[rule_idx]
+			lhs_idx = lhsidx_tab[rule_idx]
 			lhs_id = get_table_id(nontermidx_tab, lhs_idx)
 
 			#print(f"Reducing {num_syms} symbols.")
@@ -97,9 +100,9 @@ def lr1_parse(tables, input_tokens, semantics):
 
 			# apply semantic rule if available
 			rule_ret = None
-			if semantics != None and new_rule < len(semantics):
+			if semantics != None and rule_id in semantics:
 				#print(f"args: {args}")
-				rule_ret = semantics[new_rule](*args)
+				rule_ret = semantics[rule_id](*args)
 
 			# push reduced nonterminal symbol
 			symbols.append({ "is_term" : False, "id" : lhs_id, "val" : rule_ret })

@@ -49,8 +49,8 @@ public:
 	Closure(const Closure& coll);
 	const Closure& operator=(const Closure& coll);
 
-	std::size_t GetId() const;
-	void SetId(std::size_t id);
+	t_state_id GetId() const;
+	void SetId(t_state_id id);
 
 	void AddElement(const ElementPtr& elem);
 	typename t_elements::const_iterator FindElement(
@@ -69,27 +69,27 @@ public:
 	// tests if the closure has a reduce/reduce conflict
 	bool HasReduceConflict() const;
 
-	std::size_t hash(bool only_core = false) const;
+	t_hash hash(bool only_core = false) const;
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Closure& coll);
 
 
 private:
 	t_elements m_elems{};     // lalr(1) elements in the closure
-	std::size_t m_id{0};      // closure id
+	t_state_id m_id{0};       // closure id
 
-	static std::size_t g_id;  // global closure id counter
+	static t_state_id g_id;   // global closure id counter
 
 	// cached hash values
-	mutable std::optional<std::size_t> m_hash{ std::nullopt };
-	mutable std::optional<std::size_t> m_hash_core{ std::nullopt };
+	mutable std::optional<t_hash> m_hash{ std::nullopt };
+	mutable std::optional<t_hash> m_hash_core{ std::nullopt };
 
-	// cached transition symbols
-	mutable std::unordered_map<std::size_t, t_symbolset>
+	// cached transition symbols (key: hash)
+	mutable std::unordered_map<t_hash, t_symbolset>
 		m_cached_transition_symbols {};
 
-	// cached transitions
-	mutable std::unordered_map<std::size_t, t_transitions>
+	// cached transitions (key: hash)
+	mutable std::unordered_map<t_hash, t_transitions>
 		m_cached_transitions {};
 };
 

@@ -33,7 +33,7 @@ public:
 	}
 
 	const NonTerminalPtr& GetStartNonTerminal() const { return start; }
-	const std::vector<t_semanticrule>& GetSemanticRules() const { return rules; }
+	const t_semanticrules& GetSemanticRules() const { return rules; }
 
 
 private:
@@ -49,7 +49,7 @@ private:
 	TerminalPtr sym_real{}, sym_int{}, ident{};
 
 	// semantic rules
-	std::vector<t_semanticrule> rules{};
+	t_semanticrules rules{};
 };
 
 #endif

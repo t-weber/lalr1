@@ -54,36 +54,36 @@ functab_2args = {
 #
 # semantic rules, same as in expr_grammar.cpp
 #
-semantics = [
-	lambda expr : expr["val"],
+semantics = {
+	0: lambda expr : expr["val"],
 
 	# binary arithmetic operations
-	lambda expr1, op_plus, expr2 : expr1["val"] + expr2["val"],
-	lambda expr1, op_minus, expr2 : expr1["val"] - expr2["val"],
-	lambda expr1, op_mult, expr2 : expr1["val"] * expr2["val"],
-	lambda expr1, op_div, expr2 : expr1["val"] / expr2["val"],
-	lambda expr1, op_mod, expr2 : expr1["val"] % expr2["val"],
-	lambda expr1, op_pow, expr2 : expr1["val"] ** expr2["val"],
+	1: lambda expr1, op_plus, expr2 : expr1["val"] + expr2["val"],
+	2: lambda expr1, op_minus, expr2 : expr1["val"] - expr2["val"],
+	3: lambda expr1, op_mult, expr2 : expr1["val"] * expr2["val"],
+	4: lambda expr1, op_div, expr2 : expr1["val"] / expr2["val"],
+	5: lambda expr1, op_mod, expr2 : expr1["val"] % expr2["val"],
+	6: lambda expr1, op_pow, expr2 : expr1["val"] ** expr2["val"],
 
-	lambda bracket_open, expr, bracket_close : expr["val"],
+	7: lambda bracket_open, expr, bracket_close : expr["val"],
 
 	# function calls
-	lambda ident, bracket_open, bracket_close :
+	8: lambda ident, bracket_open, bracket_close :
 		functab_0args[ident["val"]](),
-	lambda ident, bracket_open, expr, bracket_close :
+	9: lambda ident, bracket_open, expr, bracket_close :
 		functab_1arg[ident["val"]](expr["val"]),
-	lambda ident, bracket_open, expr1, comma, expr2, bracket_close :
+	10: lambda ident, bracket_open, expr1, comma, expr2, bracket_close :
 		functab_2args[ident["val"]](expr1["val"], expr2["val"]),
 
 	# symbols
-	lambda sym_real : sym_real["val"],
-	lambda sym_int : sym_int["val"],
-	lambda sym_ident : symtab[sym_ident["val"]],
+	11: lambda sym_real : sym_real["val"],
+	12: lambda sym_int : sym_int["val"],
+	13: lambda sym_ident : symtab[sym_ident["val"]],
 
 	# unary arithmetic operations
-	lambda unary_minus, expr : -expr["val"],
-	lambda unary_plus, expr : +expr["val"],
-]
+	14: lambda unary_minus, expr : -expr["val"],
+	15: lambda unary_plus, expr : +expr["val"],
+}
 
 
 #

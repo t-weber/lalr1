@@ -23,7 +23,7 @@
 
 
 // global closure id counter
-std::size_t Closure::g_id = 0;
+t_state_id Closure::g_id = 0;
 
 
 Closure::Closure() : std::enable_shared_from_this<Closure>{}, m_id{g_id++}
@@ -53,13 +53,13 @@ const Closure& Closure::operator=(const Closure& closure)
 }
 
 
-std::size_t Closure::GetId() const
+t_state_id Closure::GetId() const
 {
 	return m_id;
 }
 
 
-void Closure::SetId(std::size_t id)
+void Closure::SetId(t_state_id id)
 {
 	m_id = id;
 	m_hash = m_hash_core = std::nullopt;
@@ -88,14 +88,14 @@ void Closure::AddElement(const ElementPtr& elem)
 
 	// if the cursor is before a non-terminal, add the rule as element
 	const WordPtr& rhs = elem->GetRhs();
-	const std::size_t cursor = elem->GetCursor();
+	const t_index cursor = elem->GetCursor();
 	if(cursor < rhs->size() && !(*rhs)[cursor]->IsTerminal())
 	{
 		// get non-terminal at cursor
 		const NonTerminalPtr& nonterm = std::dynamic_pointer_cast<NonTerminal>((*rhs)[cursor]);
 
 		// iterate all rules of the non-terminal
-		for(std::size_t nonterm_ruleidx=0; nonterm_ruleidx<nonterm->NumRules(); ++nonterm_ruleidx)
+		for(t_index nonterm_ruleidx=0; nonterm_ruleidx<nonterm->NumRules(); ++nonterm_ruleidx)
 		{
 			ElementPtr newelem = std::make_shared<Element>(nonterm, nonterm_ruleidx, 0);
 			newelem->AddLookaheadDependency(elem, true);
@@ -141,7 +141,7 @@ ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
 {
 	for(const ElementPtr& theelem : m_elems)
 	{
-		std::size_t cursor = theelem->GetCursor();
+		t_index cursor = theelem->GetCursor();
 		const WordPtr& rhs = theelem->GetRhs();
 
 		if(!rhs || cursor >= rhs->NumSymbols())
@@ -160,7 +160,7 @@ ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
 const Closure::t_symbolset& Closure::GetPossibleTransitionSymbols() const
 {
 	// transition symbols of closure core already calculated?
-	std::size_t hashval = hash(true);
+	t_hash hashval = hash(true);
 	if(auto iter = m_cached_transition_symbols.find(hashval);
 		iter != m_cached_transition_symbols.end())
 		return iter->second;
@@ -187,7 +187,7 @@ void Closure::AddLookaheadDependencies(const ClosurePtr& closure)
 {
 	for(const ElementPtr& elem : m_elems)
 	{
-		std::size_t elem_hash = elem->hash(true);
+		t_hash elem_hash = elem->hash(true);
 
 		// find the element whose core has the same hash
 		if(auto iter = std::find_if(closure->m_elems.begin(), closure->m_elems.end(),
@@ -249,7 +249,7 @@ Closure::DoTransition(const SymbolPtr& transsym) const
  */
 const Closure::t_transitions& Closure::DoTransitions() const
 {
-	std::size_t hashval = hash(true);
+	t_hash hashval = hash(true);
 	auto iter = m_cached_transitions.find(hashval);
 
 	// transitions not yet calculated?
@@ -303,7 +303,7 @@ bool Closure::HasReduceConflict() const
 /**
  * calculates a unique hash for the closure (with or without lookaheads)
  */
-std::size_t Closure::hash(bool only_core) const
+t_hash Closure::hash(bool only_core) const
 {
 	if(m_hash && !only_core)
 		return *m_hash;
@@ -311,19 +311,19 @@ std::size_t Closure::hash(bool only_core) const
 		return *m_hash_core;
 
 	// sort element hashes before combining them
-	std::deque<std::size_t> hashes;
+	std::deque<t_hash> hashes;
 
 	for(const ElementPtr& elem : m_elems)
 		hashes.emplace_back(elem->hash(only_core));
 
 	std::sort(hashes.begin(), hashes.end(),
-		[](std::size_t hash1, std::size_t hash2) -> bool
+		[](t_hash hash1, t_hash hash2) -> bool
 		{
 			return hash1 < hash2;
 		});
 
-	std::size_t fullhash = 0;
-	for(std::size_t hash : hashes)
+	t_hash fullhash = 0;
+	for(t_hash hash : hashes)
 		boost::hash_combine(fullhash, hash);
 
 	if(only_core)

@@ -22,7 +22,7 @@
 #include <boost/functional/hash.hpp>
 
 
-Element::Element(const NonTerminalPtr& lhs, std::size_t rhsidx, std::size_t cursor,
+Element::Element(const NonTerminalPtr& lhs, t_index rhsidx, t_index cursor,
 	const Terminal::t_terminalset& la)
 	: Element{lhs, rhsidx, cursor}
 {
@@ -30,7 +30,7 @@ Element::Element(const NonTerminalPtr& lhs, std::size_t rhsidx, std::size_t curs
 }
 
 
-Element::Element(const NonTerminalPtr& lhs, std::size_t rhsidx, std::size_t cursor)
+Element::Element(const NonTerminalPtr& lhs, t_index rhsidx, t_index cursor)
 	: std::enable_shared_from_this<Element>{},
 		m_lhs{lhs}, m_rhs{lhs->GetRule(rhsidx)},
 		m_semanticrule{lhs->GetSemanticRule(rhsidx)},
@@ -74,13 +74,13 @@ const WordPtr& Element::GetRhs() const
 }
 
 
-std::optional<std::size_t> Element::GetSemanticRule() const
+std::optional<t_semantic_id> Element::GetSemanticRule() const
 {
 	return m_semanticrule;
 }
 
 
-std::size_t Element::GetCursor() const
+t_index Element::GetCursor() const
 {
 	return m_cursor;
 }
@@ -127,16 +127,16 @@ bool Element::operator==(const Element& other) const
 /**
  * calculates a unique hash for the closure element (with or without lookaheads)
  */
-std::size_t Element::hash(bool only_core) const
+t_hash Element::hash(bool only_core) const
 {
 	if(m_hash && !only_core)
 		return *m_hash;
 	if(m_hash_core && only_core)
 		return *m_hash_core;
 
-	std::size_t hashLhs = this->GetLhs()->hash();
-	std::size_t hashRhs = this->GetRhs()->hash();
-	std::size_t hashCursor = std::hash<std::size_t>{}(this->GetCursor());
+	t_hash hashLhs = this->GetLhs()->hash();
+	t_hash hashRhs = this->GetRhs()->hash();
+	t_hash hashCursor = std::hash<t_index>{}(this->GetCursor());
 
 	boost::hash_combine(hashLhs, hashRhs);
 	boost::hash_combine(hashLhs, hashCursor);
@@ -145,7 +145,7 @@ std::size_t Element::hash(bool only_core) const
 	{
 		for(const TerminalPtr& la : GetLookaheads())
 		{
-			std::size_t hashLA = la->hash();
+			t_hash hashLA = la->hash();
 			boost::hash_combine(hashLhs, hashLA);
 		}
 
@@ -166,7 +166,7 @@ SymbolPtr Element::GetSymbolAtCursor() const
 	if(!rhs)
 		return nullptr;
 
-	std::size_t cursor = GetCursor();
+	t_index cursor = GetCursor();
 	if(cursor >= rhs->NumSymbols())
 		return nullptr;
 
@@ -240,7 +240,7 @@ void Element::ResolveLookaheads()
 		elem->ResolveLookaheads();
 		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
 		const WordPtr& rhs = elem->GetRhs();
-		const std::size_t cursor = elem->GetCursor();
+		const t_index cursor = elem->GetCursor();
 
 		// iterate lookaheads
 		for(const TerminalPtr& la : nonterm_la)
@@ -266,13 +266,12 @@ void Element::ResolveLookaheads()
 const SymbolPtr& Element::GetPossibleTransitionSymbol() const
 {
 	// transition symbol already cached?
-	std::size_t hashval = hash(true);
+	t_hash hashval = hash(true);
 	auto iter = m_transition_symbol.find(hashval);
 	if(iter != m_transition_symbol.end())
 		return iter->second;
 
-	std::size_t skip_eps = 0;
-
+	t_index skip_eps = 0;
 	while(true)
 	{
 		// at the end of the rule?
@@ -316,7 +315,7 @@ void Element::AdvanceCursor()
  */
 bool Element::IsCursorAtEnd() const
 {
-	std::size_t skip_eps = 0;
+	t_index skip_eps = 0;
 	for(skip_eps = 0; skip_eps + m_cursor < m_rhs->size(); ++skip_eps)
 	{
 		const SymbolPtr& sym = (*m_rhs)[m_cursor + skip_eps];
@@ -359,7 +358,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 
 	// core element
 	ostr << lhs->GetStrId() << " " << g_options.GetArrowChar() << " [ ";
-	for(std::size_t rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
+	for(t_index rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
 	{
 		if(elem.GetCursor() == rhs_idx)
 			ostr << g_options.GetCursorChar();
@@ -382,7 +381,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		ostr << la->GetStrId() << " ";
 
 	// semantic rule
-	if(std::optional<std::size_t> rule = elem.GetSemanticRule(); rule)
+	if(std::optional<t_semantic_id> rule = elem.GetSemanticRule(); rule)
 		ostr << " " << g_options.GetSeparatorChar() << " rule " << *rule << " ";
 
 	ostr << "]";
