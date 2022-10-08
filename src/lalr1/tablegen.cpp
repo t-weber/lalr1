@@ -21,6 +21,7 @@
 #include <fstream>
 #include <algorithm>
 #include <unordered_map>
+#include <type_traits>
 
 #include <boost/functional/hash.hpp>
 #include <boost/algorithm/string.hpp>
@@ -66,7 +67,7 @@ bool Collection::CreateParseTables()
 
 	// set a table item
 	auto set_tab_elem = [](std::vector<std::size_t>& vec, t_index idx,
-		std::size_t val, std::size_t filler = ERROR_VAL) -> void
+		std::size_t val, t_index filler = ERROR_VAL) -> void
 	{
 		if(vec.size() <= idx)
 			vec.resize(idx+1, filler);
@@ -294,10 +295,26 @@ bool Collection::SaveParseTablesCXX(const std::string& file) const
 	ofstr <<"namespace _lalr1_tables {\n\n";
 
 	// save constants
-	ofstr << "const constexpr std::size_t err = " << ERROR_VAL << ";\n";
-	ofstr << "const constexpr std::size_t acc = " << ACCEPT_VAL << ";\n";
-	ofstr << "const constexpr t_symbol_id eps = " << EPS_IDENT << ";\n";
-	ofstr << "const constexpr t_symbol_id end = " << END_IDENT << ";\n";
+	ofstr << "const constexpr t_index err = 0x" << std::hex << ERROR_VAL << std::dec;
+	if constexpr(std::is_unsigned_v<t_index>)
+		ofstr << "u";
+	ofstr << ";\n";
+
+	ofstr << "const constexpr t_index acc = 0x" << std::hex << ACCEPT_VAL << std::dec;
+	if constexpr(std::is_unsigned_v<t_index>)
+		ofstr << "u";
+	ofstr << ";\n";
+
+	ofstr << "const constexpr t_symbol_id eps = 0x" << std::hex << EPS_IDENT << std::dec;
+	if constexpr(std::is_unsigned_v<t_symbol_id>)
+		ofstr << "u";
+	ofstr << ";\n";
+
+	ofstr << "const constexpr t_symbol_id end = 0x" << std::hex << END_IDENT << std::dec;
+	if constexpr(std::is_unsigned_v<t_symbol_id>)
+		ofstr << "u";
+	ofstr << ";\n";
+
 	ofstr << "\n";
 
 	// save lalr(1) tables
@@ -319,9 +336,9 @@ bool Collection::SaveParseTablesCXX(const std::string& file) const
 	for(const auto& [id, idx] : m_mapTermIdx)
 	{
 		ofstr << "\t{ ";
-		if(id == t_symbol_id(EPS_IDENT))
+		if(id == EPS_IDENT)
 			ofstr << "eps";
-		else if(id == t_symbol_id(END_IDENT))
+		else if(id == END_IDENT)
 			ofstr << "end";
 		else if(m_useOpChar && std::isprint(id))
 			ofstr << "'" << char(id) << "'";
@@ -418,6 +435,10 @@ bool Collection::SaveParseTablesJSON(const std::string& file) const
 	// constants
 	ofstr << "\n\"consts\" : {\n";
 	//ofstr << "\t\"acc_rule\" : " << m_accepting_rule << ",\n";
+	/*ofstr << "\t\"err\" : 0x" << std::hex << ERROR_VAL << std::dec << ",\n";
+	ofstr << "\t\"acc\" : 0x" << std::hex << ACCEPT_VAL << std::dec << ",\n";
+	ofstr << "\t\"eps\" : 0x" << std::hex << EPS_IDENT << std::dec << ",\n";
+	ofstr << "\t\"end\" : 0x" << std::hex << END_IDENT << std::dec << "\n";*/
 	ofstr << "\t\"err\" : " << ERROR_VAL << ",\n";
 	ofstr << "\t\"acc\" : " << ACCEPT_VAL << ",\n";
 	ofstr << "\t\"eps\" : " << EPS_IDENT << ",\n";

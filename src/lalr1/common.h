@@ -11,15 +11,16 @@
 #include "table.h"
 #include "ast.h"
 
+#include <limits>
 #include <vector>
 #include <unordered_map>
 
 
-#define ERROR_VAL  0xffffffff  /* 'error' table entry */
-#define ACCEPT_VAL 0xfffffffe  /* 'accept' table entry */
+const constinit t_index ERROR_VAL = std::numeric_limits<t_index>::max();     // 'error' table entry
+const constinit t_index ACCEPT_VAL = std::numeric_limits<t_index>::max()-1;  // 'accept' table entry
 
-#define EPS_IDENT  0xffffff00  /* epsilon token id*/
-#define END_IDENT  0xffffff01  /* end token id*/
+const constinit t_symbol_id EPS_IDENT = std::numeric_limits<t_symbol_id>::max()-2;  // epsilon token id
+const constinit t_symbol_id END_IDENT = std::numeric_limits<t_symbol_id>::max()-3;  // end token id
 
 
 // (input) token types

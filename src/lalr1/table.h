@@ -178,6 +178,11 @@ public:
 			ostr << "\t\t[ ";
 			for(std::size_t col=0; col<size2(); ++col)
 			{
+				/*T entry = operator()(row, col);
+				if(entry == m_errorval || entry == m_acceptval)
+					ostr << "0x" << std::hex << entry << std::dec;
+				else
+					ostr << entry;*/
 				ostr << operator()(row, col);
 				if(col < size2()-1)
 					ostr << ",";
@@ -222,9 +227,9 @@ private:
 	container_type m_data{};
 	std::size_t m_rowsize{}, m_colsize{};
 
-	T m_errorval{0};
-	T m_acceptval{0};
-	T m_fillval{0};
+	T m_errorval{};
+	T m_acceptval{};
+	T m_fillval{};
 };
 
 

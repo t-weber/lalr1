@@ -23,6 +23,7 @@
 #include <fstream>
 #include <algorithm>
 #include <unordered_map>
+#include <type_traits>
 
 #include <boost/functional/hash.hpp>
 #include <boost/algorithm/string.hpp>
@@ -837,12 +838,18 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 	std::string incl = "#include \"" + filename_h + "\"";
 	std::string time_stamp = get_timestamp();
 
+	t_symbol_id end_id = g_end->GetId();
+	std::ostringstream end_id_ostr;
+	end_id_ostr << "0x" << std::hex << end_id;
+	if constexpr(std::is_unsigned_v<t_symbol_id>)
+		end_id_ostr << "u";
+
 	boost::replace_all(outfile_cpp, "%%PARSER_CLASS%%", class_name);
 	boost::replace_all(outfile_h, "%%PARSER_CLASS%%", class_name);
 	boost::replace_all(outfile_cpp, "%%INCLUDE_HEADER%%", incl);
 	boost::replace_all(outfile_cpp, "%%DEFINE_CLOSURES%%", ostr_cpp.str());
 	boost::replace_all(outfile_h, "%%DECLARE_CLOSURES%%", ostr_h.str());
-	boost::replace_all(outfile_h, "%%END_ID%%", std::to_string(g_end->GetId()));
+	boost::replace_all(outfile_h, "%%END_ID%%", end_id_ostr.str());
 	boost::replace_all(outfile_cpp, "%%TIME_STAMP%%", time_stamp);
 	boost::replace_all(outfile_h, "%%TIME_STAMP%%", time_stamp);
 
