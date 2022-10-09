@@ -13,6 +13,7 @@
 
 #include <sstream>
 #include <unordered_set>
+#include <optional>
 #include <functional>
 
 #include <boost/functional/hash.hpp>
@@ -107,12 +108,16 @@ static void print_stacks(const ParseStack<t_state_id>& states,
  * debug output of current token
  */
 static void print_input_token(t_index inputidx, const t_toknode& curtok,
-	std::ostream& ostr)
+	std::ostream& ostr, std::optional<t_symbol_id> end = std::nullopt)
 {
-	ostr << "\tCurrent token [" << inputidx-1 << "]"
-		<< ": " << curtok->GetId();
-	if(std::isprint(curtok->GetId()))
-		ostr << " = '" << char(curtok->GetId()) << "'";
+	t_symbol_id curtok_id = curtok->GetId();
+	ostr << "\tCurrent token [" << inputidx-1 << "]" << ": ";
+	if(end && curtok_id == *end)
+		ostr << "end";
+	else
+		ostr << curtok_id;
+	if(std::isprint(curtok_id))
+		ostr << " = '" << char(curtok_id) << "'";
 	ostr << " (terminal index " << curtok->GetTableIndex() << ")."
 		<< std::endl;
 };
@@ -243,10 +248,10 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 
 		// debug-print the current parser state
 		auto print_active_state = [&topstate, &inputidx, &curtok,
-			&states, &symbols](std::ostream& ostr)
+			&states, &symbols, this](std::ostream& ostr)
 		{
 			ostr << "\nState " << topstate << " active." << std::endl;
-			print_input_token(inputidx, curtok, ostr);
+			print_input_token(inputidx, curtok, ostr, m_end);
 			print_stacks(states, symbols, ostr);
 		};
 

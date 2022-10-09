@@ -151,6 +151,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 	bool colours = false;
 	bool ascii = false;
 	bool write_graph = false;
+	bool name_states = false;
 	bool show_help = false;
 
 	args::options_description arg_descr("Script parser generator arguments");
@@ -163,6 +164,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 		("noerror,e", args::bool_switch(&no_error_code), "disable generation of error handling code for parser")
 		("colours,c", args::bool_switch(&colours), "enable colours in output")
 		("ascii,o", args::bool_switch(&ascii), "only use ascii characters in output")
+		("names,n", args::bool_switch(&name_states), "name state functions")
 		("help,h", args::bool_switch(&show_help), "show help");
 
 	auto argparser = args::command_line_parser{argc, argv};
@@ -189,6 +191,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 
 	g_options.SetUseColour(colours);
 	g_options.SetUseAsciiChars(ascii);
+	g_options.SetUseStateNames(name_states);
 
 	if(!create_asc && !create_tables)
 	{

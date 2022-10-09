@@ -12,10 +12,11 @@
 /**
  * print using colours
  */
+bool Options::GetUseColour() const
+{ return m_useColour; }
+
 void Options::SetUseColour(bool b)
-{
-	m_useColour = b;
-}
+{ m_useColour = b; }
 
 
 /**
@@ -31,87 +32,55 @@ void Options::SetUseAsciiChars(bool b)
 }
 
 
-bool Options::GetUseColour() const
-{
-	return m_useColour;
-}
+/**
+ * use non-terminal names for closures functions
+ */
+bool Options::GetUseStateNames() const
+{ return m_useStateNames; }
+
+void Options::SetUseStateNames(bool b)
+{ m_useStateNames = b; }
 
 
 const std::string& Options::GetShiftColour() const
-{
-	return m_shift_col;
-}
-
+{ return m_shift_col; }
 
 const std::string& Options::GetReduceColour() const
-{
-	return m_reduce_col;
-}
-
+{ return m_reduce_col; }
 
 const std::string& Options::GetJumpColour() const
-{
-	return m_jump_col;
-}
-
+{ return m_jump_col; }
 
 const std::string& Options::GetTermShiftColour() const
-{
-	return m_term_shift_col;
-}
-
+{ return m_term_shift_col; }
 
 const std::string& Options::GetTermReduceColour() const
-{
-	return m_term_reduce_col;
-}
-
+{ return m_term_reduce_col; }
 
 const std::string& Options::GetTermJumpColour() const
-{
-	return m_term_jump_col;
-}
-
+{ return m_term_jump_col; }
 
 const std::string& Options::GetTermNoColour() const
-{
-	return m_term_no_col;
-}
-
+{ return m_term_no_col; }
 
 const std::string& Options::GetTermBoldColour() const
-{
-	return m_term_bold_col;
-}
+{ return m_term_bold_col; }
 
 
 const std::string& Options::GetCursorChar() const
-{
-	return m_useAsciiChars ? m_cursor_asc : m_cursor;
-}
-
+{ return m_useAsciiChars ? m_cursor_asc : m_cursor; }
 
 const std::string& Options::GetArrowChar() const
-{
-	return m_useAsciiChars ? m_arrow_asc : m_arrow;
-}
-
+{ return m_useAsciiChars ? m_arrow_asc : m_arrow; }
 
 const std::string& Options::GetSeparatorChar() const
-{
-	return m_useAsciiChars ? m_sep_asc : m_sep;
-}
-
+{ return m_useAsciiChars ? m_sep_asc : m_sep; }
 
 const std::string& Options::GetEpsilonChar() const
-{
-	return m_useAsciiChars ? m_eps_asc : m_eps;
-}
+{ return m_useAsciiChars ? m_eps_asc : m_eps; }
 
 const std::string& Options::GetEndChar() const
-{
-	return m_useAsciiChars ? m_end_asc : m_end;
-}
+{ return m_useAsciiChars ? m_end_asc : m_end; }
 
 
 Options g_options{};

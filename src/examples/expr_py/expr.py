@@ -9,12 +9,16 @@
 #	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
 #
 
+use_tables = True
+
+
 import sys
 import json
 import math
 import random
 
 import lexer
+
 import parser
 #import expr_parser
 
@@ -52,37 +56,58 @@ functab_2args = {
 
 
 #
+# semantic ids
+#
+start_id    = 100
+brackets_id = 101
+add_id      = 200
+sub_id      = 201
+mul_id      = 202
+div_id      = 203
+mod_id      = 204
+pow_id      = 205
+uadd_id     = 210
+usub_id     = 211
+call0_id    = 300
+call1_id    = 301
+call2_id    = 302
+real_id     = 400
+int_id      = 401
+ident_id    = 410
+assign_id   = 500
+
+
+#
 # semantic rules, same as in expr_grammar.cpp
 #
 semantics = {
-	0: lambda expr : expr["val"],
+	start_id: lambda expr : expr["val"],
+	brackets_id: lambda bracket_open, expr, bracket_close : expr["val"],
 
 	# binary arithmetic operations
-	1: lambda expr1, op_plus, expr2 : expr1["val"] + expr2["val"],
-	2: lambda expr1, op_minus, expr2 : expr1["val"] - expr2["val"],
-	3: lambda expr1, op_mult, expr2 : expr1["val"] * expr2["val"],
-	4: lambda expr1, op_div, expr2 : expr1["val"] / expr2["val"],
-	5: lambda expr1, op_mod, expr2 : expr1["val"] % expr2["val"],
-	6: lambda expr1, op_pow, expr2 : expr1["val"] ** expr2["val"],
+	add_id: lambda expr1, op_plus, expr2 : expr1["val"] + expr2["val"],
+	sub_id: lambda expr1, op_minus, expr2 : expr1["val"] - expr2["val"],
+	mul_id: lambda expr1, op_mult, expr2 : expr1["val"] * expr2["val"],
+	div_id: lambda expr1, op_div, expr2 : expr1["val"] / expr2["val"],
+	mod_id: lambda expr1, op_mod, expr2 : expr1["val"] % expr2["val"],
+	pow_id: lambda expr1, op_pow, expr2 : expr1["val"] ** expr2["val"],
 
-	7: lambda bracket_open, expr, bracket_close : expr["val"],
+	# unary arithmetic operations
+	uadd_id: lambda unary_plus, expr : +expr["val"],
+	usub_id: lambda unary_minus, expr : -expr["val"],
 
 	# function calls
-	8: lambda ident, bracket_open, bracket_close :
+	call0_id: lambda ident, bracket_open, bracket_close :
 		functab_0args[ident["val"]](),
-	9: lambda ident, bracket_open, expr, bracket_close :
+	call1_id: lambda ident, bracket_open, expr, bracket_close :
 		functab_1arg[ident["val"]](expr["val"]),
-	10: lambda ident, bracket_open, expr1, comma, expr2, bracket_close :
+	call2_id: lambda ident, bracket_open, expr1, comma, expr2, bracket_close :
 		functab_2args[ident["val"]](expr1["val"], expr2["val"]),
 
 	# symbols
-	11: lambda sym_real : sym_real["val"],
-	12: lambda sym_int : sym_int["val"],
-	13: lambda sym_ident : symtab[sym_ident["val"]],
-
-	# unary arithmetic operations
-	14: lambda unary_minus, expr : -expr["val"],
-	15: lambda unary_plus, expr : +expr["val"],
+	real_id: lambda sym_real : sym_real["val"],
+	int_id: lambda sym_int : sym_int["val"],
+	ident_id: lambda sym_ident : symtab[sym_ident["val"]],
 }
 
 
@@ -118,11 +143,11 @@ def main(args):
 			input_tokens = lexer.get_tokens(input_str)
 			input_tokens.append([end_token])
 
+			result = parser.lr1_parse(tables, input_tokens, semantics)
 			#parser = expr_parser.Parser()
 			#parser.input_tokens = input_tokens
 			#parser.semantics = semantics
 			#result = parser.parse()
-			result = parser.lr1_parse(tables, input_tokens, semantics)
 			if result != None:
 				print(result["val"])
 			else:

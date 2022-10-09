@@ -41,6 +41,7 @@ public:
 	void SetSemanticIdxMap(const t_mapSemanticIdIdx* map);
 	void SetSemanticRules(const t_semanticrules* rules) { m_semantics = rules; }
 
+	void SetEndId(t_symbol_id id) { m_end = id; }
 	void SetDebug(bool b) { m_debug = b; }
 
 	t_lalrastbaseptr Parse(const t_toknodes& input) const;
@@ -85,6 +86,9 @@ private:
 
 	// semantic rules
 	const t_semanticrules *m_semantics{nullptr};
+
+	// end token id
+	t_symbol_id m_end{END_IDENT};
 
 	// debug output
 	bool m_debug{false};

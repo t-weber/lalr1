@@ -88,7 +88,7 @@ static void lr1_create_parser()
 		};
 
 		Collection collsLALR{ closure };
-		collsLALR.SetAcceptingRule(0);
+		collsLALR.SetAcceptingRule(static_cast<t_semantic_id>(Semantics::START));
 		collsLALR.SetProgressObserver(progress);
 		collsLALR.DoTransitions();
 
@@ -124,6 +124,8 @@ int main()
 	std::ios_base::sync_with_stdio(false);
 
 	g_options.SetUseColour(true);
+	g_options.SetUseStateNames(true);
+
 	lr1_create_parser();
 	return 0;
 }

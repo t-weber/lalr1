@@ -17,6 +17,9 @@ public:
 	void SetUseColour(bool b = true);
 	bool GetUseColour() const;
 
+	bool GetUseStateNames() const;
+	void SetUseStateNames(bool b = true);
+
 	void SetUseAsciiChars(bool b = true);
 
 	const std::string& GetShiftColour() const;
@@ -40,6 +43,7 @@ private:
 	// flags
 	bool m_useColour{true};
 	bool m_useAsciiChars{false};
+	bool m_useStateNames{false};
 
 	// colours
 	std::string m_shift_col{"#ff0000"};

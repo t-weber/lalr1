@@ -19,7 +19,7 @@
 #include "lalr1/common.h"
 
 
-using t_tok = std::size_t;
+using t_tok = t_symbol_id;
 
 // [ token, lvalue, line number ]
 using t_lexer_match = std::tuple<t_tok, t_lval, std::size_t>;

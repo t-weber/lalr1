@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <type_traits>
+#include <regex>
 
 #include <boost/functional/hash.hpp>
 #include <boost/algorithm/string.hpp>
@@ -36,7 +37,9 @@
  */
 bool Collection::SaveParser(const std::string& filename_cpp, const std::string& class_name) const
 {
+	// --------------------------------------------------------------------------------
 	// output header file stub
+	// --------------------------------------------------------------------------------
 	std::string outfile_h = R"raw(/*
  * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
@@ -109,9 +112,12 @@ private:
 };
 
 #endif)raw";
+	// --------------------------------------------------------------------------------
 
 
+	// --------------------------------------------------------------------------------
 	// output cpp file stub
+	// --------------------------------------------------------------------------------
 	std::string outfile_cpp = R"raw(/*
  * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
@@ -227,7 +233,11 @@ void %%PARSER_CLASS%%::DebugMessageState(t_state_id state_id,
 		<< "..." << std::endl;
 	if(m_lookahead)
 	{
-		std::cout << "Lookahead [" << m_lookahead_idx << "]: " << m_lookahead_id;
+		std::cout << "Lookahead [" << m_lookahead_idx << "]: ";
+		if(m_lookahead_id == s_end_id)
+			std::cout << "end";
+		else
+			std::cout << m_lookahead_id;
 		if(std::isprint(m_lookahead_id))
 			std::cout << " = '" << char(m_lookahead_id) << "'";
 		std::cout << "." << std::endl;
@@ -320,7 +330,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const t_semanticrules* rules)
 		m_symbols.pop();
 
 	GetNextLookahead();
-	state_0(0xffffffff /* random seed value */);
+	%%START_STATE%%(0xffffffff /* random seed value */);
 
 	if(m_symbols.size() && m_accepted)
 		return m_symbols.top();
@@ -395,6 +405,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 }
 
 %%DEFINE_CLOSURES%%)raw";
+	// --------------------------------------------------------------------------------
 
 
 	std::string filename_h = boost::replace_last_copy(filename_cpp, ".cpp", ".h");
@@ -413,12 +424,62 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 
 	// generate closures
 	bool use_col_saved = g_options.GetUseColour();
+	bool use_names = g_options.GetUseStateNames();
+	g_options.SetUseColour(false);
 
 	std::ostringstream ostr_h, ostr_cpp;
-	g_options.SetUseColour(false);
+
+	// create the names of the closure functions
+	std::regex regex_ident("[_A-Za-z][_A-Za-z0-9]*");
+	std::unordered_map<t_state_id, std::string> closure_names;
+	std::unordered_map<std::string, std::size_t> name_counts;
 
 	for(const ClosurePtr& closure : m_collection)
 	{
+		bool name_valid = false;
+		std::ostringstream closure_name;
+
+		const t_state_id closure_id = closure->GetId();
+		const Closure::t_elements& elems = closure->GetElements();
+
+		if(use_names && elems.size())
+		{
+			// name the state function
+			const std::string& lhsname = (*elems.begin())->GetLhs()->GetStrId();
+			std::size_t name_count = 0;
+
+			if(auto iter_ctr = name_counts.find(lhsname); iter_ctr != name_counts.end())
+			{
+				++iter_ctr->second;
+				name_count = iter_ctr->second;
+			}
+			else
+			{
+				name_counts.emplace(std::make_pair(lhsname, 0));
+				name_count = 0;
+			}
+
+			closure_name << lhsname << "_" << name_count;
+			// checks if the name is a valid C++ identifier
+			name_valid = std::regex_match(closure_name.str(), regex_ident);
+		}
+
+		if(!name_valid)
+		{
+			// use an anonymous state function name
+			closure_name = std::ostringstream{};
+			closure_name << "state_" << closure_id;
+		}
+
+		closure_names[closure_id] = closure_name.str();
+	}
+
+	// create closure functions
+	for(const ClosurePtr& closure : m_collection)
+	{
+		const t_state_id closure_id = closure->GetId();
+		const std::string& closure_name = closure_names[closure_id];
+
 		std::optional<Terminal::t_terminalset> lookbacks;
 
 		// write comment
@@ -469,17 +530,17 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 
 		ostr_cpp << "*/\n";  // end comment
 
-
 		// write closure function
-		ostr_cpp << "void " << class_name << "::state_" << closure->GetId() << "(t_hash state_hash)\n";
+		ostr_cpp << "void " << class_name << "::"
+			<< closure_name << "(t_hash state_hash)\n";
 		ostr_cpp << "{\n";
-		t_hash hash_id = std::hash<t_state_id>{}(closure->GetId());
+		t_hash hash_id = std::hash<t_state_id>{}(closure_id);
 		ostr_cpp << "\tboost::hash_combine(state_hash, " << hash_id << ");\n";
 
 		if(m_genDebugCode)
 		{
 			ostr_cpp << "\tif(m_debug)\n";
-			ostr_cpp << "\t\tDebugMessageState(" << closure->GetId()
+			ostr_cpp << "\t\tDebugMessageState(" << closure_id
 				<< ", __PRETTY_FUNCTION__"
 				<< ", state_hash);\n";
 		}
@@ -539,8 +600,10 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			ostr_shift << "\t\t{\n";
 			if(has_partial)
 				ostr_shift << ostr_partial.str();
+
+			const std::string& closure_to_name = closure_names[closure_to->GetId()];
 			ostr_shift << "\t\t\tnext_state = &" << class_name
-				<< "::state_" << closure_to->GetId() << ";\n";
+				<< "::" << closure_to_name << ";\n";
 			ostr_shift << "\t\t\tbreak;\n";
 			ostr_shift << "\t\t}\n";  // end case
 
@@ -655,7 +718,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 					{
 						std::ostringstream ostrErr;
 						ostrErr << "Shift/reduce conflict detected"
-							<< " in state " << closure->GetId();
+							<< " in state " << closure_id;
 						if(conflictelem)
 							ostrErr << ":\n\t" << *conflictelem << "\n";
 						if(lookbacks->size())
@@ -730,7 +793,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			// default: error
 			ostr_cpp << "\t\tdefault:\n";
 			ostr_cpp << "\t\t{\n";
-			ostr_cpp << "\t\t\tTransitionError(" << closure->GetId() << ");\n";
+			ostr_cpp << "\t\t\tTransitionError(" << closure_id << ");\n";
 			ostr_cpp << "\t\t\tbreak;\n";
 			ostr_cpp << "\t\t}\n";
 		}
@@ -796,7 +859,9 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			ostr_cpp_while << "\t\t\t{\n";
 			if(has_partial)
 				ostr_cpp_while << ostr_partial.str();
-			ostr_cpp_while << "\t\t\t\tstate_" << closure_to->GetId() << "(state_hash);\n";
+
+			const std::string& closure_to_name = closure_names[closure_to->GetId()];
+			ostr_cpp_while << "\t\t\t\t" << closure_to_name << "(state_hash);\n";
 			ostr_cpp_while << "\t\t\t\tbreak;\n";
 			ostr_cpp_while << "\t\t\t}\n";
 
@@ -807,7 +872,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		{
 			ostr_cpp_while << "\t\t\tdefault:\n";
 			ostr_cpp_while << "\t\t\t{\n";
-			ostr_cpp_while << "\t\t\t\tTransitionError(" << closure->GetId() << ");\n";
+			ostr_cpp_while << "\t\t\t\tTransitionError(" << closure_id << ");\n";
 			ostr_cpp_while << "\t\t\t\tbreak;\n";
 			ostr_cpp_while << "\t\t\t}\n";
 		}
@@ -824,13 +889,13 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		if(m_genDebugCode)
 		{
 			ostr_cpp << "\tif(m_debug)\n";
-			ostr_cpp << "\t\tDebugMessageReturn(" << closure->GetId() << ");\n";
+			ostr_cpp << "\t\tDebugMessageReturn(" << closure_id << ");\n";
 		}
 
 		// end closure function
 		ostr_cpp << "}\n\n";
 
-		ostr_h << "\tvoid state_" << closure->GetId() << "(t_hash state_hash);\n";
+		ostr_h << "\tvoid " << closure_name << "(t_hash state_hash);\n";
 	}
 
 
@@ -850,6 +915,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 	boost::replace_all(outfile_cpp, "%%DEFINE_CLOSURES%%", ostr_cpp.str());
 	boost::replace_all(outfile_h, "%%DECLARE_CLOSURES%%", ostr_h.str());
 	boost::replace_all(outfile_h, "%%END_ID%%", end_id_ostr.str());
+	boost::replace_all(outfile_cpp, "%%START_STATE%%", closure_names[0]);
 	boost::replace_all(outfile_cpp, "%%TIME_STAMP%%", time_stamp);
 	boost::replace_all(outfile_h, "%%TIME_STAMP%%", time_stamp);
 

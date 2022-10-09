@@ -14,10 +14,35 @@
 /**
  * non-terminals identifiers
  */
-enum : std::size_t
+enum : t_symbol_id
 {
 	START,      // start
 	EXPR,       // expression
+};
+
+
+/**
+ * semantic rule identifiers
+ */
+enum class Semantics : t_semantic_id
+{
+	START    = 100,
+	BRACKETS = 101,
+	ADD      = 200,
+	SUB      = 201,
+	MUL      = 202,
+	DIV      = 203,
+	MOD      = 204,
+	POW      = 205,
+	UADD     = 210,
+	USUB     = 211,
+	CALL0    = 300,
+	CALL1    = 301,
+	CALL2    = 302,
+	REAL     = 400,
+	INT      = 401,
+	IDENT    = 410,
+	ASSIGN   = 500,
 };
 
 

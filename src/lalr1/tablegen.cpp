@@ -408,6 +408,12 @@ bool Collection::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "\t\t&_lalr1_tables::map_term_idx, &_lalr1_tables::map_nonterm_idx, &_lalr1_tables::map_semantic_idx);\n";
 	ofstr << "}\n\n";
 
+	// constants getter
+	ofstr << "static constexpr\nstd::tuple<t_index, t_index, t_symbol_id, t_symbol_id>\n";
+	ofstr << "get_lalr1_constants()\n{\n";
+	ofstr << "\treturn std::make_tuple(\n";
+	ofstr << "\t\t_lalr1_tables::err, _lalr1_tables::acc, _lalr1_tables::eps, _lalr1_tables::end);\n";
+	ofstr << "}\n\n";
 
 	ofstr << "\n#endif" << std::endl;
 	return true;

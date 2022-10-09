@@ -73,6 +73,7 @@ static void lalr1_run_parser()
 		auto [partials_rules_term, partials_matchlen_term,
 			partials_rules_nonterm, partials_matchlen_nonterm]
 				= get_lalr1_partials_tables();
+		auto [err_idx, acc_idx, eps_id, end_id] = get_lalr1_constants();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);
@@ -85,6 +86,7 @@ static void lalr1_run_parser()
 		parser.SetPartialsMatchLenTerm(partials_matchlen_term);
 		parser.SetPartialsRulesNonTerm(partials_rules_nonterm);
 		parser.SetPartialsMatchLenNonTerm(partials_matchlen_nonterm);
+		parser.SetEndId(end_id);
 #endif
 		parser.SetSemanticRules(&rules);
 		parser.SetDebug(true);
@@ -107,7 +109,7 @@ static void lalr1_run_parser()
 			for(const t_toknode& tok : tokens)
 			{
 				std::size_t tokid = tok->GetId();
-				if(tokid == (std::size_t)Token::END)
+				if(tokid == static_cast<t_tok>(Token::END))
 					std::cout << "END";
 				else
 					std::cout << tokid;
