@@ -5,8 +5,8 @@
  * @license see 'LICENSE' file
  */
 
-#ifndef __LR1_SYM_H__
-#define __LR1_SYM_H__
+#ifndef __LALR1_SYMBOL_H__
+#define __LALR1_SYMBOL_H__
 
 
 #include <memory>
@@ -18,7 +18,6 @@
 #include <unordered_set>
 #include <functional>
 #include <optional>
-#include <iostream>
 
 #include "types.h"
 
@@ -32,7 +31,6 @@ using SymbolPtr = std::shared_ptr<Symbol>;
 using TerminalPtr = std::shared_ptr<Terminal>;
 using NonTerminalPtr = std::shared_ptr<NonTerminal>;
 using WordPtr = std::shared_ptr<Word>;
-
 
 
 /**
@@ -176,6 +174,10 @@ public:
 	// adds multiple alternative production rules
 	void AddRule(const Word& rule,
 		std::optional<t_semantic_id> semantic_id = std::nullopt);
+
+	// adds multiple alternative production rules
+	// (non-overloaded helper for scripting interface)
+	void AddARule(const WordPtr& rule, t_semantic_id semantic_id);
 
 	// number of rules
 	std::size_t NumRules() const;

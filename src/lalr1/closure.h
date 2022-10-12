@@ -56,7 +56,6 @@ public:
 	typename t_elements::const_iterator FindElement(
 		const ElementPtr& elem, bool only_core = false) const;
 	const t_elements& GetElements() const;
-	ElementPtr GetElementWithCursorAtBeginning() const;
 	ElementPtr GetElementWithCursorAtSymbol(const SymbolPtr& sym) const;
 
 	const t_symbolset& GetPossibleTransitionSymbols() const;

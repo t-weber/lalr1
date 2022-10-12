@@ -10,15 +10,7 @@
 #
 
 import re
-
-
-#
-# token ids, same as in lexer.h
-#
-real_id  = 1000
-int_id   = 1001
-str_id   = 1002
-ident_id = 1003
+from ids import *
 
 
 #
@@ -30,9 +22,9 @@ re_ident = re.compile("[A-Za-z]+[A-Za-z0-9]*")
 
 # [ regex parser, token id, converter function from lvalue string to lvalue ]
 token_regexes = [
-	[ re_int, int_id, lambda str : int(str) ],
-	[ re_real, real_id, lambda str : float(str) ],
-	[ re_ident, ident_id, lambda str : str ],
+	[ re_int, tok_int_id, lambda str : int(str) ],
+	[ re_real, tok_real_id, lambda str : float(str) ],
+	[ re_ident, tok_ident_id, lambda str : str ],
 ]
 
 

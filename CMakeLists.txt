@@ -1,4 +1,5 @@
 #
+# liblalr1
 # @author Tobias Weber (orcid: 0000-0002-7230-1932)
 # @date june-2020
 # @license see 'LICENSE' file
@@ -21,7 +22,8 @@ enable_language(CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-add_definitions(-Wall -Wextra -Weffc++)
+add_compile_options(-Wall -Wextra -Weffc++)
+#add_compile_options(-fPIC)
 
 
 option(BUILD_EXAMPLES "build example compilers" TRUE)
@@ -84,6 +86,7 @@ ${PROJECT_SOURCE_DIR}/src/lalr1/timer.h"
 #get_target_property(LALR1_HEADERS lalr1 PUBLIC_HEADER)
 #message("lalr1 headers: ${LALR1_HEADERS}")
 
+target_compile_options(lalr1 PUBLIC -fPIC)
 target_link_libraries(lalr1 ${Boost_LIBRARIES})
 
 install(TARGETS lalr1
@@ -116,6 +119,25 @@ install(TARGETS lalr1-parser
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lalr1
 )
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
+# external bindings
+# see: https://cmake.org/cmake/help/latest/module/UseSWIG.html
+find_package(SWIG REQUIRED COMPONENTS python)
+find_package(Python REQUIRED COMPONENTS Development)
+if(SWIG_FOUND AND SWIG_python_FOUND AND Python_FOUND)
+	cmake_policy(SET CMP0078 NEW)
+	cmake_policy(SET CMP0086 NEW)
+	include(${SWIG_USE_FILE})
+
+	set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/lalr1_py/lalr1.i PROPERTY CPLUSPLUS TRUE)
+	swig_add_library(lalr1_py TYPE SHARED LANGUAGE python SOURCES ${PROJECT_SOURCE_DIR}/src/lalr1_py/lalr1.i)
+	target_link_libraries(lalr1_py lalr1 Python::Python)
+else()
+	message("Disabling Swig/Python bindings.")
+endif()
 # -----------------------------------------------------------------------------
 
 
@@ -210,3 +232,4 @@ if(BUILD_EXAMPLES)
 	target_link_libraries(expr_simple_compiler script lalr1-parser script-vm)
 endif()
 # -----------------------------------------------------------------------------
+

@@ -19,6 +19,7 @@ import random
 
 import lexer
 
+from ids import *
 import parser
 #import expr_parser
 
@@ -56,66 +57,38 @@ functab_2args = {
 
 
 #
-# semantic ids
-#
-start_id    = 100
-brackets_id = 101
-add_id      = 200
-sub_id      = 201
-mul_id      = 202
-div_id      = 203
-mod_id      = 204
-pow_id      = 205
-uadd_id     = 210
-usub_id     = 211
-call0_id    = 300
-call1_id    = 301
-call2_id    = 302
-real_id     = 400
-int_id      = 401
-ident_id    = 410
-assign_id   = 500
-
-
-#
 # semantic rules, same as in expr_grammar.cpp
 #
 semantics = {
-	start_id: lambda expr : expr["val"],
-	brackets_id: lambda bracket_open, expr, bracket_close : expr["val"],
+	sem_start_id: lambda expr : expr["val"],
+	sem_brackets_id: lambda bracket_open, expr, bracket_close : expr["val"],
 
 	# binary arithmetic operations
-	add_id: lambda expr1, op_plus, expr2 : expr1["val"] + expr2["val"],
-	sub_id: lambda expr1, op_minus, expr2 : expr1["val"] - expr2["val"],
-	mul_id: lambda expr1, op_mult, expr2 : expr1["val"] * expr2["val"],
-	div_id: lambda expr1, op_div, expr2 : expr1["val"] / expr2["val"],
-	mod_id: lambda expr1, op_mod, expr2 : expr1["val"] % expr2["val"],
-	pow_id: lambda expr1, op_pow, expr2 : expr1["val"] ** expr2["val"],
+	sem_add_id: lambda expr1, op_plus, expr2 : expr1["val"] + expr2["val"],
+	sem_sub_id: lambda expr1, op_minus, expr2 : expr1["val"] - expr2["val"],
+	sem_mul_id: lambda expr1, op_mult, expr2 : expr1["val"] * expr2["val"],
+	sem_div_id: lambda expr1, op_div, expr2 : expr1["val"] / expr2["val"],
+	sem_mod_id: lambda expr1, op_mod, expr2 : expr1["val"] % expr2["val"],
+	sem_pow_id: lambda expr1, op_pow, expr2 : expr1["val"] ** expr2["val"],
 
 	# unary arithmetic operations
-	uadd_id: lambda unary_plus, expr : +expr["val"],
-	usub_id: lambda unary_minus, expr : -expr["val"],
+	sem_uadd_id: lambda unary_plus, expr : +expr["val"],
+	sem_usub_id: lambda unary_minus, expr : -expr["val"],
 
 	# function calls
-	call0_id: lambda ident, bracket_open, bracket_close :
+	sem_call0_id: lambda ident, bracket_open, bracket_close :
 		functab_0args[ident["val"]](),
-	call1_id: lambda ident, bracket_open, expr, bracket_close :
+	sem_call1_id: lambda ident, bracket_open, expr, bracket_close :
 		functab_1arg[ident["val"]](expr["val"]),
-	call2_id: lambda ident, bracket_open, expr1, comma, expr2, bracket_close :
+	sem_call2_id: lambda ident, bracket_open, expr1, comma, expr2, bracket_close :
 		functab_2args[ident["val"]](expr1["val"], expr2["val"]),
 
 	# symbols
-	real_id: lambda sym_real : sym_real["val"],
-	int_id: lambda sym_int : sym_int["val"],
-	ident_id: lambda sym_ident : symtab[sym_ident["val"]],
+	sem_real_id: lambda sym_real : sym_real["val"],
+	sem_int_id: lambda sym_int : sym_int["val"],
+	sem_ident_id: lambda sym_ident : symtab[sym_ident["val"]],
 }
 
-
-#
-# token ids, same as in lexer.h
-#
-real_id = 1000
-int_id  = 1001
 
 
 #

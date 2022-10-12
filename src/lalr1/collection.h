@@ -27,6 +27,9 @@
 #include <iostream>
 
 
+class Collection;
+using CollectionPtr = std::shared_ptr<Collection>;
+
 
 /**
  * LALR(1) collection of closures
@@ -64,10 +67,12 @@ public:
 
 
 public:
+	Collection();
 	Collection(const ClosurePtr& closure);
 	Collection(const Collection& coll);
 	const Collection& operator=(const Collection& coll);
 
+	void AddClosure(const ClosurePtr& closure);
 	void DoTransitions();
 
 	// tests which closures of the collection have reduce/reduce conflicts
@@ -102,8 +107,6 @@ public:
 
 
 protected:
-	Collection() = delete;
-
 	Terminal::t_terminalset _GetLookbackTerminals(const ClosurePtr& closure) const;
 
 	void DoTransitions(const ClosurePtr& closure);

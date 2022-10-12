@@ -218,6 +218,16 @@ void NonTerminal::AddRule(const Word& _rule, std::optional<t_semantic_id> semant
 
 
 /**
+ * adds multiple alternative production rules
+ * (non-overloaded helper for scripting interface)
+ */
+void NonTerminal::AddARule(const WordPtr& rule, t_semantic_id semantic_id)
+{
+	AddRule(rule, semantic_id);
+}
+
+
+/**
  * number of rules
  */
 std::size_t NonTerminal::NumRules() const

@@ -16,8 +16,8 @@
  */
 enum : t_symbol_id
 {
-	START,      // start
-	EXPR,       // expression
+	START    = 10,
+	EXPR     = 20,
 };
 
 

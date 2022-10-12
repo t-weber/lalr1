@@ -76,11 +76,15 @@ bool Collection::CompareTransitionsLess::operator()(
 }
 // ----------------------------------------------------------------------------
 
+Collection::Collection() : std::enable_shared_from_this<Collection>{}
+{
+}
+
 
 Collection::Collection(const ClosurePtr& closure)
 	: std::enable_shared_from_this<Collection>{}
 {
-	m_collection.push_back(closure);
+	AddClosure(closure);
 }
 
 
@@ -117,6 +121,12 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_ruleLhsIdx = coll.m_ruleLhsIdx;
 
 	return *this;
+}
+
+
+void Collection::AddClosure(const ClosurePtr& closure)
+{
+	m_collection.push_back(closure);
 }
 
 
