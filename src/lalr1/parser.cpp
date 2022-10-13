@@ -88,7 +88,7 @@ static void print_stacks(const ParseStack<t_state_id>& states,
 		const t_lalrastbaseptr& sym = (*iter);
 
 		ostr << sym->GetTableIndex();
-		if(sym->IsTerminal() && std::isprint(sym->GetId()))
+		if(sym->IsTerminal() && isprintable(sym->GetId()))
 			ostr << " ('" << char(sym->GetId()) << "')";
 
 		if(sym->IsTerminal())
@@ -116,7 +116,7 @@ static void print_input_token(t_index inputidx, const t_toknode& curtok,
 		ostr << "end";
 	else
 		ostr << curtok_id;
-	if(std::isprint(curtok_id))
+	if(isprintable(curtok_id))
 		ostr << " = '" << char(curtok_id) << "'";
 	ostr << " (terminal index " << curtok->GetTableIndex() << ")."
 		<< std::endl;
@@ -307,7 +307,7 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 			ostrErr << "Undefined shift and reduce entries"
 				<< " from state " << topstate << "."
 				<< " Current token id is " << curtok->GetId();
-			if(std::isprint(curtok->GetId()))
+			if(isprintable(curtok->GetId()))
 				ostrErr << " = '" << char(curtok->GetId()) << "'";
 			ostrErr << get_line_numbers(curtok) << ".";
 
@@ -322,7 +322,7 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 				<< " from state " << topstate << " to state " << newstate
 				<< " and reduce using rule " << rule_id << "."
 				<< " Current token id is " << curtok->GetId();
-			if(std::isprint(curtok->GetId()))
+			if(isprintable(curtok->GetId()))
 				ostrErr << " = '" << char(curtok->GetId()) << "'";
 			ostrErr << get_line_numbers(curtok) << ".";
 

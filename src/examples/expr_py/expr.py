@@ -116,11 +116,11 @@ def main(args):
 			input_tokens = lexer.get_tokens(input_str)
 			input_tokens.append([end_token])
 
-			result = parser.lr1_parse(tables, input_tokens, semantics)
-			#parser = expr_parser.Parser()
-			#parser.input_tokens = input_tokens
-			#parser.semantics = semantics
-			#result = parser.parse()
+			theparser = parser.Parser(tables)
+			#theparser = expr_parser.Parser()
+			theparser.input_tokens = input_tokens
+			theparser.semantics = semantics
+			result = theparser.parse()
 			if result != None:
 				print(result["val"])
 			else:

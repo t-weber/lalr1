@@ -340,7 +340,7 @@ bool Collection::SaveParseTablesCXX(const std::string& file) const
 			ofstr << "eps";
 		else if(id == END_IDENT)
 			ofstr << "end";
-		else if(m_useOpChar && std::isprint(id))
+		else if(m_useOpChar && isprintable(id))
 			ofstr << "'" << char(id) << "'";
 		else
 			ofstr << id;
@@ -479,7 +479,7 @@ bool Collection::SaveParseTablesJSON(const std::string& file) const
 		const auto& [id, idx] = *iter;
 
 		ofstr << "\t[ ";
-		if(m_useOpChar && std::isprint(id))
+		if(m_useOpChar && isprintable(id))
 			ofstr << "\"" << char(id) << "\"";
 		else
 			ofstr << id;

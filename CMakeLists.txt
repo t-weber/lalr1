@@ -133,7 +133,7 @@ if(SWIG_FOUND AND SWIG_python_FOUND AND Python_FOUND)
 	include(${SWIG_USE_FILE})
 
 	set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/lalr1_py/lalr1.i PROPERTY CPLUSPLUS TRUE)
-	swig_add_library(lalr1_py TYPE SHARED LANGUAGE python SOURCES ${PROJECT_SOURCE_DIR}/src/lalr1_py/lalr1.i)
+	swig_add_library(lalr1_py TYPE MODULE LANGUAGE python SOURCES ${PROJECT_SOURCE_DIR}/src/lalr1_py/lalr1.i)
 	target_link_libraries(lalr1_py lalr1 Python::Python)
 else()
 	message("Disabling Swig/Python bindings.")

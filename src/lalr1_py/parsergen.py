@@ -86,9 +86,9 @@ def create_parser(tables, outfile_name):
 
 	print("class Parser:", file=outfile)
 	print("\tdef __init__(self):", file=outfile)
-	print(f"\t\tend_id = 0x{end_token:x}", file=outfile)
-	print("\t\tinput_tokens = []", file=outfile)
-	print("\t\tsemantics = None", file=outfile)
+	print(f"\t\tself.end_id = 0x{end_token:x}", file=outfile)
+	print("\t\tself.input_tokens = []", file=outfile)
+	print("\t\tself.semantics = None", file=outfile)
 	print("\t\tself.reset()\n", file=outfile)
 
 	print("\tdef reset(self):", file=outfile)

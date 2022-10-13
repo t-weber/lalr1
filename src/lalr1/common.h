@@ -14,6 +14,7 @@
 #include <limits>
 #include <vector>
 #include <unordered_map>
+#include <locale>
 
 
 const constinit t_index ERROR_VAL = std::numeric_limits<t_index>::max();     // 'error' table entry
@@ -41,6 +42,16 @@ enum class IndexTableKind
 	NONTERMINAL,
 	SEMANTIC,
 };
+
+
+template<class T> bool isprintable(T ch)
+{
+	if(sizeof(ch) > 1 && ch > 255)
+		return false;
+
+	using t_char = char;
+	return std::isprint<t_char>(static_cast<t_char>(ch), std::locale("C"));
+}
 
 
 #endif

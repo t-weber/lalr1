@@ -35,80 +35,116 @@ def get_table_id(idx_tab, idx):
 
 
 #
-# run LR(1) parser
+# table-based LR(1) parser
 #
-def lr1_parse(tables, input_tokens, semantics):
-	# tables
-	shift_tab = tables["shift"]["elems"]
-	reduce_tab = tables["reduce"]["elems"]
-	jump_tab = tables["jump"]["elems"]
-	termidx_tab = tables["term_idx"]
-	nontermidx_tab = tables["nonterm_idx"]
-	semanticidx_tab = tables["semantic_idx"]
-	numrhs_tab = tables["num_rhs_syms"]
-	lhsidx_tab = tables["lhs_idx"]
+class Parser:
+	def __init__(self, tables):
+		# tables
+		self.shift_tab = tables["shift"]["elems"]
+		self.reduce_tab = tables["reduce"]["elems"]
+		self.jump_tab = tables["jump"]["elems"]
+		self.termidx_tab = tables["term_idx"]
+		self.nontermidx_tab = tables["nonterm_idx"]
+		self.semanticidx_tab = tables["semantic_idx"]
+		self.numrhs_tab = tables["num_rhs_syms"]
+		self.lhsidx_tab = tables["lhs_idx"]
 
-	# special values
-	acc_token = tables["consts"]["acc"]
-	err_token = tables["consts"]["err"]
+		# special values
+		self.acc_token = tables["consts"]["acc"]
+		self.err_token = tables["consts"]["err"]
 
-	# stacks
-	states = [ 0 ]  # parser states
-	symbols = [ ]   # symbol stack
+		self.input_tokens = []
+		self.semantics = None
+		self.reset()
 
-	input_index = 0
-	lookahead = input_tokens[input_index]
-	lookahead_idx = get_table_index(termidx_tab, lookahead[0])
 
-	while True:
-		top_state = states[-1]
-		new_state = shift_tab[top_state][lookahead_idx]
-		rule_idx = reduce_tab[top_state][lookahead_idx]
-		#print(f"States: {states},\nsymbols: {symbols},\nnew state: {new_state}, rule: {rule_idx}.\n")
+	def reset(self):
+		self.input_index = -1
+		self.lookahead = None
+		self.lookahead_idx = None
+		self.accepted = False
+		self.states = [ 0 ]    # parser states
+		self.symbols = [ ]     # symbol stack
 
-		if new_state == err_token and rule_idx == err_token:
-			raise RuntimeError("No shift or reduce action defined.")
-		elif new_state != err_token and rule_idx != err_token:
-			raise RuntimeError("Shift/reduce conflict.")
-		elif rule_idx == acc_token:
-			# accept
-			#print("Accepting.")
-			return symbols[-1] if len(symbols) >= 1 else None
 
-		if new_state != err_token:
-			# shift
-			states.append(new_state)
-			sym_lval = lookahead[1] if len(lookahead) > 1 else None
-			symbols.append({ "is_term" : True, "id" : lookahead[0], "val" : sym_lval })
+	#
+	# get the next lookahead token and its table index
+	#
+	def get_next_lookahead(self):
+		self.input_index = self.input_index + 1
+		tok = self.input_tokens[self.input_index]
+		tok_lval = tok[1] if len(tok) > 1 else None
+		self.lookahead = { "is_term" : True, "id" : tok[0], "val" : tok_lval }
+		self.lookahead_idx = get_table_index(self.termidx_tab, self.lookahead["id"])
 
-			input_index += 1
-			lookahead = input_tokens[input_index]
-			lookahead_idx = get_table_index(termidx_tab, lookahead[0])
 
-		elif rule_idx != err_token:
-			rule_id = get_table_id(semanticidx_tab, rule_idx)
+	#
+	# push the current lookahead token onto the symbol stack
+	# and get the next lookahead
+	#
+	def push_lookahead(self):
+		self.symbols.append(self.lookahead)
+		self.get_next_lookahead()
 
-			# reduce
-			num_syms = numrhs_tab[rule_idx]
-			lhs_idx = lhsidx_tab[rule_idx]
-			lhs_id = get_table_id(nontermidx_tab, lhs_idx)
 
-			#print(f"Reducing {num_syms} symbols.")
-			args = symbols[len(symbols)-num_syms : len(symbols)]
-			symbols = symbols[0 : len(symbols)-num_syms]
-			states = states[0 : len(states)-num_syms]
+	#
+	# reduce using a semantic rule
+	#
+	def apply_rule(self, rule_id, num_rhs, lhs_id):
+		#print(f"Reducing {num_syms} symbols.")
+		args = self.symbols[len(self.symbols)-num_rhs : len(self.symbols)]
+		self.symbols = self.symbols[0 : len(self.symbols) - num_rhs]
+		self.states = self.states[0 : len(self.states) - num_rhs]
 
-			# apply semantic rule if available
-			rule_ret = None
-			if semantics != None and rule_id in semantics:
-				#print(f"args: {args}")
-				rule_ret = semantics[rule_id](*args)
+		# apply semantic rule if available
+		rule_ret = None
+		if self.semantics != None and rule_id in self.semantics:
+			#print(f"args: {args}")
+			rule_ret = self.semantics[rule_id](*args)
 
-			# push reduced nonterminal symbol
-			symbols.append({ "is_term" : False, "id" : lhs_id, "val" : rule_ret })
+		# push reduced nonterminal symbol
+		self.symbols.append({ "is_term" : False, "id" : lhs_id, "val" : rule_ret })
 
-			top_state = states[-1]
-			states.append(jump_tab[top_state][lhs_idx])
 
-	# input not accepted
-	return None
+	#
+	# run LR(1) parser
+	#
+	def parse(self):
+		self.get_next_lookahead()
+
+		while True:
+			top_state = self.states[-1]
+			new_state = self.shift_tab[top_state][self.lookahead_idx]
+			rule_idx = self.reduce_tab[top_state][self.lookahead_idx]
+			#print(f"States: {self.states},\nsymbols: {self.symbols},\nnew state: {new_state}, rule: {rule_idx}.\n")
+
+			if new_state == self.err_token and rule_idx == self.err_token:
+				raise RuntimeError("No shift or reduce action defined.")
+			elif new_state != self.err_token and rule_idx != self.err_token:
+				raise RuntimeError("Shift/reduce conflict.")
+			elif rule_idx == self.acc_token:
+				# accept
+				#print("Accepting.")
+				self.accepted = True
+				return self.symbols[-1] if len(self.symbols) >= 1 else None
+
+			if new_state != self.err_token:
+				# shift
+				self.states.append(new_state)
+				self.push_lookahead()
+
+			elif rule_idx != self.err_token:
+				rule_id = get_table_id(self.semanticidx_tab, rule_idx)
+
+				# reduce
+				num_syms = self.numrhs_tab[rule_idx]
+				lhs_idx = self.lhsidx_tab[rule_idx]
+				lhs_id = get_table_id(self.nontermidx_tab, lhs_idx)
+
+				self.apply_rule(rule_id, num_syms, lhs_id)
+				top_state = self.states[-1]
+				self.states.append(self.jump_tab[top_state][lhs_idx])
+
+		# input not accepted
+		self.accepted = False
+		return None

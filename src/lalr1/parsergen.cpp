@@ -141,7 +141,7 @@ void %%PARSER_CLASS%%::PrintSymbols() const
 		const t_lalrastbaseptr& sym = *iter;
 
 		std::cout << sym->GetId();
-		if(sym->IsTerminal() && std::isprint(sym->GetId()))
+		if(sym->IsTerminal() && isprintable(sym->GetId()))
 			std::cout << " ('" << char(sym->GetId()) << "')";
 
 		if(sym->IsTerminal())
@@ -238,7 +238,7 @@ void %%PARSER_CLASS%%::DebugMessageState(t_state_id state_id,
 			std::cout << "end";
 		else
 			std::cout << m_lookahead_id;
-		if(std::isprint(m_lookahead_id))
+		if(isprintable(m_lookahead_id))
 			std::cout << " = '" << char(m_lookahead_id) << "'";
 		std::cout << "." << std::endl;
 	}
@@ -587,7 +587,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			{
 				ostr_shift << "\t\tcase s_end_id:\n";
 			}
-			else if(m_useOpChar && std::isprint(symTrans->GetId()))
+			else if(m_useOpChar && isprintable(symTrans->GetId()))
 			{
 				ostr_shift << "\t\tcase \'"
 					<< char(symTrans->GetId()) << "\':\n";
@@ -773,7 +773,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 				{
 					ostr_cpp << "\t\tcase s_end_id:\n";
 				}
-				else if(m_useOpChar && std::isprint(la->GetId()))
+				else if(m_useOpChar && isprintable(la->GetId()))
 				{
 					ostr_cpp << "\t\tcase \'"
 						<< char(la->GetId())
