@@ -48,7 +48,7 @@ def has_table_entry(tab, idx1, err_token):
 
 
 def id_to_str(id, end_token):
-	if id == end_token:
+	if id == end_token and id >= 0:
 		return f"0x{id:x}"
 		#return "end_id"
 	if isinstance(id, str):
@@ -85,12 +85,15 @@ def create_parser(tables, outfile_name):
 		file=outfile)
 
 	print("class Parser:", file=outfile)
+
+	# constructor
 	print("\tdef __init__(self):", file=outfile)
-	print(f"\t\tself.end_id = 0x{end_token:x}", file=outfile)
+	#print(f"\t\tself.end_id = 0x{end_token:x}", file=outfile)
 	print("\t\tself.input_tokens = []", file=outfile)
 	print("\t\tself.semantics = None", file=outfile)
 	print("\t\tself.reset()\n", file=outfile)
 
+	# reset function
 	print("\tdef reset(self):", file=outfile)
 	print("\t\tself.input_index = -1", file=outfile)
 	print("\t\tself.lookahead = None", file=outfile)
@@ -98,16 +101,19 @@ def create_parser(tables, outfile_name):
 	print("\t\tself.accepted = False", file=outfile)
 	print("\t\tself.symbols = []\n", file=outfile)
 
+	# get_next_lookahead function
 	print("\tdef get_next_lookahead(self):", file=outfile)
 	print("\t\tself.input_index = self.input_index + 1", file=outfile)
 	print("\t\ttok = self.input_tokens[self.input_index]", file=outfile)
 	print("\t\ttok_lval = tok[1] if len(tok) > 1 else None", file=outfile)
 	print("\t\tself.lookahead = { \"is_term\" : True, \"id\" : tok[0], \"val\" : tok_lval }\n", file=outfile)
 
+	# push_lookahead function
 	print("\tdef push_lookahead(self):", file=outfile)
 	print("\t\tself.symbols.append(self.lookahead)", file=outfile)
 	print("\t\tself.get_next_lookahead()\n", file=outfile)
 
+	# apply_rule function
 	print("\tdef apply_rule(self, rule_id, num_rhs, lhs_id):", file=outfile)
 	print("\t\tself.dist_to_jump = num_rhs", file=outfile)
 	print("\t\targs = self.symbols[len(self.symbols)-num_rhs : len(self.symbols)]", file=outfile)
@@ -117,6 +123,7 @@ def create_parser(tables, outfile_name):
 	print("\t\t\trule_ret = self.semantics[rule_id](*args)", file=outfile)
 	print("\t\tself.symbols.append({ \"is_term\" : False, \"id\" : lhs_id, \"val\" : rule_ret })\n", file=outfile)
 
+	# parse function
 	print("\tdef parse(self):", file=outfile)
 	print("\t\tself.reset()", file=outfile)
 	print("\t\tself.get_next_lookahead()", file=outfile)
@@ -125,10 +132,14 @@ def create_parser(tables, outfile_name):
 	print("\t\t\treturn None", file=outfile)
 	print("\t\treturn self.symbols[-1]\n", file=outfile)
 
+	# closures
 	for state_idx in range(num_states):
 		print(f"\tdef state_{state_idx}(self):", file=outfile)
 
-		if has_table_entry(shift_tab, state_idx, err_token):
+		has_shift_entry = has_table_entry(shift_tab, state_idx, err_token)
+		has_jump_entry = has_table_entry(jump_tab, state_idx, err_token)
+
+		if has_shift_entry:
 			print("\t\tnext_state = None", file=outfile)
 		print("\t\tmatch self.lookahead[\"id\"]:", file=outfile)
 
@@ -177,12 +188,12 @@ def create_parser(tables, outfile_name):
 		print("\t\t\tcase _:", file=outfile)
 		print(f"\t\t\t\traise RuntimeError(\"Invalid transition from state {state_idx}.\")", file=outfile)
 
-		if has_table_entry(shift_tab, state_idx, err_token):
+		if has_shift_entry:
 			print("\t\tif next_state != None:", file=outfile)
 			print("\t\t\tself.push_lookahead()", file=outfile)
 			print("\t\t\tnext_state()", file=outfile)
 
-		if has_table_entry(jump_tab, state_idx, err_token):
+		if has_jump_entry:
 			print("\t\twhile self.dist_to_jump == 0 and len(self.symbols) > 0 and not self.accepted:", file=outfile)
 			print("\t\t\ttopsym = self.symbols[-1]", file=outfile)
 			print("\t\t\tif topsym[\"is_term\"]:", file=outfile)
@@ -213,6 +224,8 @@ def main(args):
 	outfile_name = os.path.splitext(tablesfile_name)[0] + "_parser.py"
 
 	try:
+		print(f"Creating parser \"{tablesfile_name}\" -> \"{outfile_name}\".")
+
 		tablesfile = open(tablesfile_name, mode="rt")
 		tables = json.load(tablesfile)
 		print(tables["infos"])

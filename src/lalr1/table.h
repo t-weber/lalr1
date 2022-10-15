@@ -10,6 +10,7 @@
 
 
 #include <vector>
+#include <unordered_map>
 #include <optional>
 #include <iostream>
 #include <iomanip>
@@ -96,10 +97,10 @@ public:
 		{
 			for(std::size_t col=0; col<cols; ++col)
 			{
-				const T& val = tab(row, col);
+				const value_type& val = tab(row, col);
 				if(val != m_errorval && val != m_fillval)
 				{
-					T& oldval = (*this)(row, col);
+					value_type& oldval = (*this)(row, col);
 
 					if(show_conflict && oldval != m_errorval && oldval != m_fillval)
 					{
@@ -144,7 +145,7 @@ public:
 			ostr << "\t";
 			for(std::size_t col=0; col<size2(); ++col)
 			{
-				T entry = operator()(row, col);
+				const value_type& entry = operator()(row, col);
 
 				if(entry == m_errorval)
 					ostr << "err, ";
@@ -164,7 +165,8 @@ public:
 	 * export table to json
 	 */
 	void SaveJSON(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "", const std::string& col_label = "") const
+		const std::string& row_label = "", const std::string& col_label = "",
+		const std::unordered_map<T, int>* value_map = nullptr) const
 	{
 		ostr << "\"" << var << "\" : {\n";
 		ostr << "\t\"rows\" : " << size1() << ",\n";
@@ -178,12 +180,27 @@ public:
 			ostr << "\t\t[ ";
 			for(std::size_t col=0; col<size2(); ++col)
 			{
-				/*T entry = operator()(row, col);
-				if(entry == m_errorval || entry == m_acceptval)
+				value_type entry = operator()(row, col);
+				/*if(entry == m_errorval || entry == m_acceptval)
 					ostr << "0x" << std::hex << entry << std::dec;
 				else
 					ostr << entry;*/
-				ostr << operator()(row, col);
+
+				bool has_value = false;
+				if(value_map)
+				{
+					if(auto iter_val = value_map->find(entry); iter_val != value_map->end())
+					{
+						// write mapped value
+						ostr << iter_val->second;
+						has_value = true;
+					}
+				}
+
+				// write unmapped value otherwise
+				if(!has_value)
+					ostr << entry;
+
 				if(col < size2()-1)
 					ostr << ",";
 				ostr << " ";
@@ -209,7 +226,7 @@ public:
 		{
 			for(std::size_t col=0; col<tab.size2(); ++col)
 			{
-				T entry = tab(row, col);
+				const value_type& entry = tab(row, col);
 				if(entry == tab.m_errorval)
 					ostr << std::setw(width) << std::left << "err";
 				else if(entry == tab.m_acceptval)

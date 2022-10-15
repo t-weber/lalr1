@@ -54,8 +54,6 @@ class Parser
 {
 	constructor(tables)
 	{
-		//console.log(tables.infos);
-
 		// tables
 		this.shift_tab = tables.shift.elems;
 		this.reduce_tab = tables.reduce.elems;
@@ -158,6 +156,7 @@ class Parser
 
 	parse()
 	{
+		this.reset();
 		this.get_next_lookahead();
 
 		while(true)

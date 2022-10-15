@@ -15,6 +15,7 @@
  */
 
 #include "collection.h"
+#include "options.h"
 #include "timer.h"
 
 #include <sstream>
@@ -426,6 +427,19 @@ bool Collection::SaveParseTablesCXX(const std::string& file) const
  */
 bool Collection::SaveParseTablesJSON(const std::string& file) const
 {
+	const bool map_special_vals_to_negative = g_options.GetUseNegativeTableValues();
+
+	std::unordered_map<t_index, int> special_values
+	{
+		{ ERROR_VAL, -1 },
+		{ ACCEPT_VAL, -2 },
+	};
+	std::unordered_map<t_symbol_id, int> special_idents
+	{
+		{ END_IDENT, -1 },
+		{ EPS_IDENT, -2 },
+	};
+
 	std::ofstream ofstr{file};
 	if(!ofstr)
 		return false;
@@ -441,34 +455,50 @@ bool Collection::SaveParseTablesJSON(const std::string& file) const
 	// constants
 	ofstr << "\n\"consts\" : {\n";
 	//ofstr << "\t\"acc_rule\" : " << m_accepting_rule << ",\n";
-	/*ofstr << "\t\"err\" : 0x" << std::hex << ERROR_VAL << std::dec << ",\n";
-	ofstr << "\t\"acc\" : 0x" << std::hex << ACCEPT_VAL << std::dec << ",\n";
-	ofstr << "\t\"eps\" : 0x" << std::hex << EPS_IDENT << std::dec << ",\n";
-	ofstr << "\t\"end\" : 0x" << std::hex << END_IDENT << std::dec << "\n";*/
-	ofstr << "\t\"err\" : " << ERROR_VAL << ",\n";
-	ofstr << "\t\"acc\" : " << ACCEPT_VAL << ",\n";
-	ofstr << "\t\"eps\" : " << EPS_IDENT << ",\n";
-	ofstr << "\t\"end\" : " << END_IDENT << "\n";
+
+	if(map_special_vals_to_negative)
+	{
+		ofstr << "\t\"err\" : " << special_values[ERROR_VAL] << ",\n";
+		ofstr << "\t\"acc\" : " << special_values[ACCEPT_VAL] << ",\n";
+		ofstr << "\t\"eps\" : " << special_idents[EPS_IDENT] << ",\n";
+		ofstr << "\t\"end\" : " << special_idents[END_IDENT] << "\n";
+	}
+	else
+	{
+		/*ofstr << "\t\"err\" : 0x" << std::hex << ERROR_VAL << std::dec << ",\n";
+		ofstr << "\t\"acc\" : 0x" << std::hex << ACCEPT_VAL << std::dec << ",\n";
+		ofstr << "\t\"eps\" : 0x" << std::hex << EPS_IDENT << std::dec << ",\n";
+		ofstr << "\t\"end\" : 0x" << std::hex << END_IDENT << std::dec << "\n";*/
+		ofstr << "\t\"err\" : " << ERROR_VAL << ",\n";
+		ofstr << "\t\"acc\" : " << ACCEPT_VAL << ",\n";
+		ofstr << "\t\"eps\" : " << EPS_IDENT << ",\n";
+		ofstr << "\t\"end\" : " << END_IDENT << "\n";
+	}
+
 	ofstr << "},\n\n";
 
 	// lalr(1) tables
-	m_tabActionShift.SaveJSON(ofstr, "shift", "state", "terminal");
+	m_tabActionShift.SaveJSON(ofstr, "shift", "state", "terminal", &special_values);
 	ofstr << ",\n\n";
-	m_tabActionReduce.SaveJSON(ofstr, "reduce", "state", "lookahead");
+	m_tabActionReduce.SaveJSON(ofstr, "reduce", "state", "lookahead", &special_values);
 	ofstr << ",\n\n";
-	m_tabJump.SaveJSON(ofstr, "jump", "state", "nonterminal");
+	m_tabJump.SaveJSON(ofstr, "jump", "state", "nonterminal", &special_values);
 	ofstr << ",\n\n";
 
 	// partial match tables
 	if(m_genPartialMatches)
 	{
-		m_tabPartialRuleTerm.SaveJSON(ofstr, "partials_rule_term", "state", "terminal");
+		m_tabPartialRuleTerm.SaveJSON(ofstr,
+			"partials_rule_term", "state", "terminal", &special_values);
 		ofstr << ",\n\n";
-		m_tabPartialMatchLenTerm.SaveJSON(ofstr, "partials_matchlen_term", "state", "terminal");
+		m_tabPartialMatchLenTerm.SaveJSON(ofstr,
+			"partials_matchlen_term", "state", "terminal");
 		ofstr << ",\n\n";
-		m_tabPartialRuleNonterm.SaveJSON(ofstr, "partials_rule_nonterm", "state", "nonterminal");
+		m_tabPartialRuleNonterm.SaveJSON(ofstr,
+			"partials_rule_nonterm", "state", "nonterminal", &special_values);
 		ofstr << ",\n\n";
-		m_tabPartialMatchLenNonterm.SaveJSON(ofstr, "partials_matchlen_nonterm", "state", "nonterminal");
+		m_tabPartialMatchLenNonterm.SaveJSON(ofstr,
+			"partials_matchlen_nonterm", "state", "nonterminal");
 		ofstr << ",\n";
 	}
 
@@ -479,10 +509,17 @@ bool Collection::SaveParseTablesJSON(const std::string& file) const
 		const auto& [id, idx] = *iter;
 
 		ofstr << "\t[ ";
-		if(m_useOpChar && isprintable(id))
-			ofstr << "\"" << char(id) << "\"";
+		if(auto iter_special = special_idents.find(id); iter_special != special_idents.end())
+		{
+			ofstr << iter_special->second;
+		}
 		else
-			ofstr << id;
+		{
+			if(m_useOpChar && isprintable(id))
+				ofstr << "\"" << char(id) << "\"";
+			else
+				ofstr << id;
+		}
 		ofstr << ", " << idx << " ]";
 		if(std::next(iter, 1) != m_mapTermIdx.end())
 			ofstr << ",";

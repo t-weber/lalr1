@@ -42,6 +42,13 @@ void Options::SetUseStateNames(bool b)
 { m_useStateNames = b; }
 
 
+bool Options::GetUseNegativeTableValues() const
+{ return m_useNegativeTableValues; }
+
+void Options::SetUseNegativeTableValues(bool b)
+{ m_useNegativeTableValues = b; }
+
+
 const std::string& Options::GetShiftColour() const
 { return m_shift_col; }
 

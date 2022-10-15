@@ -22,6 +22,9 @@ public:
 
 	void SetUseAsciiChars(bool b = true);
 
+	bool GetUseNegativeTableValues() const;
+	void SetUseNegativeTableValues(bool b = true);
+
 	const std::string& GetShiftColour() const;
 	const std::string& GetReduceColour() const;
 	const std::string& GetJumpColour() const;
@@ -44,6 +47,7 @@ private:
 	bool m_useColour{true};
 	bool m_useAsciiChars{false};
 	bool m_useStateNames{false};
+	bool m_useNegativeTableValues{true};
 
 	// colours
 	std::string m_shift_col{"#ff0000"};

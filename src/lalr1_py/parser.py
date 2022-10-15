@@ -110,6 +110,7 @@ class Parser:
 	# run LR(1) parser
 	#
 	def parse(self):
+		self.reset()
 		self.get_next_lookahead()
 
 		while True:
