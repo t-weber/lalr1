@@ -134,9 +134,8 @@ class Parser:
 				self.push_lookahead()
 
 			elif rule_idx != self.err_token:
-				rule_id = get_table_id(self.semanticidx_tab, rule_idx)
-
 				# reduce
+				rule_id = get_table_id(self.semanticidx_tab, rule_idx)
 				num_syms = self.numrhs_tab[rule_idx]
 				lhs_idx = self.lhsidx_tab[rule_idx]
 				lhs_id = get_table_id(self.nontermidx_tab, lhs_idx)
