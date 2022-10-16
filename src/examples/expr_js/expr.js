@@ -14,12 +14,12 @@ const lexer = require("./lexer.js");
 const ids = require("./ids.js");
 
 
-// load parser
-const parser = require("./parser.js");
+// load standalone parser
 //const expr_parser = require("./expr_parser.js");
 
 
-// load tables
+// load table-based parser
+const parser = require("./parser.js");
 const tables_file = "./expr.json";
 if(process.argv.length >= 3)
 	tables_file = process.argv[2];
