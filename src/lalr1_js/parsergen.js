@@ -121,7 +121,6 @@ function create_parser(tables, outfile)
 	fs.writeFileSync(outfile, "\treset()\n\t{\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.input_index = -1;\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.lookahead = null;\n", {"flag":"a"});
-	fs.writeFileSync(outfile, "\t\tthis.lookahead_idx = null;\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.accepted = false;\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.symbols = [ ];\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.dist_to_jump = 0;\n", {"flag":"a"});
@@ -137,6 +136,11 @@ function create_parser(tables, outfile)
 	fs.writeFileSync(outfile, "\t\tthis.semantics = sem;\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t}\n\n", {"flag":"a"});  // end of set_semantics()
 
+	// get_end_token function
+	fs.writeFileSync(outfile, "\tget_end_token()\n\t{\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\treturn this.end_token;\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t}\n\n", {"flag":"a"});  // end of get_end_token()
+
 	// get_next_lookahead function
 	fs.writeFileSync(outfile, "\tget_next_lookahead()\n\t{\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\t++this.input_index;\n", {"flag":"a"});
@@ -145,7 +149,6 @@ function create_parser(tables, outfile)
 	fs.writeFileSync(outfile, "\t\tif(tok.length > 1)\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\t\ttok_lval = tok[1];\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.lookahead = { \"is_term\" : true, \"id\" : tok[0], \"val\" : tok_lval };\n", {"flag":"a"});
-	fs.writeFileSync(outfile, "\t\tthis.lookahead_idx = get_table_index(this.termidx_tab, this.lookahead[\"id\"]);\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t}\n\n", {"flag":"a"});  // end of get_next_lookahead()
 
 	// push_lookahead function
@@ -157,11 +160,13 @@ function create_parser(tables, outfile)
 	// apply_rule function
 	fs.writeFileSync(outfile, "\tapply_rule(rule_id, num_rhs, lhs_id)\n\t{\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.dist_to_jump = num_rhs;\n", {"flag":"a"});
-	fs.writeFileSync(outfile, "\t\tconst args = this.symbols.slice(this.symbols.length-num_rhs, this.symbols.length);\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\tconst args = this.symbols.slice(this.symbols.length - num_rhs, this.symbols.length);\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.symbols = this.symbols.slice(0, this.symbols.length - num_rhs);\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tlet rule_ret = null;\n", {"flag":"a"});
-	fs.writeFileSync(outfile, "\t\tif(this.semantics != null && self.semantics.has(rule_id))\n", {"flag":"a"});
-	fs.writeFileSync(outfile, "\t\t\trule_ret = this.semantics[rule_id](args);\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\tif(this.semantics != null && rule_id in this.semantics)\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\t\trule_ret = this.semantics[rule_id].apply(this, args);\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\telse\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\t\tthrow new Error(\"Semantic rule \" + rule_id + \" is not defined.\");\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.symbols.push({ \"is_term\" : false, \"id\" : lhs_id, \"val\" : rule_ret });\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t}\n\n", {"flag":"a"});  // end of apply_rule()
 
@@ -238,7 +243,7 @@ function create_parser(tables, outfile)
 
 			if(created_cases)
 			{
-				fs.writeFileSync(outfile, "\t\t\t\tapply_rule(" + rule_id + ", " + num_rhs + ", " + lhs_id + ");\n", {"flag":"a"});
+				fs.writeFileSync(outfile, "\t\t\t\tthis.apply_rule(" + rule_id + ", " + num_rhs + ", " + lhs_id + ");\n", {"flag":"a"});
 				fs.writeFileSync(outfile, "\t\t\t\tbreak;\n", {"flag":"a"});
 			}
 		}
@@ -251,7 +256,7 @@ function create_parser(tables, outfile)
 				fs.writeFileSync(outfile, "\t\t\tcase " + term_id_str + ":\n", {"flag":"a"});
 			}
 
-			fs.writeFileSync(outfile, "\t\t\t\tthis.accept = true;\n", {"flag":"a"});
+			fs.writeFileSync(outfile, "\t\t\t\tthis.accepted = true;\n", {"flag":"a"});
 			fs.writeFileSync(outfile, "\t\t\t\tbreak;\n", {"flag":"a"});
 		}
 
@@ -264,12 +269,34 @@ function create_parser(tables, outfile)
 		{
 			fs.writeFileSync(outfile, "\t\tif(next_state != null)\n\t\t{\n", {"flag":"a"});
 			fs.writeFileSync(outfile, "\t\t\tthis.push_lookahead();\n", {"flag":"a"});  // end of closure function
-			fs.writeFileSync(outfile, "\t\t\tnext_state();\n", {"flag":"a"});
+			fs.writeFileSync(outfile, "\t\t\tnext_state.call(this);\n", {"flag":"a"});
 			fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});  // endif
 		}
 
 		if(has_jump_entry)
 		{
+			fs.writeFileSync(outfile, "\t\twhile(this.dist_to_jump == 0 && this.symbols.length > 0 && !this.accepted)\n\t\t{\n", {"flag":"a"});
+			fs.writeFileSync(outfile, "\t\t\tconst topsym = this.symbols[this.symbols.length - 1];\n", {"flag":"a"});
+			fs.writeFileSync(outfile, "\t\t\tif(topsym[\"is_term\"])\n", {"flag":"a"});
+			fs.writeFileSync(outfile, "\t\t\t\tbreak;\n", {"flag":"a"});
+
+			fs.writeFileSync(outfile, "\t\t\tswitch(topsym[\"id\"])\n\t\t\t{\n", {"flag":"a"});
+			for(let nonterm_idx = 0; nonterm_idx < num_nonterms; ++nonterm_idx)
+			{
+				const nonterm_id = get_table_id(nontermidx_tab, nonterm_idx);
+				const jump_state_idx = jump_tab[state_idx][nonterm_idx];
+				if(jump_state_idx != err_token)
+				{
+					fs.writeFileSync(outfile, "\t\t\t\tcase " + nonterm_id + ":\n", {"flag":"a"});
+					fs.writeFileSync(outfile, "\t\t\t\t\tthis.state_" + jump_state_idx + "();\n", {"flag":"a"});
+					fs.writeFileSync(outfile, "\t\t\t\t\tbreak;\n", {"flag":"a"});
+				}
+			}
+			fs.writeFileSync(outfile, "\t\t\t\tdefault:\n", {"flag":"a"});
+			fs.writeFileSync(outfile, "\t\t\t\t\tthrow new Error(\"Invalid transition from state " + state_idx + ".\");\n", {"flag":"a"});
+			fs.writeFileSync(outfile, "\t\t\t\t\tbreak;\n", {"flag":"a"});
+			fs.writeFileSync(outfile, "\t\t\t}\n", {"flag":"a"});  // end switch
+			fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});  // end while
 		}
 
 		fs.writeFileSync(outfile, "\t\t--this.dist_to_jump;\n", {"flag":"a"});

@@ -16,6 +16,7 @@ const ids = require("./ids.js");
 
 // load parser
 const parser = require("./parser.js");
+//const expr_parser = require("./expr_parser.js");
 
 
 // load tables
@@ -48,7 +49,8 @@ semantics[ids.SemanticIds.int] = (sym_int) => { return sym_int["val"]; };
 process.stdin.on("data", (data) =>
 {
 	let theparser = new parser.Parser(tables);
-	const end_token = theparser.end_token;
+	//let theparser = new expr_parser.Parser();
+	const end_token = theparser.get_end_token();
 
 	const input_str = data.toString();
 	const input_tokens = lexer.get_tokens(input_str);

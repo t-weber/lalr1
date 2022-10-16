@@ -104,6 +104,12 @@ class Parser
 	}
 
 
+	get_end_token()
+	{
+		return this.end_token;
+	}
+
+
 	/**
 	 * get the next lookahead token and its table index
 	 */
@@ -135,14 +141,16 @@ class Parser
 	 */
 	apply_rule(rule_id, num_rhs, lhs_id)
 	{
-		const args = this.symbols.slice(this.symbols.length-num_rhs, this.symbols.length);
+		const args = this.symbols.slice(this.symbols.length - num_rhs, this.symbols.length);
 		this.symbols = this.symbols.slice(0, this.symbols.length - num_rhs);
 		this.states = this.states.slice(0, this.states.length - num_rhs);
 
 		// apply semantic rule if available
 		let rule_ret = null;
-		if(this.semantics != null && self.semantics.has(rule_id))
-			rule_ret = this.semantics[rule_id](args);
+		if(this.semantics != null && rule_id in this.semantics)
+			rule_ret = this.semantics[rule_id].apply(this, args);
+		else
+			console.error("Semantic rule " + rule_id + " is not defined.");
 
 		// push reduced nonterminal symbol
 		this.symbols.push({ "is_term" : false, "id" : lhs_id, "val" : rule_ret });
@@ -166,11 +174,10 @@ class Parser
 			const new_state = this.shift_tab[top_state][this.lookahead_idx];
 			const rule_idx = this.reduce_tab[top_state][this.lookahead_idx];
 
-			console.log();
-			console.log("Lookahead: " + this.lookahead.id + " (index: " + this.lookahead_idx + ")");
+			/*console.log("\nLookahead: " + this.lookahead.id + " (index: " + this.lookahead_idx + ")");
 			console.log("States: " + this.states);
 			console.log("Symbols: ", [...this.symbols.values()]);
-			console.log("New state: " + new_state + ", rule: " + rule_idx);
+			console.log("New state: " + new_state + ", rule: " + rule_idx);*/
 
 			if(new_state == this.err_token && rule_idx == this.err_token)
 				throw new Error("No shift or reduce action defined.");
@@ -179,7 +186,7 @@ class Parser
 			else if(rule_idx == this.acc_token)
 			{
 				// accept
-				console.log("Accepted.");
+				//console.log("Accepted.");
 				this.accepted = true;
 				if(this.symbols.length >= 1)
 					return this.symbols[this.symbols.length - 1];
@@ -212,10 +219,3 @@ class Parser
 
 
 module.exports = { "Parser" : Parser };
-
-
-// test
-const tables = require("./expr.json");
-const parser = new Parser(tables);
-parser.set_input([[1001, 1], "+", [1001, 2], "*", [1001, 3], [tables.consts.end]]);
-parser.parse();
