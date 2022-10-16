@@ -52,6 +52,7 @@ class Parser:
 		# special values
 		self.acc_token = tables["consts"]["acc"]
 		self.err_token = tables["consts"]["err"]
+		self.end_token = tables["consts"]["end"]
 
 		self.input_tokens = []
 		self.semantics = None

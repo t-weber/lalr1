@@ -88,7 +88,10 @@ def create_parser(tables, outfile_name):
 
 	# constructor
 	print("\tdef __init__(self):", file=outfile)
-	#print(f"\t\tself.end_id = 0x{end_token:x}", file=outfile)
+	if end_token < 0:
+		print(f"\t\tself.end_token = {end_token}", file=outfile)
+	else:
+		print(f"\t\tself.end_token = 0x{end_token:x}", file=outfile)
 	print("\t\tself.input_tokens = []", file=outfile)
 	print("\t\tself.semantics = None", file=outfile)
 	print("\t\tself.reset()\n", file=outfile)

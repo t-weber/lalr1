@@ -9,9 +9,6 @@
 #	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
 #
 
-use_tables = True
-
-
 import sys
 import json
 import math
@@ -95,17 +92,7 @@ semantics = {
 # load tables from a json file and run parser
 #
 def main(args):
-	tablesfile_name = "expr.json"   # output from ./expr_parsergen
-	if len(sys.argv) > 1:
-		tablesfile_name = sys.argv[1]
-
 	try:
-		tablesfile = open(tablesfile_name)
-
-		tables = json.load(tablesfile)
-		end_token = tables["consts"]["end"]
-		#print(tables["infos"])
-
 		while True:
 			sys.stdout.write("> ")
 			sys.stdout.flush()
@@ -113,13 +100,19 @@ def main(args):
 			if len(input_str) == 0:
 				continue
 
+			tablesfile = open("expr.json")
+			tables = json.load(tablesfile)
+			theparser = parser.Parser(tables)
+
+			#theparser = expr_parser.Parser()
+
+			theparser.semantics = semantics
+			end_token = theparser.end_token
+
 			input_tokens = lexer.get_tokens(input_str)
 			input_tokens.append([end_token])
-
-			theparser = parser.Parser(tables)
-			#theparser = expr_parser.Parser()
 			theparser.input_tokens = input_tokens
-			theparser.semantics = semantics
+
 			result = theparser.parse()
 			if result != None:
 				print(result["val"])
@@ -127,12 +120,6 @@ def main(args):
 				print("Error while parsing.")
 				return -1
 
-	except FileNotFoundError as err:
-		print(f"Error: Could not open tables file \"{tablesfile_name}\".")
-		return -1
-	except json.decoder.JSONDecodeError as err:
-		print(f"Error: Tables file \"{tablesfile_name}\" could not be decoded as json.")
-		return -1
 	except IndexError as err:
 		print(f"Index error: {str(err)}")
 		return -1

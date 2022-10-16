@@ -67,6 +67,7 @@ class Parser
 		// special values
 		this.acc_token = tables.consts.acc;
 		this.err_token = tables.consts.err;
+		this.end_token = tables.consts.end;
 
 		this.input_tokens = [ ];
 		this.semantics = null;
