@@ -123,7 +123,7 @@ public:
 	void SaveCXXDefinition(std::ostream& ostr, const std::string& var,
 		const std::string& row_label = "", const std::string& col_label = "") const
 	{
-		ostr << "const Table<std::size_t, std::vector> " << var << "{";
+		ostr << "const t_table " << var << "{";
 		ostr << size1();
 		if(row_label.size())
 			ostr << " /*" << row_label << "*/";

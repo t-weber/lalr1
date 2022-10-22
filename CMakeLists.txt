@@ -135,6 +135,10 @@ if(SWIG_FOUND AND SWIG_python_FOUND AND Python_FOUND)
 	set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/lalr1_py/lalr1.i PROPERTY CPLUSPLUS TRUE)
 	swig_add_library(lalr1_py TYPE MODULE LANGUAGE python SOURCES ${PROJECT_SOURCE_DIR}/src/lalr1_py/lalr1.i)
 	target_link_libraries(lalr1_py lalr1 Python::Python)
+
+	set_source_files_properties(
+		"${PROJECT_BINARY_DIR}/CMakeFiles/lalr1_py.dir/lalr1PYTHON_wrap.cxx"
+		PROPERTIES COMPILE_OPTIONS "-Wno-extra;-Wno-effc++")
 else()
 	message("Disabling Swig/Python bindings.")
 endif()
