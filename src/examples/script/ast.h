@@ -18,7 +18,7 @@
 #include <sstream>
 
 #include "lval.h"
-#include "lalr1/ast.h"
+#include "core/ast.h"
 #include "script_vm/types.h"
 
 

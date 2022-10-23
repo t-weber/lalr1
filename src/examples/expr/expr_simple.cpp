@@ -5,8 +5,8 @@
  * @license see 'LICENSE' file
  */
 
-#include "lalr1/collection.h"
-#include "lalr1/tableexport.h"
+#include "core/collection.h"
+#include "core/tableexport.h"
 #include "script/lexer.h"
 #include "script/ast.h"
 #include "script/ast_printer.h"

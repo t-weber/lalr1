@@ -16,7 +16,7 @@
 
 #include "ast.h"
 #include "lval.h"
-#include "lalr1/common.h"
+#include "core/common.h"
 
 
 using t_tok = t_symbol_id;

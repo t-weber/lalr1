@@ -5,7 +5,7 @@
  * @license see 'LICENSE' file
  */
 
-#include "lalr1/collection.h"
+#include "core/collection.h"
 #include "expr_grammar.h"
 #include "script/lexer.h"
 #include "script/ast.h"
@@ -32,7 +32,7 @@
 	#define USE_RECASC 1
 
 #elif __has_include("expr.tab")
-	#include "lalr1/parser.h"
+	#include "core/parser.h"
 	#include "expr.tab"
 
 	#define USE_RECASC 0

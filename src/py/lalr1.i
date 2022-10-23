@@ -56,12 +56,12 @@ namespace std
 // --------------------------------------------------------------------------------
 %module lalr1
 %{
-	#include "src/lalr1/types.h"
-	#include "src/lalr1/symbol.h"
-	#include "src/lalr1/element.h"
-	#include "src/lalr1/closure.h"
-	#include "src/lalr1/collection.h"
-	#include "src/lalr1/tableexport.h"
+	#include "src/core/types.h"
+	#include "src/core/symbol.h"
+	#include "src/core/element.h"
+	#include "src/core/closure.h"
+	#include "src/core/collection.h"
+	#include "src/core/tableexport.h"
 %}
 
 %shared_ptr(std::enable_shared_from_this<Symbol>);
@@ -84,12 +84,12 @@ namespace std
 %template(CollectionESFT) std::enable_shared_from_this<Collection>;
 %template(SymbolVec) std::vector<SymbolPtr>;
 
-%include "src/lalr1/types.h"
-%include "src/lalr1/symbol.h"
-%include "src/lalr1/element.h"
-%include "src/lalr1/closure.h"
-%include "src/lalr1/collection.h"
-%include "src/lalr1/tableexport.h"
+%include "src/core/types.h"
+%include "src/core/symbol.h"
+%include "src/core/element.h"
+%include "src/core/closure.h"
+%include "src/core/collection.h"
+%include "src/core/tableexport.h"
 // --------------------------------------------------------------------------------
 
 

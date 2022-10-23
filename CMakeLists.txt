@@ -52,38 +52,38 @@ add_library(lalr1 STATIC)
 
 target_sources(lalr1
 	PUBLIC
-		${PROJECT_SOURCE_DIR}/src/lalr1/symbol.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/collection.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/tableexport.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/options.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/ast.h
+		${PROJECT_SOURCE_DIR}/src/core/symbol.h
+		${PROJECT_SOURCE_DIR}/src/core/collection.h
+		${PROJECT_SOURCE_DIR}/src/core/tableexport.h
+		${PROJECT_SOURCE_DIR}/src/core/options.h
+		${PROJECT_SOURCE_DIR}/src/core/ast.h
 	PRIVATE
-		${PROJECT_SOURCE_DIR}/src/lalr1/symbol.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/element.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/closure.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/collection.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/options.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/parsergen.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/tablegen.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/tableexport.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/element.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/closure.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/table.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/common.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/timer.h
+		${PROJECT_SOURCE_DIR}/src/core/symbol.cpp
+		${PROJECT_SOURCE_DIR}/src/core/element.cpp
+		${PROJECT_SOURCE_DIR}/src/core/closure.cpp
+		${PROJECT_SOURCE_DIR}/src/core/collection.cpp
+		${PROJECT_SOURCE_DIR}/src/core/options.cpp
+		${PROJECT_SOURCE_DIR}/src/core/parsergen.cpp
+		${PROJECT_SOURCE_DIR}/src/core/tablegen.cpp
+		${PROJECT_SOURCE_DIR}/src/core/tableexport.cpp
+		${PROJECT_SOURCE_DIR}/src/core/element.h
+		${PROJECT_SOURCE_DIR}/src/core/closure.h
+		${PROJECT_SOURCE_DIR}/src/core/table.h
+		${PROJECT_SOURCE_DIR}/src/core/common.h
+		${PROJECT_SOURCE_DIR}/src/core/timer.h
 )
 
 set_target_properties(lalr1 PROPERTIES PUBLIC_HEADER
-	"${PROJECT_SOURCE_DIR}/src/lalr1/symbol.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/element.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/closure.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/collection.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/options.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/tableexport.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/table.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/ast.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/common.h;\
-${PROJECT_SOURCE_DIR}/src/lalr1/timer.h"
+	"${PROJECT_SOURCE_DIR}/src/core/symbol.h;\
+${PROJECT_SOURCE_DIR}/src/core/element.h;\
+${PROJECT_SOURCE_DIR}/src/core/closure.h;\
+${PROJECT_SOURCE_DIR}/src/core/collection.h;\
+${PROJECT_SOURCE_DIR}/src/core/options.h;\
+${PROJECT_SOURCE_DIR}/src/core/tableexport.h;\
+${PROJECT_SOURCE_DIR}/src/core/table.h;\
+${PROJECT_SOURCE_DIR}/src/core/ast.h;\
+${PROJECT_SOURCE_DIR}/src/core/common.h;\
+${PROJECT_SOURCE_DIR}/src/core/timer.h"
 )
 
 #get_target_property(LALR1_HEADERS lalr1 PUBLIC_HEADER)
@@ -103,17 +103,17 @@ add_library(lalr1-parser STATIC)
 
 target_sources(lalr1-parser
 	PUBLIC
-		${PROJECT_SOURCE_DIR}/src/lalr1/parser.h
+		${PROJECT_SOURCE_DIR}/src/core/parser.h
 
 	PRIVATE
-		${PROJECT_SOURCE_DIR}/src/lalr1/parser.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/table.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/common.h
-		${PROJECT_SOURCE_DIR}/src/lalr1/ast.h
+		${PROJECT_SOURCE_DIR}/src/core/parser.cpp
+		${PROJECT_SOURCE_DIR}/src/core/table.h
+		${PROJECT_SOURCE_DIR}/src/core/common.h
+		${PROJECT_SOURCE_DIR}/src/core/ast.h
 )
 
 set_target_properties(lalr1-parser PROPERTIES PUBLIC_HEADER
-	${PROJECT_SOURCE_DIR}/src/lalr1/parser.h
+	${PROJECT_SOURCE_DIR}/src/core/parser.h
 )
 
 target_link_libraries(lalr1-parser ${Boost_LIBRARIES})
@@ -135,8 +135,8 @@ if(SWIG_FOUND AND SWIG_python_FOUND AND Python_FOUND)
 	cmake_policy(SET CMP0086 NEW)
 	include(${SWIG_USE_FILE})
 
-	set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/lalr1_py/lalr1.i PROPERTY CPLUSPLUS TRUE)
-	swig_add_library(lalr1_py TYPE MODULE LANGUAGE python SOURCES ${PROJECT_SOURCE_DIR}/src/lalr1_py/lalr1.i)
+	set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/py/lalr1.i PROPERTY CPLUSPLUS TRUE)
+	swig_add_library(lalr1_py TYPE MODULE LANGUAGE python SOURCES ${PROJECT_SOURCE_DIR}/src/py/lalr1.i)
 	target_link_libraries(lalr1_py lalr1 Python::Python)
 
 	set_source_files_properties(
@@ -153,8 +153,8 @@ endif()
 if(BUILD_EXAMPLES)
 	# script compiler library
 	add_library(script STATIC
-		src/lalr1/symbol.cpp src/lalr1/symbol.h
-		src/lalr1/options.cpp src/lalr1/options.h
+		src/core/symbol.cpp src/core/symbol.h
+		src/core/options.cpp src/core/options.h
 		src/examples/script/lexer.cpp src/examples/script/lexer.h
 		src/examples/script/ast_printer.cpp src/examples/script/ast_printer.h
 		src/examples/script/ast_asm.cpp src/examples/script/ast_asm.h

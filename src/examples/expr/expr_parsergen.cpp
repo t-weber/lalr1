@@ -5,9 +5,9 @@
  * @license see 'LICENSE' file
  */
 
-#include "lalr1/collection.h"
-#include "lalr1/tableexport.h"
-#include "lalr1/options.h"
+#include "core/collection.h"
+#include "core/tableexport.h"
+#include "core/options.h"
 #include "expr_grammar.h"
 #include "script/lexer.h"
 #include "script/ast.h"

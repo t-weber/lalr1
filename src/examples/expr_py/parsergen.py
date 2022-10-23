@@ -1,1 +1,1 @@
-../../lalr1_py/parsergen.py
+../../py/parsergen.py

@@ -6,10 +6,10 @@
  */
 
 #include "script_grammar.h"
-#include "lalr1/collection.h"
-#include "lalr1/tableexport.h"
-#include "lalr1/timer.h"
-#include "lalr1/options.h"
+#include "core/collection.h"
+#include "core/tableexport.h"
+#include "core/timer.h"
+#include "core/options.h"
 #include "lexer.h"
 #include "ast.h"
 #include "ast_printer.h"

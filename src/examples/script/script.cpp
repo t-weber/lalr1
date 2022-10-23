@@ -6,8 +6,8 @@
  */
 
 #include "script_grammar.h"
-#include "lalr1/collection.h"
-#include "lalr1/timer.h"
+#include "core/collection.h"
+#include "core/timer.h"
 #include "lexer.h"
 #include "ast.h"
 #include "ast_printer.h"
@@ -43,7 +43,7 @@ namespace args = boost::program_options;
 	#define USE_RECASC 1
 
 #elif __has_include("script.tab")
-	#include "lalr1/parser.h"
+	#include "core/parser.h"
 	#include "script.tab"
 
 	#define USE_RECASC 0

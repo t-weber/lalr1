@@ -47,9 +47,9 @@ bool Collection::SaveParser(const std::string& filename_cpp, const std::string& 
 #ifndef __LALR1_PARSER_REC_ASC_H__
 #define __LALR1_PARSER_REC_ASC_H__
 
-#include "lalr1/ast.h"
-#include "lalr1/common.h"
-#include "lalr1/stack.h"
+#include "core/ast.h"
+#include "core/common.h"
+#include "core/stack.h"
 
 #include <unordered_set>
 

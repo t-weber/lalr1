@@ -260,7 +260,7 @@ public class Parser<t_lval>
 	/**
 	 * test
 	 */
-	public static void main(String[] prog_args)
+	/*public static void main(String[] prog_args)
 	{
 		// semantic ids
 		final int sem_start_id    = 100;
@@ -345,5 +345,5 @@ public class Parser<t_lval>
 		Symbol result = parser.Parse();
 		if(result != null)
 			System.out.println(result.GetVal());
-	}
+	}*/
 }

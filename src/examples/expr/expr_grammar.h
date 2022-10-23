@@ -7,7 +7,7 @@
 #ifndef __LALR1_EXPR_GRAMMAR_H__
 #define __LALR1_EXPR_GRAMMAR_H__
 
-#include "lalr1/symbol.h"
+#include "core/symbol.h"
 #include "script/ast.h"
 
 
