@@ -6,7 +6,7 @@
  * @license see 'LICENSE' file
  */
 
-interface LALR1Tables
+public interface ParsingTables
 {
 	public int GetErrConst();
 	public int GetAccConst();
