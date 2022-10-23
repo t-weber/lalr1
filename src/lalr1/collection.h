@@ -88,8 +88,6 @@ public:
 	t_transitions GetTransitions(const ClosurePtr& closure, bool term = true) const;
 
 	bool CreateParseTables();
-	bool SaveParseTablesCXX(const std::string& file) const;
-	bool SaveParseTablesJSON(const std::string& file) const;
 	bool SaveParser(const std::string& file, const std::string& class_name = "ParserRecAsc") const;
 
 	bool SaveGraph(std::ostream& ostr, bool write_full_coll = true) const;
@@ -134,6 +132,9 @@ private:
 	t_closurecache m_closure_cache{};           // seen closures
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures
 
+	t_mapIdStrId m_mapNonTermStrIds{};          // maps the non-terminal ids to the respective string identifiers
+	t_mapIdStrId m_mapTermStrIds{};             // maps the terminal ids to the respective string identifiers
+
 	bool m_stopOnConflicts{true};               // stop table/code generation on conflicts
 	bool m_useOpChar{true};                     // use printable character for operators if possible
 	bool m_genDebugCode{true};                  // generate debug code in parser output
@@ -156,6 +157,31 @@ private:
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Collection& colls);
+
+
+public:
+	// getters
+	const t_table& GetShiftTable() const { return m_tabActionShift; }
+	const t_table& GetReduceTable() const { return m_tabActionReduce; }
+	const t_table& GetJumpTable() const { return m_tabJump; }
+
+	const t_mapIdStrId& GetNontermStringIdMap() const { return m_mapNonTermStrIds; }
+	const t_mapIdStrId& GetTermStringIdMap() const { return m_mapTermStrIds; }
+
+	const t_table& GetPartialsRuleTerm() const { return m_tabPartialRuleTerm; }
+	const t_table& GetPartialsRuleNonterm() const { return m_tabPartialRuleNonterm; }
+	const t_table& GetPartialsMatchLengthTerm() const { return m_tabPartialMatchLenTerm; }
+	const t_table& GetPartialsMatchLengthNonterm() const { return m_tabPartialMatchLenNonterm; }
+
+	const t_mapIdIdx& GetTermIndexMap() const { return m_mapTermIdx; }
+	const t_mapIdIdx& GetNontermIndexMap() const { return m_mapNonTermIdx; }
+	const t_mapIdIdx& GetSemanticIndexMap() const { return m_mapSemanticIdx; }
+
+	const std::vector<std::size_t>& GetNumRhsSymbolsPerRule() const { return m_numRhsSymsPerRule; }
+	const std::vector<t_index>& GetRuleLhsIndices() const { return m_ruleLhsIdx; }
+
+	bool GetGenPartialMatches() const { return m_genPartialMatches; }
+	bool GetUseOpChar() const { return m_useOpChar; }
 };
 
 

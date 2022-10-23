@@ -7,6 +7,7 @@
 
 #include "script_grammar.h"
 #include "lalr1/collection.h"
+#include "lalr1/tableexport.h"
 #include "lalr1/timer.h"
 #include "lalr1/options.h"
 #include "lexer.h"
@@ -116,7 +117,8 @@ static bool lr1_create_parser(
 			if(collsLALR.CreateParseTables())
 			{
 				const char* lalr_tables = "script.tab";
-				tables_ok = collsLALR.SaveParseTablesCXX(lalr_tables);
+				TableExporter exporter{&collsLALR};
+				tables_ok = exporter.SaveParseTablesCXX(lalr_tables);
 				std::cout << "Created LALR(1) tables \""
 					<< lalr_tables << "\"." << std::endl;
 			}

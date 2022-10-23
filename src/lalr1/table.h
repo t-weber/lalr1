@@ -120,7 +120,7 @@ public:
 	/**
 	 * export table to C++ code
 	 */
-	void SaveCXXDefinition(std::ostream& ostr, const std::string& var,
+	void SaveCXX(std::ostream& ostr, const std::string& var,
 		const std::string& row_label = "", const std::string& col_label = "") const
 	{
 		ostr << "const t_table " << var << "{";
@@ -157,6 +157,55 @@ public:
 			ostr << "// " << row_label << " " << row << "\n";
 		}
 		ostr << "}";
+		ostr << "};\n\n";
+	}
+
+
+	/**
+	 * export table to Java code
+	 */
+	void SaveJava(std::ostream& ostr, const std::string& var,
+		const std::string& row_label = "", const std::string& col_label = "",
+		const std::string& acc_level = "public", std::size_t indent = 0) const
+	{
+		auto do_indent = [&ostr, indent]()
+		{
+			for(std::size_t i=0; i<indent; ++i)
+				ostr << "\t";
+		};
+
+		do_indent();
+		ostr << acc_level << " final int[";
+		//ostr << " " << size1();
+		if(row_label != "")
+			ostr << " /*" << row_label << "*/ ";
+		ostr << "][";
+		//ostr << " " << size2();
+		if(col_label != "")
+			ostr << " /*" << col_label << "*/ ";
+		ostr << "] " << var << " =\n";
+
+		do_indent();
+		ostr << "{\n";
+		for(std::size_t row=0; row<size1(); ++row)
+		{
+			do_indent();
+			ostr << "\t{ ";
+			for(std::size_t col=0; col<size2(); ++col)
+			{
+				const value_type& entry = operator()(row, col);
+
+				if(entry == m_errorval)
+					ostr << "err, ";
+				else if(entry == m_acceptval)
+					ostr << "acc, ";
+				else
+					ostr << entry << ", ";
+			}
+			ostr << "}, // " << row_label << " " << row << "\n";
+		}
+
+		do_indent();
 		ostr << "};\n\n";
 	}
 

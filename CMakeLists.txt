@@ -54,6 +54,7 @@ target_sources(lalr1
 	PUBLIC
 		${PROJECT_SOURCE_DIR}/src/lalr1/symbol.h
 		${PROJECT_SOURCE_DIR}/src/lalr1/collection.h
+		${PROJECT_SOURCE_DIR}/src/lalr1/tableexport.h
 		${PROJECT_SOURCE_DIR}/src/lalr1/options.h
 		${PROJECT_SOURCE_DIR}/src/lalr1/ast.h
 	PRIVATE
@@ -62,8 +63,9 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/lalr1/closure.cpp
 		${PROJECT_SOURCE_DIR}/src/lalr1/collection.cpp
 		${PROJECT_SOURCE_DIR}/src/lalr1/options.cpp
-		${PROJECT_SOURCE_DIR}/src/lalr1/tablegen.cpp
 		${PROJECT_SOURCE_DIR}/src/lalr1/parsergen.cpp
+		${PROJECT_SOURCE_DIR}/src/lalr1/tablegen.cpp
+		${PROJECT_SOURCE_DIR}/src/lalr1/tableexport.cpp
 		${PROJECT_SOURCE_DIR}/src/lalr1/element.h
 		${PROJECT_SOURCE_DIR}/src/lalr1/closure.h
 		${PROJECT_SOURCE_DIR}/src/lalr1/table.h
@@ -77,6 +79,7 @@ ${PROJECT_SOURCE_DIR}/src/lalr1/element.h;\
 ${PROJECT_SOURCE_DIR}/src/lalr1/closure.h;\
 ${PROJECT_SOURCE_DIR}/src/lalr1/collection.h;\
 ${PROJECT_SOURCE_DIR}/src/lalr1/options.h;\
+${PROJECT_SOURCE_DIR}/src/lalr1/tableexport.h;\
 ${PROJECT_SOURCE_DIR}/src/lalr1/table.h;\
 ${PROJECT_SOURCE_DIR}/src/lalr1/ast.h;\
 ${PROJECT_SOURCE_DIR}/src/lalr1/common.h;\

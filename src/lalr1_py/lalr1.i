@@ -61,6 +61,7 @@ namespace std
 	#include "src/lalr1/element.h"
 	#include "src/lalr1/closure.h"
 	#include "src/lalr1/collection.h"
+	#include "src/lalr1/tableexport.h"
 %}
 
 %shared_ptr(std::enable_shared_from_this<Symbol>);
@@ -88,6 +89,7 @@ namespace std
 %include "src/lalr1/element.h"
 %include "src/lalr1/closure.h"
 %include "src/lalr1/collection.h"
+%include "src/lalr1/tableexport.h"
 // --------------------------------------------------------------------------------
 
 

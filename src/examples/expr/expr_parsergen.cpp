@@ -6,6 +6,7 @@
  */
 
 #include "lalr1/collection.h"
+#include "lalr1/tableexport.h"
 #include "lalr1/options.h"
 #include "expr_grammar.h"
 #include "script/lexer.h"
@@ -103,8 +104,10 @@ static void lr1_create_parser()
 		bool tables_ok = false;
 		if(collsLALR.CreateParseTables())
 		{
-			tables_ok = collsLALR.SaveParseTablesCXX("expr.tab");
-			collsLALR.SaveParseTablesJSON("expr.json");
+			TableExporter exporter{&collsLALR};
+			tables_ok = exporter.SaveParseTablesCXX("expr.tab");
+			exporter.SaveParseTablesJSON("expr.json");
+			exporter.SaveParseTablesJava("ExprTab.java");
 		}
 
 		if(!tables_ok)

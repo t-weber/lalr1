@@ -84,7 +84,8 @@ coll.DoTransitions()
 # table generation
 tablesfile_name = "expr.json"
 if coll.CreateParseTables():
-	coll.SaveParseTablesJSON(tablesfile_name)
+	tables = lalr1.TableExporter(coll)
+	tables.SaveParseTablesJSON(tablesfile_name)
 	print(f"Created parsing tables \"{tablesfile_name}\".")
 else:
 	print(f"Could not create parsing tables \"{tablesfile_name}\".", file=sys.stderr)

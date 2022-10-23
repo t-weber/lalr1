@@ -102,6 +102,8 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_mapTermIdx = coll.m_mapTermIdx;
 	this->m_mapNonTermIdx = coll.m_mapNonTermIdx;
 	this->m_mapSemanticIdx = coll.m_mapSemanticIdx;
+	this->m_mapNonTermStrIds = coll.m_mapNonTermStrIds;
+	this->m_mapTermStrIds = coll.m_mapNonTermStrIds;
 	this->m_closure_cache = coll.m_closure_cache;
 	this->m_seen_closures = coll.m_seen_closures;
 	this->m_stopOnConflicts = coll.m_stopOnConflicts;
@@ -484,6 +486,7 @@ void Collection::CreateTableIndices()
 {
 	// generate table indices for terminals
 	m_mapTermIdx.clear();
+	m_mapTermStrIds.clear();
 	t_index curTermIdx = 0;
 
 	for(const t_transition& tup : m_transitions)
@@ -496,15 +499,20 @@ void Collection::CreateTableIndices()
 		if(auto [iter, inserted] = m_mapTermIdx.try_emplace(
 			symTrans->GetId(), curTermIdx); inserted)
 			++curTermIdx;
+
+		// nonterminal string id map
+		const std::string& sym_strid = symTrans->GetStrId();
+		m_mapTermStrIds.try_emplace(symTrans->GetId(), sym_strid);
 	}
 
 	// add end symbol
 	m_mapTermIdx.try_emplace(g_end->GetId(), curTermIdx++);
-
+	m_mapTermStrIds.try_emplace(g_end->GetId(), g_end->GetStrId());
 
 	// generate table indices for non-terminals and semantic rules
 	m_mapNonTermIdx.clear();
 	m_mapSemanticIdx.clear();
+	m_mapNonTermStrIds.clear();
 	t_index curNonTermIdx = 0;
 	t_index curSemanticIdx = 0;
 
@@ -515,10 +523,15 @@ void Collection::CreateTableIndices()
 			if(!elem->IsCursorAtEnd())
 				continue;
 
+			// nonterminal id map
 			t_symbol_id sym_id = elem->GetLhs()->GetId();
 			if(auto [iter, inserted] = m_mapNonTermIdx.try_emplace(
 				sym_id, curNonTermIdx); inserted)
 				++curNonTermIdx;
+
+			// nonterminal string id map
+			const std::string& sym_strid = elem->GetLhs()->GetStrId();
+			m_mapNonTermStrIds.try_emplace(sym_id, sym_strid);
 
 			if(std::optional<t_semantic_id> semantic_id =
 				elem->GetSemanticRule(); semantic_id)

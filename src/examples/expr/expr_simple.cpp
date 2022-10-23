@@ -6,6 +6,7 @@
  */
 
 #include "lalr1/collection.h"
+#include "lalr1/tableexport.h"
 #include "script/lexer.h"
 #include "script/ast.h"
 #include "script/ast_printer.h"
@@ -199,7 +200,10 @@ static void lr1_create_parser()
 #endif
 
 		if(collsLALR.CreateParseTables())
-			collsLALR.SaveParseTablesCXX("expr_simple.tab");
+		{
+			TableExporter exporter{&collsLALR};
+			exporter.SaveParseTablesCXX("expr_simple.tab");
+		}
 		collsLALR.SaveParser("expr_simple_parser.cpp");
 	}
 	catch(const std::exception& err)
