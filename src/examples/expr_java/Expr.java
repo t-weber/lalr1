@@ -22,31 +22,31 @@ public class Expr
 	public static void main(String[] prog_args)
 	{
 		// semantic rules
-		SemanticRule<Integer> sem_start = (args) -> {
+		SemanticRuleInterface<Integer> sem_start = (args) -> {
 			return args.elementAt(0).GetVal(); };
-		SemanticRule<Integer> sem_brackets = (args) -> {
+		SemanticRuleInterface<Integer> sem_brackets = (args) -> {
 			return args.elementAt(1).GetVal(); };
-		SemanticRule<Integer> sem_add = (args) -> {
+		SemanticRuleInterface<Integer> sem_add = (args) -> {
 			return args.elementAt(0).GetVal() + args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_sub = (args) -> {
+		SemanticRuleInterface<Integer> sem_sub = (args) -> {
 			return args.elementAt(0).GetVal() - args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_mul = (args) -> {
+		SemanticRuleInterface<Integer> sem_mul = (args) -> {
 			return args.elementAt(0).GetVal() * args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_div = (args) -> {
+		SemanticRuleInterface<Integer> sem_div = (args) -> {
 			return args.elementAt(0).GetVal() / args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_mod = (args) -> {
+		SemanticRuleInterface<Integer> sem_mod = (args) -> {
 			return args.elementAt(0).GetVal() % args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_uadd = (args) -> {
+		SemanticRuleInterface<Integer> sem_uadd = (args) -> {
 			return +args.elementAt(1).GetVal(); };
-		SemanticRule<Integer> sem_usub = (args) -> {
+		SemanticRuleInterface<Integer> sem_usub = (args) -> {
 			return -args.elementAt(1).GetVal(); };
-		SemanticRule<Integer> sem_real = (args) -> {
+		SemanticRuleInterface<Integer> sem_real = (args) -> {
 			return args.elementAt(0).GetVal(); };
-		SemanticRule<Integer> sem_int = (args) -> {
+		SemanticRuleInterface<Integer> sem_int = (args) -> {
 			return args.elementAt(0).GetVal(); };
 
-		HashMap<Integer, SemanticRule<Integer>> rules =
-			new HashMap<Integer, SemanticRule<Integer>>();
+		HashMap<Integer, SemanticRuleInterface<Integer>> rules =
+			new HashMap<Integer, SemanticRuleInterface<Integer>>();
 		rules.put(Ids.sem_start_id, sem_start);
 		rules.put(Ids.sem_brackets_id, sem_brackets);
 		rules.put(Ids.sem_add_id, sem_add);

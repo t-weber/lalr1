@@ -9,7 +9,7 @@
 import java.util.Vector;
 
 
-public interface SemanticRule<t_lval>
+public interface SemanticRuleInterface<t_lval>
 {
 	t_lval call(Vector<Symbol<t_lval>> args);
 }

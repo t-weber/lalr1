@@ -51,6 +51,9 @@ function get_table_id(idx_tab, idx)
 }
 
 
+/**
+ * check if the given table row has at least one non-error entry
+ */
 function has_table_entry(tab, idx1, err_token)
 {
 	const row = tab[idx1];
@@ -195,12 +198,11 @@ function create_parser(tables, outfile)
 
 		fs.writeFileSync(outfile, "\t\tswitch(this.lookahead[\"id\"])\n\t\t{\n", {"flag":"a"});
 
-		let rules_term_id = {};
-		let acc_term_id = [];
+		let rules_term_id = {};  // map of rules and their terminal ids
+		let acc_term_id = [];    // terminal ids for accepting
 		for(let term_idx = 0; term_idx < num_terms; ++term_idx)
 		{
 			const term_id = get_table_id(termidx_tab, term_idx);
-
 			const newstate_idx = shift_tab[state_idx][term_idx];
 			const rule_idx = reduce_tab[state_idx][term_idx];
 
@@ -226,6 +228,7 @@ function create_parser(tables, outfile)
 			}
 		}
 
+		// create cases for rule application
 		for(const rule_idx in rules_term_id)
 		{
 			const term_ids = rules_term_id[rule_idx];
@@ -248,6 +251,7 @@ function create_parser(tables, outfile)
 			}
 		}
 
+		// create accepting case
 		if(acc_term_id.length > 0)
 		{
 			for(const term_id of acc_term_id)
@@ -260,6 +264,7 @@ function create_parser(tables, outfile)
 			fs.writeFileSync(outfile, "\t\t\t\tbreak;\n", {"flag":"a"});
 		}
 
+		// default to error
 		fs.writeFileSync(outfile, "\t\t\tdefault:\n", {"flag":"a"});
 		fs.writeFileSync(outfile, "\t\t\t\tthrow new Error(\"Invalid transition from state " + state_idx + ".\");\n", {"flag":"a"});
 		fs.writeFileSync(outfile, "\t\t\t\tbreak;\n", {"flag":"a"});

@@ -11,7 +11,7 @@ import java.util.Stack;
 import java.util.HashMap;
 
 
-public class Parser<t_lval>
+public class Parser<t_lval> implements ParserInterface<t_lval>
 {
 	protected ParsingTables m_tables;          // parsing tables
 
@@ -23,7 +23,7 @@ public class Parser<t_lval>
 	protected Vector<Symbol<t_lval>> m_input;  // input tokens
 	protected Stack<Symbol<t_lval>> m_symbols; // symbol stack
 	protected Stack<Integer> m_states;         // state stack
-	protected HashMap<Integer, SemanticRule<t_lval>> m_semantics;
+	protected HashMap<Integer, SemanticRuleInterface<t_lval>> m_semantics;
 
 	protected int m_input_index;               // current input token
 	protected int m_lookahead_index;           // lookahead index
@@ -68,7 +68,9 @@ public class Parser<t_lval>
 	{
 		m_accepted = false;
 		m_input_index = -1;
+
 		m_lookahead = null;
+		m_lookahead_index = -1;
 
 		m_symbols.clear();
 
@@ -89,9 +91,19 @@ public class Parser<t_lval>
 	/**
 	 * set the semantic rule functions
 	 */
-	public void SetSemantics(HashMap<Integer, SemanticRule<t_lval>> semantics)
+	public void SetSemantics(HashMap<Integer,
+		SemanticRuleInterface<t_lval>> semantics)
 	{
 		m_semantics = semantics;
+	}
+
+
+	/**
+	 * has the input been accepted?
+	 */
+	public boolean GetAccepted()
+	{
+		return m_accepted;
 	}
 
 
