@@ -176,7 +176,7 @@ public class Parser<t_lval>
 		// get arguments for semantic rule
 		Vector<Symbol<t_lval>> args = new Vector<Symbol<t_lval>>();
 		for(int i=0; i<num_rhs; ++i)
-			args.add(m_symbols.elementAt(m_symbols.size() - 1 - i));
+			args.add(m_symbols.elementAt(m_symbols.size() - num_rhs + i));
 
 		for(int i=0; i<num_rhs; ++i)
 		{
@@ -255,95 +255,4 @@ public class Parser<t_lval>
 		//m_accepted = false;
 		//return null;
 	}
-
-
-	/**
-	 * test
-	 */
-	/*public static void main(String[] prog_args)
-	{
-		// semantic ids
-		final int sem_start_id    = 100;
-		final int sem_brackets_id = 101;
-		final int sem_add_id      = 200;
-		final int sem_sub_id      = 201;
-		final int sem_mul_id      = 202;
-		final int sem_div_id      = 203;
-		final int sem_mod_id      = 204;
-		final int sem_pow_id      = 205;
-		final int sem_uadd_id     = 210;
-		final int sem_usub_id     = 211;
-		final int sem_call0_id    = 300;
-		final int sem_call1_id    = 301;
-		final int sem_call2_id    = 302;
-		final int sem_real_id     = 400;
-		final int sem_int_id      = 401;
-		final int sem_ident_id    = 410;
-		final int sem_assign_id   = 500;
-
-		// token ids
-		final int tok_real_id     = 1000;
-		final int tok_int_id      = 1001;
-		final int tok_str_id      = 1002;
-		final int tok_ident_id    = 1003;
-
-		// semantic rules
-		SemanticRule<Integer> sem_start = (args) -> {
-			return args.elementAt(0).GetVal(); };
-		SemanticRule<Integer> sem_brackets = (args) -> {
-			return args.elementAt(1).GetVal(); };
-		SemanticRule<Integer> sem_add = (args) -> {
-			return args.elementAt(0).GetVal() + args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_sub = (args) -> {
-			return args.elementAt(0).GetVal() - args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_mul = (args) -> {
-			return args.elementAt(0).GetVal() * args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_div = (args) -> {
-			return args.elementAt(0).GetVal() / args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_mod = (args) -> {
-			return args.elementAt(0).GetVal() % args.elementAt(2).GetVal(); };
-		SemanticRule<Integer> sem_uadd = (args) -> {
-			return +args.elementAt(1).GetVal(); };
-		SemanticRule<Integer> sem_usub = (args) -> {
-			return -args.elementAt(1).GetVal(); };
-		SemanticRule<Integer> sem_real = (args) -> {
-			return args.elementAt(0).GetVal(); };
-		SemanticRule<Integer> sem_int = (args) -> {
-			return args.elementAt(0).GetVal(); };
-
-		HashMap<Integer, SemanticRule<Integer>> rules = new HashMap<Integer, SemanticRule<Integer>>();
-		rules.put(sem_start_id, sem_start);
-		rules.put(sem_brackets_id, sem_brackets);
-		rules.put(sem_add_id, sem_add);
-		rules.put(sem_sub_id, sem_sub);
-		rules.put(sem_mul_id, sem_mul);
-		rules.put(sem_div_id, sem_div);
-		rules.put(sem_mod_id, sem_mod);
-		rules.put(sem_uadd_id, sem_uadd);
-		rules.put(sem_usub_id, sem_usub);
-		rules.put(sem_real_id, sem_real);
-		rules.put(sem_int_id, sem_int);
-
-		// parsing tables
-		ParsingTables tab = new ExprTab();
-
-		// test input
-		Vector<Symbol<Integer>> input = new Vector<Symbol<Integer>>();
-		input.add(new Symbol<Integer>(true, tok_int_id, Integer.valueOf(1)));
-		input.add(new Symbol<Integer>(true, (int)'+', null));
-		input.add(new Symbol<Integer>(true, tok_int_id, Integer.valueOf(2)));
-		input.add(new Symbol<Integer>(true, (int)'*', null));
-		input.add(new Symbol<Integer>(true, tok_int_id, Integer.valueOf(3)));
-		input.add(new Symbol<Integer>(true, tab.GetEndConst(), null));
-
-		// parser
-		Parser<Integer> parser = new Parser<Integer>(tab);
-		parser.SetSemantics(rules);
-		parser.SetInput(input);
-
-		// run parser
-		Symbol result = parser.Parse();
-		if(result != null)
-			System.out.println(result.GetVal());
-	}*/
 }

@@ -85,7 +85,7 @@ function get_token(str)
 
 
 /**
- * get the next token in a string
+ * get all tokens in a string
  */
 function get_tokens(str)
 {

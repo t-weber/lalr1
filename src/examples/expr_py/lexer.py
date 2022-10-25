@@ -75,7 +75,7 @@ def get_token(str):
 
 
 #
-# get the next token in a string
+# get all tokens in a string
 #
 def get_tokens(str):
 	tokens = []
