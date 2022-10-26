@@ -29,6 +29,11 @@ public interface ParserInterface<t_lval>
 	public void SetSemantics(HashMap<Integer, SemanticRuleInterface<t_lval>> semantics);
 
 	/**
+	 * get the token id representing the end of the input
+	 */
+	public int GetEndConst();
+
+	/**
 	 * has the input been accepted?
 	 */
 	public boolean GetAccepted();

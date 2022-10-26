@@ -32,6 +32,7 @@ public class ParserGen
 
 	protected int m_err_token = -1;
 	protected int m_acc_token = -2;
+	protected int m_end_token = -1;
 
 
 	public ParserGen(ParsingTables tables)
@@ -63,6 +64,7 @@ public class ParserGen
 		// get special token values
 		m_err_token = m_tables.GetErrConst();
 		m_acc_token = m_tables.GetAccConst();
+		m_end_token = m_tables.GetEndConst();
 	}
 
 
@@ -163,7 +165,7 @@ public class ParserGen
 
 			// default to error
 			pw.print("\t\t\tdefault:\n");
-			pw.print("\t\t\t\tthrow new RuntimeException(\"Invalid transition from state " + state_idx + ".\");\n");
+			pw.print("\t\t\t\tthrow new RuntimeException(\"Invalid terminal transition from state " + state_idx + ".\");\n");
 			//pw.print("\t\t\t\tbreak;\n");
 
 			pw.print("\t\t}\n");  // end switch
@@ -178,7 +180,30 @@ public class ParserGen
 
 			if(has_jump_entry)
 			{
-				// TODO
+				pw.print("\t\twhile(m_dist_to_jump == 0 && m_symbols.size() > 0 && !m_accepted)\n\t\t{\n");
+				pw.print("\t\t\tSymbol<t_lval> topsym = m_symbols.peek();\n");
+				pw.print("\t\t\tif(topsym.IsTerm())\n\t\t\t\tbreak;\n");
+				pw.print("\t\t\tswitch(topsym.GetId())\n\t\t\t{\n");
+
+				for(int nonterm_idx = 0; nonterm_idx < num_nonterms; ++nonterm_idx)
+				{
+					int jump_state_idx = jump[state_idx][nonterm_idx];
+					if(jump_state_idx != m_err_token)
+					{
+						int nonterm_id = GetNontermTableId(nonterm_idx);
+						pw.print("\t\t\t\tcase " + nonterm_id + ":\n");
+						pw.print("\t\t\t\t\tState" + jump_state_idx + "();\n");
+						pw.print("\t\t\t\t\tbreak;\n");
+					}
+				}
+
+				// default to error
+				pw.print("\t\t\t\tdefault:\n");
+				pw.print("\t\t\t\t\tthrow new RuntimeException(\"Invalid nonterminal transition from state " + state_idx + ".\");\n");
+				//pw.print("\t\t\t\t\tbreak;\n");
+
+				pw.print("\t\t\t}\n");  // end switch
+				pw.print("\t\t}\n");  // end while
 			}
 
 			pw.print("\t\t--m_dist_to_jump;\n");
@@ -257,6 +282,7 @@ public class ParserGen
 			pw.print("\t}\n\n");  // end constructor
 
 			// Reset()
+			pw.print("\t@Override\n");
 			pw.print("\tpublic void Reset()\n\t{\n");
 			pw.print("\t\tm_symbols.clear();\n");
 			pw.print("\t\tm_input_index = -1;\n");
@@ -266,21 +292,31 @@ public class ParserGen
 			pw.print("\t}\n\n");  // end Reset()
 
 			// SetInput()
+			pw.print("\t@Override\n");
 			pw.print("\tpublic void SetInput(Vector<Symbol<t_lval>> input)\n\t{\n");
 			pw.print("\t\tm_input = input;\n");
 			pw.print("\t}\n\n");  // end SetInput()
 
 			// SetSemantics()
+			pw.print("\t@Override\n");
 			pw.print("\tpublic void SetSemantics(HashMap<Integer, SemanticRuleInterface<t_lval>> semantics)\n\t{\n");
 			pw.print("\t\tm_semantics = semantics;\n");
 			pw.print("\t}\n\n");  // end SetSemantics()
 
 			// GetAccepted()
+			pw.print("\t@Override\n");
 			pw.print("\tpublic boolean GetAccepted()\n\t{\n");
 			pw.print("\t\treturn m_accepted;\n");
 			pw.print("\t}\n\n");  // end GetAccepted()
 
+			// GetEndConst()
+			pw.print("\t@Override\n");
+			pw.print("\tpublic int GetEndConst()\n\t{\n");
+			pw.print("\t\treturn " + m_end_token + ";\n");
+			pw.print("\t}\n\n");  // end GetEndConst()
+
 			// Parse()
+			pw.print("\t@Override\n");
 			pw.print("\tpublic Symbol<t_lval> Parse()\n\t{\n");
 			pw.print("\t\tReset();\n");
 			pw.print("\t\tNextLookahead();\n");

@@ -59,11 +59,9 @@ public class Expr
 		rules.put(Ids.sem_real_id, sem_real);
 		rules.put(Ids.sem_int_id, sem_int);
 
-		// parsing tables
-		ParsingTables tab = new ExprTab();
-
 		// parser
-		Parser<Integer> parser = new Parser<Integer>(tab);
+		ParserInterface<Integer> parser = new Parser<Integer>(new ExprTab());
+		//ParserInterface<Integer> parser = new ExprParser<Integer>();
 		parser.SetSemantics(rules);
 
 		// lexer
@@ -98,7 +96,7 @@ public class Expr
 				break;
 
 			Vector<Symbol<Integer>> syms = lexer.GetTokens(line);
-			syms.add(new Symbol<Integer>(true, tab.GetEndConst(), null));
+			syms.add(new Symbol<Integer>(true, parser.GetEndConst(), null));
 
 			/*for(int i=0; i<syms.size(); ++i)
 			{

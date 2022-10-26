@@ -64,6 +64,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 	}
 
 
+	@Override
 	public void Reset()
 	{
 		m_accepted = false;
@@ -82,6 +83,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 	/**
 	 * set the input tokens
 	 */
+	@Override
 	public void SetInput(Vector<Symbol<t_lval>> input)
 	{
 		m_input = input;
@@ -91,6 +93,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 	/**
 	 * set the semantic rule functions
 	 */
+	@Override
 	public void SetSemantics(HashMap<Integer,
 		SemanticRuleInterface<t_lval>> semantics)
 	{
@@ -101,9 +104,20 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 	/**
 	 * has the input been accepted?
 	 */
+	@Override
 	public boolean GetAccepted()
 	{
 		return m_accepted;
+	}
+
+
+	/**
+	 * get the token id representing the end of the input
+	 */
+	@Override
+	public int GetEndConst()
+	{
+		return m_tables.GetEndConst();
 	}
 
 
@@ -209,6 +223,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 	/**
 	 * parse the input
 	 */
+	@Override
 	public Symbol<t_lval> Parse()
 	{
 		int[][] shift = m_tables.GetShiftTab();

@@ -189,7 +189,7 @@ def create_parser(tables, outfile_name):
 			print(f"\t\t\t\tself.accepted = True", file=outfile)
 
 		print("\t\t\tcase _:", file=outfile)
-		print(f"\t\t\t\traise RuntimeError(\"Invalid transition from state {state_idx}.\")", file=outfile)
+		print(f"\t\t\t\traise RuntimeError(\"Invalid terminal transition from state {state_idx}.\")", file=outfile)
 
 		if has_shift_entry:
 			print("\t\tif next_state != None:", file=outfile)
@@ -210,7 +210,7 @@ def create_parser(tables, outfile_name):
 					print(f"\t\t\t\tcase {nonterm_id}: # index: {nonterm_idx}", file=outfile)
 					print(f"\t\t\t\t\tself.state_{jump_state_idx}()", file=outfile)
 			print("\t\t\t\tcase _:", file=outfile)
-			print(f"\t\t\t\t\traise RuntimeError(\"Invalid transition from state {state_idx}.\")", file=outfile)
+			print(f"\t\t\t\t\traise RuntimeError(\"Invalid nonterminal transition from state {state_idx}.\")", file=outfile)
 
 		print("\t\tself.dist_to_jump = self.dist_to_jump - 1", file=outfile)
 		print("", file=outfile)

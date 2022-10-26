@@ -266,7 +266,7 @@ function create_parser(tables, outfile)
 
 		// default to error
 		fs.writeFileSync(outfile, "\t\t\tdefault:\n", {"flag":"a"});
-		fs.writeFileSync(outfile, "\t\t\t\tthrow new Error(\"Invalid transition from state " + state_idx + ".\");\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tthrow new Error(\"Invalid terminal transition from state " + state_idx + ".\");\n", {"flag":"a"});
 		fs.writeFileSync(outfile, "\t\t\t\tbreak;\n", {"flag":"a"});
 		fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});  // end of switch
 
@@ -288,17 +288,17 @@ function create_parser(tables, outfile)
 			fs.writeFileSync(outfile, "\t\t\tswitch(topsym[\"id\"])\n\t\t\t{\n", {"flag":"a"});
 			for(let nonterm_idx = 0; nonterm_idx < num_nonterms; ++nonterm_idx)
 			{
-				const nonterm_id = get_table_id(nontermidx_tab, nonterm_idx);
 				const jump_state_idx = jump_tab[state_idx][nonterm_idx];
 				if(jump_state_idx != err_token)
 				{
+					const nonterm_id = get_table_id(nontermidx_tab, nonterm_idx);
 					fs.writeFileSync(outfile, "\t\t\t\tcase " + nonterm_id + ":\n", {"flag":"a"});
 					fs.writeFileSync(outfile, "\t\t\t\t\tthis.state_" + jump_state_idx + "();\n", {"flag":"a"});
 					fs.writeFileSync(outfile, "\t\t\t\t\tbreak;\n", {"flag":"a"});
 				}
 			}
 			fs.writeFileSync(outfile, "\t\t\t\tdefault:\n", {"flag":"a"});
-			fs.writeFileSync(outfile, "\t\t\t\t\tthrow new Error(\"Invalid transition from state " + state_idx + ".\");\n", {"flag":"a"});
+			fs.writeFileSync(outfile, "\t\t\t\t\tthrow new Error(\"Invalid nonterminal transition from state " + state_idx + ".\");\n", {"flag":"a"});
 			fs.writeFileSync(outfile, "\t\t\t\t\tbreak;\n", {"flag":"a"});
 			fs.writeFileSync(outfile, "\t\t\t}\n", {"flag":"a"});  // end switch
 			fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});  // end while
