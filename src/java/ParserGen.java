@@ -25,7 +25,6 @@ public class ParserGen
 	protected ParsingTables m_tables;
 
 	// table index and id maps
-	protected HashMap<Integer, Integer> m_map_term_index;
 	protected HashMap<Integer, Integer> m_map_term_id;
 	protected HashMap<Integer, Integer> m_map_nonterm_id;
 	protected HashMap<Integer, Integer> m_map_semantic_id;
@@ -39,15 +38,11 @@ public class ParserGen
 	{
 		m_tables = tables;
 
-		// create terminal map from id to index and vice versa
-		m_map_term_index = new HashMap<Integer, Integer>();
+		// create terminal map from index to id
 		m_map_term_id = new HashMap<Integer, Integer>();
 		int[][] term_idx = m_tables.GetTermIndexMap();
 		for(int i=0; i<term_idx.length; ++i)
-		{
-			m_map_term_index.put(term_idx[i][0], term_idx[i][1]);
 			m_map_term_id.put(term_idx[i][1], term_idx[i][0]);
-		}
 
 		// create nonterminal map from index to id
 		m_map_nonterm_id = new HashMap<Integer, Integer>();
@@ -69,146 +64,151 @@ public class ParserGen
 
 
 	/**
+	 * write an individual state function to the file
+	 */
+	protected void CreateState(PrintWriter pw, int state_idx)
+	{
+		int[] shift = m_tables.GetShiftTab()[state_idx];
+		int[] reduce = m_tables.GetReduceTab()[state_idx];
+		int[] jump = m_tables.GetJumpTab()[state_idx];
+
+		int num_terms = shift.length;
+		int num_nonterms = jump.length;
+
+		boolean has_shift_entry = HasTableEntry(shift, state_idx);
+		boolean has_jump_entry = HasTableEntry(jump, state_idx);
+
+		pw.print("\tprotected void State" + state_idx + "()\n\t{\n");
+
+		if(has_shift_entry)
+			pw.print("\t\tRunnable next_state = null;\n");
+
+		pw.print("\t\tswitch(m_lookahead.GetId())\n\t\t{\n");
+
+		// map of rules and their terminal ids
+		HashMap<Integer, Vector<Integer>> rules_term_id = new HashMap<Integer, Vector<Integer>>();
+		// terminal ids for accepting
+		Vector<Integer> acc_term_id = new Vector<Integer>();
+
+		for(int term_idx=0; term_idx<num_terms; ++term_idx)
+		{
+			int term_id = GetTermTableId(term_idx);
+			int newstate_idx = shift[term_idx];
+			int rule_idx = reduce[term_idx];
+
+			if(newstate_idx != m_err_token)
+			{
+				pw.print("\t\t\tcase " + term_id + ":" + GetCharComment(term_id) + "\n");
+				pw.print("\t\t\t\tnext_state = this::State" + newstate_idx + ";\n");
+				pw.print("\t\t\t\tbreak;\n");
+			}
+			else if(rule_idx != m_err_token)
+			{
+				if(rule_idx == m_acc_token)
+				{
+					acc_term_id.add(term_id);
+				}
+				else
+				{
+					if(!rules_term_id.containsKey(rule_idx))
+						rules_term_id.put(rule_idx, new Vector<Integer>());
+					rules_term_id.get(rule_idx).add(term_id);
+				}
+			}
+		}
+
+		// create cases for rule application
+		for(Integer rule_idx : rules_term_id.keySet())
+		{
+			Vector<Integer> term_ids = rules_term_id.get(rule_idx);
+			int num_rhs = m_tables.GetNumRhsSymbols()[rule_idx];
+			int lhs_id = GetNontermTableId(m_tables.GetLhsIndices()[rule_idx]);
+			int rule_id = GetSemanticTableId(rule_idx);
+
+			boolean created_cases = false;
+			for(Integer term_id : term_ids)
+			{
+				pw.print("\t\t\tcase " + term_id + ":" + GetCharComment(term_id) + "\n");
+				created_cases = true;
+			}
+
+			if(created_cases)
+			{
+				pw.print("\t\t\t\tApplyRule(" + rule_id + ", " + num_rhs + ", " + lhs_id + ");\n");
+				pw.print("\t\t\t\tbreak;\n");
+			}
+		}
+
+		// create accepting case
+		if(acc_term_id.size() > 0)
+		{
+			for(Integer term_id : acc_term_id)
+				pw.print("\t\t\tcase " + term_id + ":" + GetCharComment(term_id) + "\n");
+
+			pw.print("\t\t\t\tm_accepted = true;\n");
+			pw.print("\t\t\t\tbreak;\n");
+		}
+
+		// default to error
+		pw.print("\t\t\tdefault:\n");
+		pw.print("\t\t\t\tthrow new RuntimeException(\"Invalid terminal transition \" + m_lookahead.GetId() + \" from state " + state_idx + ".\");\n");
+		//pw.print("\t\t\t\tbreak;\n");
+
+		pw.print("\t\t}\n");  // end switch
+
+		if(has_shift_entry)
+		{
+			pw.print("\t\tif(next_state != null)\n\t\t{\n");
+			pw.print("\t\t\tPushLookahead();\n");
+			pw.print("\t\t\tnext_state.run();\n");
+			pw.print("\t\t}\n");  // end if
+		}
+
+		if(has_jump_entry)
+		{
+			pw.print("\t\twhile(m_dist_to_jump == 0 && m_symbols.size() > 0 && !m_accepted)\n\t\t{\n");
+			pw.print("\t\t\tSymbol<t_lval> topsym = m_symbols.peek();\n");
+			pw.print("\t\t\tif(topsym.IsTerm())\n\t\t\t\tbreak;\n");
+			pw.print("\t\t\tswitch(topsym.GetId())\n\t\t\t{\n");
+
+			for(int nonterm_idx = 0; nonterm_idx < num_nonterms; ++nonterm_idx)
+			{
+				int jump_state_idx = jump[nonterm_idx];
+				if(jump_state_idx != m_err_token)
+				{
+					int nonterm_id = GetNontermTableId(nonterm_idx);
+					pw.print("\t\t\t\tcase " + nonterm_id + ":\n");
+					pw.print("\t\t\t\t\tState" + jump_state_idx + "();\n");
+					pw.print("\t\t\t\t\tbreak;\n");
+				}
+			}
+
+			// default to error
+			pw.print("\t\t\t\tdefault:\n");
+			pw.print("\t\t\t\t\tthrow new RuntimeException(\"Invalid nonterminal transition \" + topsym.GetId() + \" from state " + state_idx + ".\");\n");
+			//pw.print("\t\t\t\t\tbreak;\n");
+
+			pw.print("\t\t\t}\n");  // end switch
+			pw.print("\t\t}\n");  // end while
+		}
+
+		pw.print("\t\t--m_dist_to_jump;\n");
+		pw.print("\t}\n\n");  // end state function
+	}
+
+
+	/**
 	 * write the individual state functions to the file
 	 */
 	protected boolean CreateStates(PrintWriter pw)
 	{
-		int[][] shift = m_tables.GetShiftTab();
-		int[][] reduce = m_tables.GetReduceTab();
-		int[][] jump = m_tables.GetJumpTab();
-
-		int[] numrhs = m_tables.GetNumRhsSymbols();
-		int[] lhsidx = m_tables.GetLhsIndices();
-
-		int num_states = shift.length;
+		int num_states = m_tables.GetShiftTab().length;
 		if(num_states == 0)
 			return false;
-		int num_terms = shift[0].length;
-		int num_nonterms = jump[0].length;
 
 		// state function
 		for(int state_idx=0; state_idx<num_states; ++state_idx)
-		{
-			boolean has_shift_entry = HasTableEntry(shift, state_idx);
-			boolean has_jump_entry = HasTableEntry(jump, state_idx);
-
-			pw.print("\tprotected void State" + state_idx + "()\n\t{\n");
-
-			if(has_shift_entry)
-				pw.print("\t\tRunnable next_state = null;\n");
-
-			pw.print("\t\tswitch(m_lookahead.GetId())\n\t\t{\n");
-
-			// map of rules and their terminal ids
-			HashMap<Integer, Vector<Integer>> rules_term_id = new HashMap<Integer, Vector<Integer>>();
-			// terminal ids for accepting
-			Vector<Integer> acc_term_id = new Vector<Integer>();
-
-			for(int term_idx=0; term_idx<num_terms; ++term_idx)
-			{
-				int term_id = GetTermTableId(term_idx);
-				int newstate_idx = shift[state_idx][term_idx];
-				int rule_idx = reduce[state_idx][term_idx];
-
-				if(newstate_idx != m_err_token)
-				{
-					pw.print("\t\t\tcase " + term_id + ":" + GetCharComment(term_id) + "\n");
-					pw.print("\t\t\t\tnext_state = this::State" + newstate_idx + ";\n");
-					pw.print("\t\t\t\tbreak;\n");
-				}
-				else if(rule_idx != m_err_token)
-				{
-					if(rule_idx == m_acc_token)
-					{
-						acc_term_id.add(term_id);
-					}
-					else
-					{
-						if(!rules_term_id.containsKey(rule_idx))
-							rules_term_id.put(rule_idx, new Vector<Integer>());
-						rules_term_id.get(rule_idx).add(term_id);
-					}
-				}
-			}
-
-			// create cases for rule application
-			for(Integer rule_idx : rules_term_id.keySet())
-			{
-				Vector<Integer> term_ids = rules_term_id.get(rule_idx);
-				int num_rhs = numrhs[rule_idx];
-				int lhs_id = GetNontermTableId(lhsidx[rule_idx]);
-				int rule_id = GetSemanticTableId(rule_idx);
-
-				boolean created_cases = false;
-				for(Integer term_id : term_ids)
-				{
-					pw.print("\t\t\tcase " + term_id + ":" + GetCharComment(term_id) + "\n");
-					created_cases = true;
-				}
-
-				if(created_cases)
-				{
-					pw.print("\t\t\t\tApplyRule(" + rule_id + ", " + num_rhs + ", " + lhs_id + ");\n");
-					pw.print("\t\t\t\tbreak;\n");
-				}
-			}
-
-			// create accepting case
-			if(acc_term_id.size() > 0)
-			{
-				for(Integer term_id : acc_term_id)
-					pw.print("\t\t\tcase " + term_id + ":" + GetCharComment(term_id) + "\n");
-
-				pw.print("\t\t\t\tm_accepted = true;\n");
-				pw.print("\t\t\t\tbreak;\n");
-			}
-
-			// default to error
-			pw.print("\t\t\tdefault:\n");
-			pw.print("\t\t\t\tthrow new RuntimeException(\"Invalid terminal transition from state " + state_idx + ".\");\n");
-			//pw.print("\t\t\t\tbreak;\n");
-
-			pw.print("\t\t}\n");  // end switch
-
-			if(has_shift_entry)
-			{
-				pw.print("\t\tif(next_state != null)\n\t\t{\n");
-				pw.print("\t\t\tPushLookahead();\n");
-				pw.print("\t\t\tnext_state.run();\n");
-				pw.print("\t\t}\n");  // end if
-			}
-
-			if(has_jump_entry)
-			{
-				pw.print("\t\twhile(m_dist_to_jump == 0 && m_symbols.size() > 0 && !m_accepted)\n\t\t{\n");
-				pw.print("\t\t\tSymbol<t_lval> topsym = m_symbols.peek();\n");
-				pw.print("\t\t\tif(topsym.IsTerm())\n\t\t\t\tbreak;\n");
-				pw.print("\t\t\tswitch(topsym.GetId())\n\t\t\t{\n");
-
-				for(int nonterm_idx = 0; nonterm_idx < num_nonterms; ++nonterm_idx)
-				{
-					int jump_state_idx = jump[state_idx][nonterm_idx];
-					if(jump_state_idx != m_err_token)
-					{
-						int nonterm_id = GetNontermTableId(nonterm_idx);
-						pw.print("\t\t\t\tcase " + nonterm_id + ":\n");
-						pw.print("\t\t\t\t\tState" + jump_state_idx + "();\n");
-						pw.print("\t\t\t\t\tbreak;\n");
-					}
-				}
-
-				// default to error
-				pw.print("\t\t\t\tdefault:\n");
-				pw.print("\t\t\t\t\tthrow new RuntimeException(\"Invalid nonterminal transition from state " + state_idx + ".\");\n");
-				//pw.print("\t\t\t\t\tbreak;\n");
-
-				pw.print("\t\t\t}\n");  // end switch
-				pw.print("\t\t}\n");  // end while
-			}
-
-			pw.print("\t\t--m_dist_to_jump;\n");
-			pw.print("\t}\n\n");  // end state function
-		}
+			CreateState(pw, state_idx);
 
 		return true;
 	}
@@ -270,6 +270,8 @@ public class ParserGen
 			pw.print("\t\tt_lval retval = null;\n");
 			pw.print("\t\tif(m_semantics != null && m_semantics.containsKey(rule_id))\n");
 			pw.print("\t\t\tretval = m_semantics.get(rule_id).call(args);\n");
+			pw.print("\t\telse\n");
+			pw.print("\t\t\tSystem.err.println(\"Semantic rule \" + rule_id + \" is not defined.\");\n");
 			pw.print("\t\tm_symbols.push(new Symbol<t_lval>(false, lhs_id, retval));\n");
 			pw.print("\t}\n\n");  // end ApplyRule()
 
@@ -362,20 +364,6 @@ public class ParserGen
 
 
 	/**
-	 * get the terminal table index from its id
-	 */
-	protected int GetTermTableIndex(int id)
-	{
-		HashMap<Integer, Integer> map = m_map_term_index;
-		Integer idx = map.get(id);
-
-		if(idx == null)
-			throw new RuntimeException("Invalid terminal id: " + id + ".");
-		return idx;
-	}
-
-
-	/**
 	 * get the table id from its index
 	 */
 	protected Integer GetTableId(HashMap<Integer, Integer> map, int idx)
@@ -426,9 +414,9 @@ public class ParserGen
 	/**
 	 * check if the given table row has at least one non-error entry
 	 */
-	protected boolean HasTableEntry(int[][] tab, int row)
+	protected boolean HasTableEntry(int[] tab, int row)
 	{
-		for(int entry : tab[row])
+		for(int entry : tab)
 		{
 			if(entry != m_err_token)
 				return true;

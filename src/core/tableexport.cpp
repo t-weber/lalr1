@@ -102,6 +102,7 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 
 	// terminal symbol indices
 	const t_mapIdIdx& mapTermIdx = m_collection->GetTermIndexMap();
+	const t_mapIdStrId& mapTermStrIds = m_collection->GetTermStringIdMap();
 	ofstr << "const t_mapIdIdx map_term_idx\n{{\n";
 	for(const auto& [id, idx] : mapTermIdx)
 	{
@@ -117,7 +118,6 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 		ofstr << ", " << idx << " },";
 
 		// get string identifier
-		const t_mapIdStrId& mapTermStrIds = m_collection->GetTermStringIdMap();
 		if(auto iterStrId = mapTermStrIds.find(id);
 			iterStrId != mapTermStrIds.end())
 		{
@@ -130,13 +130,13 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 
 	// non-terminal symbol indices
 	const t_mapIdIdx& mapNonTermIdx = m_collection->GetNontermIndexMap();
+	const t_mapIdStrId& mapNonTermStrIds = m_collection->GetNontermStringIdMap();
 	ofstr << "const t_mapIdIdx map_nonterm_idx\n{{\n";
 	for(const auto& [id, idx] : mapNonTermIdx)
 	{
 		ofstr << "\t{ " << id << ", " << idx << " },";
 
 		// get string identifier
-		const t_mapIdStrId& mapNonTermStrIds = m_collection->GetNontermStringIdMap();
 		if(auto iterStrId = mapNonTermStrIds.find(id);
 			iterStrId != mapNonTermStrIds.end())
 		{
@@ -295,6 +295,7 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 
 	// terminal symbol indices
 	const t_mapIdIdx& mapTermIdx = m_collection->GetTermIndexMap();
+	const t_mapIdStrId& mapTermStrIds = m_collection->GetTermStringIdMap();
 	ofstr << "\tprivate final int[][] map_term_idx =\n\t{\n";
 	for(const auto& [id, idx] : mapTermIdx)
 	{
@@ -310,7 +311,6 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 		ofstr << ", " << idx << " },";
 
 		// get string identifier
-		const t_mapIdStrId& mapTermStrIds = m_collection->GetTermStringIdMap();
 		if(auto iterStrId = mapTermStrIds.find(id);
 			iterStrId != mapTermStrIds.end())
 		{
@@ -323,13 +323,13 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 
 	// non-terminal symbol indices
 	const t_mapIdIdx& mapNonTermIdx = m_collection->GetNontermIndexMap();
+	const t_mapIdStrId& mapNonTermStrIds = m_collection->GetNontermStringIdMap();
 	ofstr << "\tprivate final int[][] map_nonterm_idx =\n\t{\n";
 	for(const auto& [id, idx] : mapNonTermIdx)
 	{
 		ofstr << "\t\t{ " << id << ", " << idx << " },";
 
 		// get string identifier
-		const t_mapIdStrId& mapNonTermStrIds = m_collection->GetNontermStringIdMap();
 		if(auto iterStrId = mapNonTermStrIds.find(id);
 			iterStrId != mapNonTermStrIds.end())
 		{
@@ -480,6 +480,7 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 
 	// terminal symbol indices
 	const t_mapIdIdx& mapTermIdx = m_collection->GetTermIndexMap();
+	const t_mapIdStrId& mapTermStrIds = m_collection->GetTermStringIdMap();
 	ofstr << "\n\"term_idx\" : [\n";
 	for(auto iter = mapTermIdx.begin(); iter != mapTermIdx.end(); std::advance(iter, 1))
 	{
@@ -497,7 +498,14 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 			else
 				ofstr << id;
 		}
-		ofstr << ", " << idx << " ]";
+		ofstr << ", " << idx;
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id); iterStrId != mapTermStrIds.end())
+			ofstr << ", \"" << iterStrId->second << "\"";
+
+		ofstr << " ]";
+
 		if(std::next(iter, 1) != mapTermIdx.end())
 			ofstr << ",";
 		ofstr << "\n";
@@ -506,11 +514,19 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 
 	// non-terminal symbol indices
 	const t_mapIdIdx& mapNonTermIdx = m_collection->GetNontermIndexMap();
+	const t_mapIdStrId& mapNonTermStrIds = m_collection->GetNontermStringIdMap();
 	ofstr << "\n\"nonterm_idx\" : [\n";
 	for(auto iter = mapNonTermIdx.begin(); iter != mapNonTermIdx.end(); std::advance(iter, 1))
 	{
 		const auto& [id, idx] = *iter;
-		ofstr << "\t[ " << id << ", " << idx << " ]";
+		ofstr << "\t[ " << id << ", " << idx;
+
+		// get string identifier
+		if(auto iterStrId = mapNonTermStrIds.find(id); iterStrId != mapNonTermStrIds.end())
+			ofstr << ", \"" << iterStrId->second << "\"";
+
+		ofstr << " ]";
+
 		if(std::next(iter, 1) != mapNonTermIdx.end())
 			ofstr << ",";
 		ofstr << "\n";

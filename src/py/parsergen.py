@@ -19,9 +19,9 @@ import json
 # get the internal table index of a token or nonterminal id
 #
 def get_table_index(idx_tab, id):
-	for [theid, theidx] in idx_tab:
-		if theid == id:
-			return theidx
+	for entry in idx_tab:
+		if entry[0] == id:
+			return entry[1]
 
 	raise IndexError("No table index for id {0}.".format(id))
 	return None
@@ -31,11 +31,23 @@ def get_table_index(idx_tab, id):
 # get the token or terminal id of an internal table index
 #
 def get_table_id(idx_tab, idx):
-	for [theid, theidx] in idx_tab:
-		if theidx == idx:
-			return theid
+	for entry in idx_tab:
+		if entry[1] == idx:
+			return entry[0]
 
 	raise IndexError("No id for table index {0}.".format(id))
+	return None
+
+
+#
+# get the token or terminal string id of an internal table index
+#
+def get_table_strid(idx_tab, idx):
+	for entry in idx_tab:
+		if entry[1] == idx:
+			return entry[2]
+
+	raise IndexError("No string id for table index {0}.".format(id))
 	return None
 
 
@@ -155,8 +167,10 @@ def create_parser(tables, outfile_name):
 			rule_idx = reduce_tab[state_idx][term_idx]
 
 			if newstate_idx != err_token:
+				term_strid = get_table_strid(termidx_tab, term_idx)
 				term_id_str = id_to_str(term_id, end_token)
-				print(f"\t\t\tcase {term_id_str}: # index: {term_idx}", file=outfile)
+
+				print(f"\t\t\tcase {term_id_str}: # id: {term_strid}, index: {term_idx}", file=outfile)
 				print(f"\t\t\t\tnext_state = self.state_{newstate_idx}", file=outfile)
 
 			elif rule_idx != err_token:
@@ -206,8 +220,11 @@ def create_parser(tables, outfile_name):
 			for nonterm_idx in range(num_nonterms):
 				nonterm_id = get_table_id(nontermidx_tab, nonterm_idx)
 				jump_state_idx = jump_tab[state_idx][nonterm_idx]
+
 				if jump_state_idx != err_token:
-					print(f"\t\t\t\tcase {nonterm_id}: # index: {nonterm_idx}", file=outfile)
+					nonterm_strid = get_table_strid(nontermidx_tab, nonterm_idx)
+
+					print(f"\t\t\t\tcase {nonterm_id}: # id: {nonterm_strid} index: {nonterm_idx}", file=outfile)
 					print(f"\t\t\t\t\tself.state_{jump_state_idx}()", file=outfile)
 			print("\t\t\t\tcase _:", file=outfile)
 			print(f"\t\t\t\t\traise RuntimeError(\"Invalid nonterminal transition from state {state_idx}.\")", file=outfile)

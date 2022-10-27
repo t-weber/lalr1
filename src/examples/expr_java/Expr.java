@@ -12,6 +12,7 @@
 
 import java.util.Vector;
 import java.util.HashMap;
+import java.util.Random;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,34 +20,77 @@ import java.io.IOException;
 
 public class Expr
 {
-	public static void main(String[] prog_args)
+	public void run()
 	{
 		// semantic rules
-		SemanticRuleInterface<Integer> sem_start = (args) -> {
+		SemanticRuleInterface<Double> sem_start = (args) -> {
 			return args.elementAt(0).GetVal(); };
-		SemanticRuleInterface<Integer> sem_brackets = (args) -> {
+		SemanticRuleInterface<Double> sem_brackets = (args) -> {
 			return args.elementAt(1).GetVal(); };
-		SemanticRuleInterface<Integer> sem_add = (args) -> {
+
+		// arithmetics
+		SemanticRuleInterface<Double> sem_add = (args) -> {
 			return args.elementAt(0).GetVal() + args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Integer> sem_sub = (args) -> {
+		SemanticRuleInterface<Double> sem_sub = (args) -> {
 			return args.elementAt(0).GetVal() - args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Integer> sem_mul = (args) -> {
+		SemanticRuleInterface<Double> sem_mul = (args) -> {
 			return args.elementAt(0).GetVal() * args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Integer> sem_div = (args) -> {
+		SemanticRuleInterface<Double> sem_div = (args) -> {
 			return args.elementAt(0).GetVal() / args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Integer> sem_mod = (args) -> {
+		SemanticRuleInterface<Double> sem_mod = (args) -> {
 			return args.elementAt(0).GetVal() % args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Integer> sem_uadd = (args) -> {
+		SemanticRuleInterface<Double> sem_pow = (args) -> {
+			return Math.pow(
+				args.elementAt(0).GetVal(), args.elementAt(2).GetVal()); };
+		SemanticRuleInterface<Double> sem_uadd = (args) -> {
 			return +args.elementAt(1).GetVal(); };
-		SemanticRuleInterface<Integer> sem_usub = (args) -> {
+		SemanticRuleInterface<Double> sem_usub = (args) -> {
 			return -args.elementAt(1).GetVal(); };
-		SemanticRuleInterface<Integer> sem_real = (args) -> {
+
+		// numerical constants
+		SemanticRuleInterface<Double> sem_real = (args) -> {
 			return args.elementAt(0).GetVal(); };
-		SemanticRuleInterface<Integer> sem_int = (args) -> {
+		SemanticRuleInterface<Double> sem_int = (args) -> {
 			return args.elementAt(0).GetVal(); };
 
-		HashMap<Integer, SemanticRuleInterface<Integer>> rules =
-			new HashMap<Integer, SemanticRuleInterface<Integer>>();
+		// variables
+		HashMap<String, Double> vars = new HashMap<String, Double>();
+		vars.put("pi", Math.PI);
+		SemanticRuleInterface<Double> sem_ident = (args) -> {
+			return vars.get(args.elementAt(0).GetStrVal()); };
+
+		// 0-argument functions
+		HashMap<String, Func0Args<Double>> funcs0
+			= new HashMap<String, Func0Args<Double>>();
+		Random rnd = new Random();
+		funcs0.put("rand", () -> {
+			return rnd.nextDouble();
+		});
+		SemanticRuleInterface<Double> sem_func0 = (args) -> {
+			return funcs0.get(args.elementAt(0).GetStrVal()).call(); };
+
+		// 1-argument functions
+		HashMap<String, Func1Arg<Double>> funcs1
+			= new HashMap<String, Func1Arg<Double>>();
+		funcs1.put("sin", (arg) -> Math.sin(arg));
+		funcs1.put("cos", (arg) -> Math.cos(arg));
+		funcs1.put("tan", (arg) -> Math.tan(arg));
+		funcs1.put("sqrt", (arg) -> Math.sqrt(arg));
+		SemanticRuleInterface<Double> sem_func1 = (args) -> {
+			return funcs1.get(args.elementAt(0).GetStrVal()).call(
+				args.elementAt(2).GetVal()); };
+
+		// 2-argument functions
+		HashMap<String, Func2Args<Double>> funcs2
+			= new HashMap<String, Func2Args<Double>>();
+		funcs2.put("pow", (arg1, arg2) -> Math.pow(arg1, arg2));
+		SemanticRuleInterface<Double> sem_func2 = (args) -> {
+			return funcs2.get(args.elementAt(0).GetStrVal()).call(
+				args.elementAt(2).GetVal(),
+				args.elementAt(4).GetVal()); };
+
+		HashMap<Integer, SemanticRuleInterface<Double>> rules =
+			new HashMap<Integer, SemanticRuleInterface<Double>>();
 		rules.put(Ids.sem_start_id, sem_start);
 		rules.put(Ids.sem_brackets_id, sem_brackets);
 		rules.put(Ids.sem_add_id, sem_add);
@@ -54,20 +98,25 @@ public class Expr
 		rules.put(Ids.sem_mul_id, sem_mul);
 		rules.put(Ids.sem_div_id, sem_div);
 		rules.put(Ids.sem_mod_id, sem_mod);
+		rules.put(Ids.sem_pow_id, sem_pow);
 		rules.put(Ids.sem_uadd_id, sem_uadd);
 		rules.put(Ids.sem_usub_id, sem_usub);
 		rules.put(Ids.sem_real_id, sem_real);
 		rules.put(Ids.sem_int_id, sem_int);
+		rules.put(Ids.sem_ident_id, sem_ident);
+		rules.put(Ids.sem_call0_id, sem_func0);
+		rules.put(Ids.sem_call1_id, sem_func1);
+		rules.put(Ids.sem_call2_id, sem_func2);
 
 		// parser
-		ParserInterface<Integer> parser = new Parser<Integer>(new ExprTab());
-		//ParserInterface<Integer> parser = new ExprParser<Integer>();
+		ParserInterface<Double> parser = new Parser<Double>(new ExprTab());
+		//ParserInterface<Double> parser = new ExprParser<Double>();
 		parser.SetSemantics(rules);
 
 		// lexer
 		InputStreamReader isr = new InputStreamReader(System.in); // byte -> char
 		BufferedReader br = new BufferedReader(isr);
-		Lexer<Integer> lexer = new Lexer<Integer>();
+		Lexer<Double> lexer = new Lexer<Double>();
 
 		int cmd_nr = 1;
 		while(true)
@@ -95,12 +144,12 @@ public class Expr
 			if(line.equals("quit") || line.equals("exit"))
 				break;
 
-			Vector<Symbol<Integer>> syms = lexer.GetTokens(line);
-			syms.add(new Symbol<Integer>(true, parser.GetEndConst(), null));
+			Vector<Symbol<Double>> syms = lexer.GetTokens(line);
+			syms.add(new Symbol<Double>(true, parser.GetEndConst(), null));
 
 			/*for(int i=0; i<syms.size(); ++i)
 			{
-				Symbol<Integer> sym = syms.elementAt(i);
+				Symbol<Double> sym = syms.elementAt(i);
 				System.out.println(sym.GetStrVal());
 			}*/
 
@@ -128,5 +177,12 @@ public class Expr
 				System.err.println("Parsing error.");
 			}
 		}
+	}
+
+
+	public static void main(String[] prog_args)
+	{
+		Expr expr = new Expr();
+		expr.run();
 	}
 }

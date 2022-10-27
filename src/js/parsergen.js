@@ -14,25 +14,6 @@
 
 
 /**
- * get the internal table index of a token or nonterminal id
- */
-function get_table_index(idx_tab, id)
-{
-	for(const [arridx, entry] of idx_tab.entries())
-	{
-		const theid = entry[0];
-		const theidx = entry[1];
-
-		if(theid == id)
-			return theidx;
-	}
-
-	throw new Error("No table index for id " + id + ".");
-	return null;
-}
-
-
-/**
  * get the token or terminal id of an internal table index
  */
 function get_table_id(idx_tab, idx)
@@ -47,6 +28,44 @@ function get_table_id(idx_tab, idx)
 	}
 
 	throw new Error("No id for table index " + idx + ".");
+	return null;
+}
+
+
+/**
+ * get the token or terminal string id of an internal table index
+ */
+function get_table_strid(idx_tab, idx)
+{
+	for(const [arridx, entry] of idx_tab.entries())
+	{
+		const thestrid = entry[2];
+		const theidx = entry[1];
+
+		if(theidx == idx)
+			return thestrid;
+	}
+
+	throw new Error("No string id for table index " + idx + ".");
+	return null;
+}
+
+
+/**
+ * get the token or terminal string id from its id
+ */
+function get_table_strid_from_id(idx_tab, id)
+{
+	for(const [arridx, entry] of idx_tab.entries())
+	{
+		const thestrid = entry[2];
+		const theid = entry[0];
+
+		if(theid == id)
+			return thestrid;
+	}
+
+	throw new Error("No string id for id " + id + ".");
 	return null;
 }
 
@@ -208,8 +227,9 @@ function create_parser(tables, outfile)
 
 			if(newstate_idx != err_token)
 			{
+				const term_strid = get_table_strid(termidx_tab, term_idx);
 				const term_id_str = id_to_str(term_id, end_token);
-				fs.writeFileSync(outfile, "\t\t\tcase " + term_id_str + ":\n", {"flag":"a"});
+				fs.writeFileSync(outfile, "\t\t\tcase " + term_id_str + ": // " + term_strid + "\n", {"flag":"a"});
 				fs.writeFileSync(outfile, "\t\t\t\tnext_state = this.state_" + newstate_idx + ";\n", {"flag":"a"});
 				fs.writeFileSync(outfile, "\t\t\t\tbreak;\n", {"flag":"a"});
 			}
@@ -239,8 +259,10 @@ function create_parser(tables, outfile)
 			let created_cases = false;
 			for(const term_id of term_ids)
 			{
+				const term_strid = get_table_strid_from_id(termidx_tab, term_id);
 				const term_id_str = id_to_str(term_id);
-				fs.writeFileSync(outfile, "\t\t\tcase " + term_id_str + ":\n", {"flag":"a"});
+
+				fs.writeFileSync(outfile, "\t\t\tcase " + term_id_str + ": // " + term_strid + "\n", {"flag":"a"});
 				created_cases = true;
 			}
 
@@ -292,7 +314,9 @@ function create_parser(tables, outfile)
 				if(jump_state_idx != err_token)
 				{
 					const nonterm_id = get_table_id(nontermidx_tab, nonterm_idx);
-					fs.writeFileSync(outfile, "\t\t\t\tcase " + nonterm_id + ":\n", {"flag":"a"});
+					const nonterm_strid = get_table_strid(nontermidx_tab, nonterm_idx);
+
+					fs.writeFileSync(outfile, "\t\t\t\tcase " + nonterm_id + ": // " + nonterm_strid + "\n", {"flag":"a"});
 					fs.writeFileSync(outfile, "\t\t\t\t\tthis.state_" + jump_state_idx + "();\n", {"flag":"a"});
 					fs.writeFileSync(outfile, "\t\t\t\t\tbreak;\n", {"flag":"a"});
 				}

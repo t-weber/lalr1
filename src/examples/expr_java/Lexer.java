@@ -26,31 +26,28 @@ public class Lexer<t_lval>
 		Pattern re_ident = Pattern.compile("[A-Za-z]+[A-Za-z0-9]*");
 
 		m_regexes = new Vector<Pattern>();
-		m_regexes.add(re_int);
-		//m_regexes.add(re_real);
+		//m_regexes.add(re_int);
+		m_regexes.add(re_real);
 		m_regexes.add(re_ident);
 
 		m_ids = new Vector<Integer>();
-		m_ids.add(Ids.tok_int_id);
-		//m_ids.add(Ids.tok_real_id);
+		//m_ids.add(Ids.tok_int_id);
+		m_ids.add(Ids.tok_real_id);
 		m_ids.add(Ids.tok_ident_id);
 
 		Converter<t_lval> conv_int = (id, strval) ->
 		{
 			// TODO: correct warning in conversion
-			t_lval val = null;
-			val = (t_lval)Integer.valueOf(Integer.parseInt(strval));
-			Symbol<t_lval> sym = new Symbol<t_lval>(true, id, val, strval);
-			return sym;
+			t_lval val = (t_lval)Integer.valueOf(Integer.parseInt(strval));
+			return new Symbol<t_lval>(true, id, val, strval);
 		};
 
-		/*Converter<t_lval> conv_real = (id, strval) ->
+		Converter<t_lval> conv_real = (id, strval) ->
 		{
-			t_lval val = null;
-			val = (t_lval)Double.valueOf(Double.parseDouble(strval));
-			Symbol<t_lval> sym = new Symbol<t_lval>(true, id, val, strval);
-			return sym;
-		};*/
+			// TODO: correct warning in conversion
+			t_lval val = (t_lval)Double.valueOf(Double.parseDouble(strval));
+			return  new Symbol<t_lval>(true, id, val, strval);
+		};
 
 		Converter<t_lval> conv_ident = (id, strval) ->
 		{
@@ -59,8 +56,8 @@ public class Lexer<t_lval>
 		};
 
 		m_conv = new Vector<Converter<t_lval>>();
-		m_conv.add(conv_int);
-		//m_conv.add(conv_real);
+		//m_conv.add(conv_int);
+		m_conv.add(conv_real);
 		m_conv.add(conv_ident);
 	}
 

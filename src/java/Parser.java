@@ -214,6 +214,8 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 		t_lval retval = null;
 		if(m_semantics != null && m_semantics.containsKey(rule_id))
 			retval = m_semantics.get(rule_id).call(args);
+		else
+			System.err.println("Semantic rule " + rule_id + " is not defined.");
 
 		// push result
 		m_symbols.push(new Symbol<t_lval>(false, lhs_id, retval));
