@@ -1,6 +1,6 @@
 /**
  * expression parser table generation
- * @author Tobias Weber
+ * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date 29-oct-2022
  * @license see 'LICENSE' file
  */
