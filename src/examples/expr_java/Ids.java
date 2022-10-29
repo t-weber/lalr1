@@ -32,4 +32,8 @@ public class Ids
 	public static final int tok_int_id      = 1001;
 	public static final int tok_str_id      = 1002;
 	public static final int tok_ident_id    = 1003;
+
+	// nonterminals
+	public static final int nonterm_start   = 10;
+	public static final int nonterm_expr    = 20;
 }

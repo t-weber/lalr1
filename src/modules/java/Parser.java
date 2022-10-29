@@ -4,6 +4,10 @@
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date 23-oct-2022
  * @license see 'LICENSE' file
+ *
+ * References:
+ * 	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
+ * 	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
  */
 
 import java.util.Vector;

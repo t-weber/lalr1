@@ -6,8 +6,8 @@
  * @license see 'LICENSE' file
  */
 
-// javac -classpath "../../java/:." Expr.java Lexer.java Ids.java ../../java/*.java -Xlint:unchecked
-// java -classpath "../../java/:." Expr
+// javac -classpath "../../modules/java/:." Expr.java Lexer.java Ids.java ../../modules/java/*.java -Xlint:unchecked
+// java -classpath "../../modules/java/:." Expr
 
 
 import java.util.Vector;
