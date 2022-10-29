@@ -13,6 +13,7 @@
 
 #include <limits>
 #include <vector>
+#include <stack>
 #include <unordered_map>
 #include <string>
 #include <locale>
@@ -44,6 +45,16 @@ enum class IndexTableKind
 	NONTERMINAL,
 	SEMANTIC,
 };
+
+
+struct ActiveRule
+{
+	std::size_t seen_tokens = 0; // number of tokens already seen in partial match
+	t_index handle = 0;          // the same for corresponding partial rules
+};
+
+using t_active_rule_stack = std::stack<ActiveRule>;
+using t_active_rules = std::unordered_map<t_semantic_id, t_active_rule_stack>;
 
 
 template<class T> bool isprintable(T ch)

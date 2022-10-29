@@ -53,11 +53,6 @@ protected:
 		GetPartialRules(t_state_id topstate, const t_toknode& curtok,
 			const ParseStack<t_lalrastbaseptr>& symbols, bool term) const;
 
-	// get a unique identifier for a partial rule
-	t_hash GetPartialRuleHash(t_index rule_idx, std::size_t len,
-		const ParseStack<t_state_id>& states,
-		const ParseStack<t_lalrastbaseptr>& symbols) const;
-
 	// get a semantic rule id from a rule index
 	t_semantic_id GetRuleId(t_index idx) const;
 

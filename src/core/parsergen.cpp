@@ -26,7 +26,6 @@
 #include <type_traits>
 #include <regex>
 
-#include <boost/functional/hash.hpp>
 #include <boost/algorithm/string.hpp>
 
 
@@ -44,6 +43,7 @@ bool Collection::SaveParser(const std::string& filename_cpp, const std::string& 
  * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
+
 #ifndef __LALR1_PARSER_REC_ASC_H__
 #define __LALR1_PARSER_REC_ASC_H__
 
@@ -52,6 +52,7 @@ bool Collection::SaveParser(const std::string& filename_cpp, const std::string& 
 #include "core/stack.h"
 
 #include <unordered_set>
+#include <optional>
 
 class %%PARSER_CLASS%%
 {
@@ -79,14 +80,14 @@ protected:
 	static t_semanticargs GetArguments(t_stack& symbols, std::size_t num_rhs);
 	t_semanticargs GetCopyArguments(std::size_t num_rhs) const;
 
-	t_hash GetPartialRuleHash(t_semantic_id rule_id, std::size_t len, t_hash state_hash) const;
-	void ApplyPartialRule(t_semantic_id rule_id, std::size_t rule_len, t_hash state_hash);
+	std::optional<t_index> GetActiveRuleHandle(t_semantic_id rule_id) const;
+	void ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len);
 	void ApplyRule(t_semantic_id rule_id, std::size_t rule_len);
 
-	void DebugMessageState(t_state_id state_id, const char* state_func, t_hash state_hash) const;
+	void DebugMessageState(t_state_id state_id, const char* state_func) const;
 	void DebugMessageReturn(t_state_id state_id) const;
 	void DebugMessageReduce(std::size_t num_rhs, t_semantic_id rule_id, const char* rule_descr) const;
-	void DebugMessagePartialRule(std::size_t rulelen, t_semantic_id rule_id, t_hash state_hash) const;
+	void DebugMessagePartialRule(std::size_t rulelen, t_semantic_id rule_id) const;
 	void TransitionError(t_state_id state_id) const;
 
 %%DECLARE_CLOSURES%%
@@ -96,10 +97,12 @@ private:
 	const t_tokens* m_input{};                    // input tokens
 	t_stack m_symbols{};                          // currently active symbols
 
+	t_active_rules m_active_rules{};              // active partial rules
+	std::size_t m_cur_rule_handle{0};             // the same for corresponding partial rules
+
 	t_token m_lookahead{nullptr};                 // lookahead token
 	t_symbol_id m_lookahead_id{0};                // lookahead identifier
 	int m_lookahead_idx{-1};                      // index into input token array
-	std::unordered_set<t_hash> m_partials{};      // already seen partial rule hashes
 
 	bool m_debug{false};                          // output debug infos
 	bool m_accepted{false};                       // input was accepted
@@ -122,12 +125,12 @@ private:
  * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
+
 %%INCLUDE_HEADER%%
 #include <exception>
 #include <string>
 #include <iostream>
 #include <sstream>
-#include <boost/functional/hash.hpp>
 
 /**
  * print the symbol stack
@@ -224,13 +227,10 @@ void %%PARSER_CLASS%%::SetDebug(bool b)
 /**
  * debug message when a new state becomes active
  */
-void %%PARSER_CLASS%%::DebugMessageState(t_state_id state_id,
-	const char* state_name, t_hash state_hash) const
+void %%PARSER_CLASS%%::DebugMessageState(t_state_id state_id, const char* state_name) const
 {
 	std::cout << "\nRunning state " << state_id
-		<< " function \"" << state_name << "\""
-		<< " having hash value " << std::hex << state_hash << std::dec
-		<< "..." << std::endl;
+		<< " function \"" << state_name << "\"" << "..." << std::endl;
 	if(m_lookahead)
 	{
 		std::cout << "Lookahead [" << m_lookahead_idx << "]: ";
@@ -262,25 +262,27 @@ void %%PARSER_CLASS%%::DebugMessageReturn(t_state_id state_id) const
 void %%PARSER_CLASS%%::DebugMessageReduce(std::size_t num_rhs,
 	t_semantic_id rule_id, const char* rule_descr) const
 {
+	std::optional<t_index> rule_handle = GetActiveRuleHandle(rule_id);
+
 	std::cout << "Reducing " << num_rhs
-		<< " symbol(s) using rule #" << rule_id
-		<< " (" << rule_descr << ")."
-		<< std::endl;
+		<< " symbol(s) using rule #" << rule_id;
+	if(rule_handle)
+		std::cout << " (handle id " << *rule_handle << ")";
+	std::cout << " (" << rule_descr << ")." << std::endl;
 }
 
 /**
  * debug message when a partial semantic rule is applied
  */
 void %%PARSER_CLASS%%::DebugMessagePartialRule(std::size_t rulelen,
-	t_semantic_id rule_id, t_hash state_hash) const
+	t_semantic_id rule_id) const
 {
-	if(t_hash hash = GetPartialRuleHash(rule_id, rulelen, state_hash);
-		m_partials.contains(hash))
-		return;
+	std::optional<t_index> rule_handle = GetActiveRuleHandle(rule_id);
 
-	std::cout << "Partially matched rule #" << rule_id
-		<< " of length " << rulelen
-		<< "." << std::endl;
+	std::cout << "Partially matched rule #" << rule_id;
+	if(rule_handle)
+		std::cout << " (handle id " << *rule_handle << ")";
+	std::cout << " of length " << rulelen << "." << std::endl;
 }
 
 /**
@@ -307,6 +309,28 @@ void %%PARSER_CLASS%%::TransitionError(t_state_id state_id) const
 }
 
 /**
+ * get active (partial) rule handle
+ */
+std::optional<t_index> %%PARSER_CLASS%%::GetActiveRuleHandle(t_semantic_id rule_id) const
+{
+	std::optional<t_index> rule_handle;
+
+	if(t_active_rules::const_iterator iter_active_rule = m_active_rules.find(rule_id);
+		iter_active_rule != m_active_rules.end())
+	{
+		const t_active_rule_stack& rulestack = iter_active_rule->second;
+		if(!rulestack.empty())
+		{
+			const t_active_rule_stack& rulestack = iter_active_rule->second;
+			const ActiveRule& active_rule = rulestack.top();
+			rule_handle = active_rule.handle;
+		}
+	}
+
+	return rule_handle;
+}
+
+/**
  * sets the semantic rules to apply when reducing
  */
 void %%PARSER_CLASS%%::SetSemanticRules(const t_semanticrules* rules)
@@ -325,12 +349,12 @@ void %%PARSER_CLASS%%::SetSemanticRules(const t_semanticrules* rules)
 	m_lookahead = nullptr;
 	m_dist_to_jump = 0;
 	m_accepted = false;
-	m_partials.clear();
+	m_active_rules.clear();
 	while(!m_symbols.empty())
 		m_symbols.pop();
 
 	GetNextLookahead();
-	%%START_STATE%%(0xffffffff /* random seed value */);
+	%%START_STATE%%();
 
 	if(m_symbols.size() && m_accepted)
 		return m_symbols.top();
@@ -338,26 +362,9 @@ void %%PARSER_CLASS%%::SetSemanticRules(const t_semanticrules* rules)
 }
 
 /**
- * get a unique identifier for a partial rule
- */
-t_hash %%PARSER_CLASS%%::GetPartialRuleHash(
-	t_semantic_id rule_id, std::size_t len, t_hash state_hash) const
-{
-	t_hash total_hash = std::hash<t_semantic_id>{}(rule_id);
-	boost::hash_combine(total_hash, std::hash<std::size_t>{}(len));
-	boost::hash_combine(total_hash, state_hash);
-
-	for(const auto& symbol : m_symbols)
-		boost::hash_combine(total_hash, symbol->hash());
-
-	return total_hash;
-}
-
-/**
  * execute a partially recognised semantic rule
  */
-void %%PARSER_CLASS%%::ApplyPartialRule(
-	t_semantic_id rule_id, std::size_t rule_len, t_hash state_hash)
+void %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len)
 {
 	if(!m_semantics || !m_semantics->contains(rule_id))
 	{
@@ -365,11 +372,58 @@ void %%PARSER_CLASS%%::ApplyPartialRule(
 		return;
 	}
 
-	if(t_hash hash = GetPartialRuleHash(rule_id, rule_len, state_hash);
-		!m_partials.contains(hash))
-	{
-		m_partials.insert(hash);
+	bool already_seen_active_rule = false;
+	bool insert_new_active_rule = false;
 
+	t_active_rules::iterator iter_active_rule = m_active_rules.find(rule_id);
+	if(iter_active_rule != m_active_rules.end())
+	{
+		t_active_rule_stack& rulestack = iter_active_rule->second;
+		if(!rulestack.empty())
+		{
+			ActiveRule& active_rule = rulestack.top();
+			if(before_shift)
+			{
+				if(active_rule.seen_tokens < rule_len)
+					active_rule.seen_tokens = rule_len;  // update seen length
+				else
+					insert_new_active_rule = true;               // start of new rule
+			}
+			else  // before jump
+			{
+				already_seen_active_rule = (active_rule.seen_tokens == rule_len);
+
+				if(!already_seen_active_rule)
+					active_rule.seen_tokens = rule_len;  // update seen length
+			}
+		}
+		else
+		{
+			// no active rule yet
+			insert_new_active_rule = true;
+		}
+	}
+	else
+	{
+		// no active rule yet
+		iter_active_rule = m_active_rules.emplace(
+			std::make_pair(rule_id, t_active_rule_stack{})).first;
+		insert_new_active_rule = true;
+	}
+
+	if(insert_new_active_rule)
+	{
+		ActiveRule active_rule{
+			.seen_tokens = rule_len,
+			.handle = m_cur_rule_handle++,
+		};
+
+		t_active_rule_stack& rulestack = iter_active_rule->second;
+		rulestack.emplace(std::move(active_rule));
+	}
+
+	if(!already_seen_active_rule)
+	{
 		const t_semanticrule& rule = m_semantics->at(rule_id);
 		if(!rule)
 		{
@@ -387,6 +441,17 @@ void %%PARSER_CLASS%%::ApplyPartialRule(
  */
 void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 {
+	if(t_active_rules::iterator iter_active_rule = m_active_rules.find(rule_id);
+		iter_active_rule != m_active_rules.end())
+	{
+		t_active_rule_stack& rulestack = iter_active_rule->second;
+		if(!rulestack.empty())
+		{
+			t_active_rule_stack& rulestack = iter_active_rule->second;
+			rulestack.pop();
+		}
+	}
+
 	if(!m_semantics || !m_semantics->contains(rule_id))
 	{
 		std::cerr << "Error: No semantic rule #" << rule_id << " defined." << std::endl;
@@ -531,18 +596,14 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		ostr_cpp << "*/\n";  // end comment
 
 		// write closure function
-		ostr_cpp << "void " << class_name << "::"
-			<< closure_name << "(t_hash state_hash)\n";
+		ostr_cpp << "void " << class_name << "::" << closure_name << "()\n";
 		ostr_cpp << "{\n";
-		t_hash hash_id = std::hash<t_state_id>{}(closure_id);
-		ostr_cpp << "\tboost::hash_combine(state_hash, " << hash_id << ");\n";
 
 		if(m_genDebugCode)
 		{
 			ostr_cpp << "\tif(m_debug)\n";
 			ostr_cpp << "\t\tDebugMessageState(" << closure_id
-				<< ", __PRETTY_FUNCTION__"
-				<< ", state_hash);\n";
+				<< ", __PRETTY_FUNCTION__);\n";
 		}
 
 
@@ -555,7 +616,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			const SymbolPtr& symTrans = std::get<2>(transition);
 			const Collection::t_elements& elemsFrom = std::get<3>(transition);
 
-			// transition symbol has to be a terminal
+			// shift => transition symbol has to be a terminal
 			if(symTrans->IsEps() || !symTrans->IsTerminal())
 				continue;
 
@@ -566,19 +627,19 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			{
 				if(auto [uniquematch, rule_id, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
 				{
+					// execute partial semantic rule
+					ostr_partial << "\t\t\t// partial semantic rule "
+						<< rule_id << " with " << rulelen << " recognised argument(s)\n";
+					ostr_partial << "\t\t\tApplyPartialRule(true, "
+						<< rule_id << ", " << rulelen << ");\n";
+					has_partial = true;
+
 					if(m_genDebugCode)
 					{
 						ostr_partial << "\t\t\tif(m_debug)\n";
 						ostr_partial << "\t\t\t\tDebugMessagePartialRule("
-							<< rulelen << ", " << rule_id << ", state_hash);\n";
+							<< rulelen << ", " << rule_id << ");\n";
 					}
-
-					// execute partial semantic rule
-					ostr_partial << "\t\t\t// partial semantic rule "
-						<< rule_id << " with " << rulelen << " recognised argument(s)\n";
-					ostr_partial << "\t\t\tApplyPartialRule("
-						<< rule_id << ", " << rulelen << ", state_hash);\n";
-					has_partial = true;
 				}
 			}
 
@@ -751,7 +812,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 
 		// write shift and reduce codes
 		if(shifts.size())
-			ostr_cpp << "\tvoid(" << class_name << "::*next_state)(t_hash) = nullptr;\n";
+			ostr_cpp << "\tvoid(" << class_name << "::*next_state)() = nullptr;\n";
 
 		ostr_cpp << "\tswitch(m_lookahead_id)\n";
 		ostr_cpp << "\t{\n";
@@ -805,12 +866,12 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			ostr_cpp << "\tif(next_state)\n";
 			ostr_cpp << "\t{\n";
 			ostr_cpp << "\t\tPushLookahead();\n";
-			ostr_cpp << "\t\t(this->*next_state)(state_hash);\n";
+			ostr_cpp << "\t\t(this->*next_state)();\n";
 			ostr_cpp << "\t}\n";
 		}
 
 
-		// jump to new closure
+		// jump to new closure after a reduce
 		std::ostringstream ostr_cpp_while;
 		ostr_cpp_while << "\twhile(!m_dist_to_jump && m_symbols.size() && !m_accepted)\n";
 		ostr_cpp_while << "\t{\n";
@@ -828,7 +889,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			const SymbolPtr& symTrans = std::get<2>(transition);
 			const Collection::t_elements& elemsFrom = std::get<3>(transition);
 
-			// transition symbol has to be a non-terminal
+			// jump => transition symbol has to be a non-terminal
 			if(symTrans->IsEps() || symTrans->IsTerminal())
 				continue;
 
@@ -839,19 +900,19 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			{
 				if(auto [uniquematch, rule_id, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
 				{
+					// execute partial semantic rule
+					ostr_partial << "\t\t\t\t// partial semantic rule "
+						<< rule_id << " with " << rulelen << " arguments\n";
+					ostr_partial << "\t\t\t\tApplyPartialRule(false, "
+						<< rule_id << ", " << rulelen << ");\n";
+					has_partial = true;
+
 					if(m_genDebugCode)
 					{
 						ostr_partial << "\t\t\t\tif(m_debug)\n";
 						ostr_partial << "\t\t\t\t\tDebugMessagePartialRule("
-							<< rulelen << ", " << rule_id << ", state_hash);\n";
+							<< rulelen << ", " << rule_id << ");\n";
 					}
-
-					// execute partial semantic rule
-					ostr_partial << "\t\t\t\t// partial semantic rule "
-						<< rule_id << " with " << rulelen << " arguments\n";
-					ostr_partial << "\t\t\t\tApplyPartialRule("
-						<< rule_id << ", " << rulelen << ", state_hash);\n";
-					has_partial = true;
 				}
 			}
 
@@ -861,7 +922,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 				ostr_cpp_while << ostr_partial.str();
 
 			const std::string& closure_to_name = closure_names[closure_to->GetId()];
-			ostr_cpp_while << "\t\t\t\t" << closure_to_name << "(state_hash);\n";
+			ostr_cpp_while << "\t\t\t\t" << closure_to_name << "();\n";
 			ostr_cpp_while << "\t\t\t\tbreak;\n";
 			ostr_cpp_while << "\t\t\t}\n";
 
@@ -895,7 +956,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		// end closure function
 		ostr_cpp << "}\n\n";
 
-		ostr_h << "\tvoid " << closure_name << "(t_hash state_hash);\n";
+		ostr_h << "\tvoid " << closure_name << "();\n";
 	}
 
 

@@ -16,8 +16,6 @@
 #include <optional>
 #include <functional>
 
-#include <boost/functional/hash.hpp>
-
 
 Parser::Parser(const Parser& parser)
 {
@@ -161,26 +159,6 @@ Parser::GetPartialRules(t_state_id topstate, const t_toknode& curtok,
 
 
 /**
- * get a unique identifier for a partial rule
- */
-t_hash Parser::GetPartialRuleHash(t_index rule_idx, std::size_t len,
-	const ParseStack<t_state_id>& states,
-	const ParseStack<t_lalrastbaseptr>& symbols) const
-{
-	t_hash total_hash = std::hash<t_index>{}(rule_idx);
-	boost::hash_combine(total_hash, std::hash<std::size_t>{}(len));
-
-	for(t_state_id state : states)
-		boost::hash_combine(total_hash, std::hash<t_state_id>{}(state));
-
-	for(const auto& symbol : symbols)
-		boost::hash_combine(total_hash, symbol->hash());
-
-	return total_hash;
-}
-
-
-/**
  * invert a map, exchanging keys and values
  */
 template<class t_key, class t_val, template<class ...> class t_map>
@@ -231,11 +209,14 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 	states.push(0);
 	t_index inputidx = 0;
 
+	// corresponding partial rule matches have the same handle
+	t_index cur_rule_handle = 0;
+
 	// next token
 	t_toknode curtok = input[inputidx++];
 
 	// already seen partial rules
-	std::unordered_set<t_hash> already_seen_partials;
+	t_active_rules active_rules;
 
 	// run the shift-reduce parser
 	while(true)
@@ -257,20 +238,69 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 
 		// run a partial rule related to either a terminal or a nonterminal transition
 		auto apply_partial_rule = [this, &topstate, &curtok, &symbols, &states,
-			&already_seen_partials](bool term)
+			&active_rules, &cur_rule_handle](bool is_term)
 		{
+			bool before_shift = is_term;  // before jump otherwise
+
 			auto [partialrule_idx, partialmatchlen] = this->GetPartialRules(
-				topstate, curtok, symbols, term);
+				topstate, curtok, symbols, is_term);
 
 			if(!partialrule_idx || *partialrule_idx == ERROR_VAL)
 				return;
 
-			if(t_hash hash_partial = GetPartialRuleHash(
-				*partialrule_idx, *partialmatchlen, states, symbols);
-				!already_seen_partials.contains(hash_partial))
-			{
-				t_semantic_id partialrule_id = GetRuleId(*partialrule_idx);
+			t_semantic_id partialrule_id = GetRuleId(*partialrule_idx);
+			bool already_seen_active_rule = false;
+			bool insert_new_active_rule = false;
 
+			t_active_rules::iterator iter_active_rule = active_rules.find(partialrule_id);
+			if(iter_active_rule != active_rules.end())
+			{
+				t_active_rule_stack& rulestack = iter_active_rule->second;
+				if(!rulestack.empty())
+				{
+					ActiveRule& active_rule = rulestack.top();
+					if(before_shift)
+					{
+						if(active_rule.seen_tokens < *partialmatchlen)
+							active_rule.seen_tokens = *partialmatchlen;  // update seen length
+						else
+							insert_new_active_rule = true;               // start of new rule
+					}
+					else  // before jump
+					{
+						already_seen_active_rule = (active_rule.seen_tokens == *partialmatchlen);
+
+						if(!already_seen_active_rule)
+							active_rule.seen_tokens = *partialmatchlen;  // update seen length
+					}
+				}
+				else
+				{
+					// no active rule yet
+					insert_new_active_rule = true;
+				}
+			}
+			else
+			{
+				// no active rule yet
+				iter_active_rule = active_rules.emplace(
+					std::make_pair(partialrule_id, t_active_rule_stack{})).first;
+				insert_new_active_rule = true;
+			}
+
+			if(insert_new_active_rule)
+			{
+				ActiveRule active_rule{
+					.seen_tokens = *partialmatchlen,
+					.handle = cur_rule_handle++,
+				};
+
+				t_active_rule_stack& rulestack = iter_active_rule->second;
+				rulestack.emplace(std::move(active_rule));
+			}
+
+			if(!already_seen_active_rule)
+			{
 				if(!m_semantics || !m_semantics->contains(partialrule_id))
 				{
 					throw std::runtime_error("No semantic rule #" +
@@ -286,11 +316,13 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 				}
 				rule(false, symbols.topN<std::deque>(*partialmatchlen));
 
-				already_seen_partials.insert(hash_partial);
-
 				if(m_debug)
 				{
+					t_active_rule_stack& rulestack = iter_active_rule->second;
+					ActiveRule& active_rule = rulestack.top();
+
 					std::cout << "\tPartially matched rule #" << partialrule_id
+						<< " (handle id " << active_rule.handle << ")"
 						<< " of length " << *partialmatchlen
 						<< "." << std::endl;
 				}
@@ -338,9 +370,6 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 			return symbols.top();
 		}
 
-		// partial rules
-		apply_partial_rule(true);
-
 		// shift
 		if(newstate != ERROR_VAL)
 		{
@@ -360,6 +389,9 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 				throw std::runtime_error(ostrErr.str());
 			}
 
+			// partial rules
+			apply_partial_rule(true);
+
 			states.push(newstate);
 			symbols.emplace(std::move(curtok));
 
@@ -370,12 +402,30 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 		// reduce
 		else if(rule_idx != ERROR_VAL)
 		{
+			// remove fully reduced rule from active rule stack
+			std::optional<t_index> rule_handle;
+			if(t_active_rules::iterator iter_active_rule = active_rules.find(rule_id);
+			   iter_active_rule != active_rules.end())
+			{
+				t_active_rule_stack& rulestack = iter_active_rule->second;
+				if(!rulestack.empty())
+				{
+					t_active_rule_stack& rulestack = iter_active_rule->second;
+					ActiveRule& active_rule = rulestack.top();
+					rule_handle = active_rule.handle;
+
+					rulestack.pop();
+				}
+			}
+
 			std::size_t numSyms = (*m_numRhsSymsPerRule)[rule_idx];
 			if(m_debug)
 			{
 				std::cout << "\tReducing " << numSyms
-					<< " symbol(s) via rule #" << rule_id
-					<< " (popping " << numSyms << " element(s) from stacks,"
+					<< " symbol(s) via rule #" << rule_id;
+				if(rule_handle)
+					std::cout << " (handle id " << *rule_handle << ")";
+				std::cout << " (popping " << numSyms << " element(s) from stacks,"
 					<< " pushing result to symbol stack)"
 					<< "." << std::endl;
 			}

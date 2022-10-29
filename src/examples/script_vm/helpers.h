@@ -28,7 +28,7 @@ t_val pow(t_val val1, t_val val2)
 			return 0;
 
 		t_val result = val1;
-		for(t_val i=0; i<val2; ++i)
+		for(t_val i=1; i<val2; ++i)
 			result *= val1;
 		return result;
 	}
