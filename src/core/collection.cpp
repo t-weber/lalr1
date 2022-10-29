@@ -441,16 +441,30 @@ std::set<t_state_id> Collection::HasShiftReduceConflicts() const
  * get the rule number and length of a partial match
  */
 std::tuple<bool, t_semantic_id /*rule #*/, std::size_t /*match length*/>
-Collection::GetUniquePartialMatch(const Collection::t_elements& elemsFrom)
+Collection::GetUniquePartialMatch(
+	const Collection::t_elements& elemsFrom, bool termTrans)
 {
 	std::unordered_map<t_semantic_id, ElementPtr> matching_rules{};
 
 	for(const ElementPtr& elemFrom : elemsFrom)
 	{
-		std::size_t match_len = elemFrom->GetCursor();
-		std::optional<t_semantic_id> rule_id = elemFrom->GetSemanticRule();
+		// only consider either terminal or non-terminal transitions
+		if(elemFrom->GetSymbolAtCursor()->IsTerminal() != termTrans)
+			continue;
 
-		if(match_len == 0 || !rule_id)
+		// - match terminal transitions with a minimum length of 0
+		//   (because the terminal lookahead is also known)
+		// - match non-terminal transitions with a minimum length of 1
+		//   (because length 0 is rarely unique as the cursor might be before
+		//    a nonterminal and the same nonterminal will be at position 0
+		//    of multiple generated elements)
+		std::size_t match_len = elemFrom->GetCursor();
+		if(!termTrans && match_len == 0)
+			continue;
+
+		// skip if no rule is assigned to this element
+		std::optional<t_semantic_id> rule_id = elemFrom->GetSemanticRule();
+		if(!rule_id)
 			continue;
 
 		if(auto iter_match = matching_rules.find(*rule_id);
@@ -470,7 +484,7 @@ Collection::GetUniquePartialMatch(const Collection::t_elements& elemsFrom)
 	// unique partial match?
 	if(matching_rules.size() == 1)
 	{
-		return std::make_tuple(true,                      // partial match found
+		return std::make_tuple(true,                          // partial match found
 			matching_rules.begin()->first,                // rule number
 			matching_rules.begin()->second->GetCursor()); // length of partial rule match
 	}

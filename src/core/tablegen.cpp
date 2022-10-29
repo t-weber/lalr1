@@ -106,18 +106,24 @@ bool Collection::CreateParseTables()
 
 		if(m_genPartialMatches)
 		{
-			// unique partial match?
-			if(auto [uniquematch, rule_id, rule_len] = GetUniquePartialMatch(elemsFrom); uniquematch)
+			// unique partial match for terminal transition?
+			if(auto [uniquematch, rule_id, rule_len] =
+				GetUniquePartialMatch(elemsFrom, true); uniquematch)
 			{
 				// set partial match table elements
-				std::vector<std::vector<t_index>>* partials_rule_tab =
-					symIsTerm ? &partials_rule_term : &partials_rule_nonterm;
-				std::vector<std::vector<std::size_t>>* partials_matchlen_tab =
-					symIsTerm ? &partials_matchlen_term : &partials_matchlen_nonterm;
-
 				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
-				set_tab_elem((*partials_rule_tab)[stateFrom->GetId()], symIdx, rule_idx);
-				set_tab_elem((*partials_matchlen_tab)[stateFrom->GetId()], symIdx, rule_len, 0);
+				set_tab_elem(partials_rule_term[stateFrom->GetId()], symIdx, rule_idx);
+				set_tab_elem(partials_matchlen_term[stateFrom->GetId()], symIdx, rule_len, 0);
+			}
+
+			// unique partial match for non-terminal transition?
+			if(auto [uniquematch, rule_id, rule_len] =
+				GetUniquePartialMatch(elemsFrom, false); uniquematch)
+			{
+				// set partial match table elements
+				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
+				set_tab_elem(partials_rule_nonterm[stateFrom->GetId()], symIdx, rule_idx);
+				set_tab_elem(partials_matchlen_nonterm[stateFrom->GetId()], symIdx, rule_len, 0);
 			}
 		}
 	}
@@ -196,8 +202,8 @@ bool Collection::CreateParseTables()
 			t_index& reduceEntry = m_tabActionReduce(state, termidx);
 
 			// partial match tables
-			t_index& partialRuleEntry = m_tabPartialRuleTerm(state, termidx);
-			std::size_t& partialMatchLenEntry = m_tabPartialMatchLenTerm(state, termidx);
+			//t_index& partialRuleEntry = m_tabPartialRuleTerm(state, termidx);
+			//std::size_t& partialMatchLenEntry = m_tabPartialMatchLenTerm(state, termidx);
 
 			// get potentially conflicting element
 			std::optional<std::string> termid;
@@ -254,11 +260,11 @@ bool Collection::CreateParseTables()
 				else  // solution found
 				{
 					// also apply conflict solution to partial matches
-					if(shiftEntry == ERROR_VAL)
+					/*if(shiftEntry == ERROR_VAL)
 					{
 						partialRuleEntry = ERROR_VAL;
 						partialMatchLenEntry = 0;
-					}
+					}*/
 				}
 			}
 		}

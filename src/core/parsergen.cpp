@@ -84,8 +84,8 @@ protected:
 	ActiveRule* GetActiveRule(t_semantic_id rule_id);
 	std::optional<t_index> GetActiveRuleHandle(t_semantic_id rule_id) const;
 
-	void ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len);
-	void ApplyRule(t_semantic_id rule_id, std::size_t rule_len);
+	bool ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len);
+	bool ApplyRule(t_semantic_id rule_id, std::size_t rule_len);
 
 	void DebugMessageState(t_state_id state_id, const char* state_func) const;
 	void DebugMessageReturn(t_state_id state_id) const;
@@ -110,11 +110,9 @@ private:
 	bool m_debug{false};                          // output debug infos
 	bool m_accepted{false};                       // input was accepted
 
-	// number of function returns between reduction and performing jump / non-terminal transition
-	std::size_t m_dist_to_jump{0};
+	std::size_t m_dist_to_jump{0};                // return count between reduction and jump / non-terminal transition
 
-	// end symbol id
-	static constexpr const t_symbol_id s_end_id{%%END_ID%%};
+	static constexpr const t_symbol_id s_end_id{%%END_ID%%}; // end symbol id
 };
 
 #endif)raw";
@@ -368,6 +366,7 @@ void %%PARSER_CLASS%%::SetSemanticRules(const t_semanticrules* rules)
 	m_lookahead_idx = -1;
 	m_lookahead_id = 0;
 	m_lookahead = nullptr;
+	m_cur_rule_handle = 0;
 	m_dist_to_jump = 0;
 	m_accepted = false;
 	m_active_rules.clear();
@@ -385,12 +384,12 @@ void %%PARSER_CLASS%%::SetSemanticRules(const t_semanticrules* rules)
 /**
  * execute a partially recognised semantic rule
  */
-void %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len)
+bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len)
 {
 	if(!m_semantics || !m_semantics->contains(rule_id))
 	{
 		std::cerr << "Error: No semantic rule #" << rule_id << " defined." << std::endl;
-		return;
+		return false;
 	}
 
 	bool already_seen_active_rule = false;
@@ -412,9 +411,9 @@ void %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 			}
 			else  // before jump
 			{
-				already_seen_active_rule = (active_rule.seen_tokens == rule_len);
-
-				if(!already_seen_active_rule)
+				if(active_rule.seen_tokens == rule_len)
+					already_seen_active_rule = true;
+				else
 					active_rule.seen_tokens = rule_len; // update seen length
 			}
 		}
@@ -447,7 +446,7 @@ void %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 		if(!rule)
 		{
 			std::cerr << "Error: Invalid semantic rule #" << rule_id << "." << std::endl;
-			return;
+			return false;
 		}
 
 		t_semanticargs args = GetCopyArguments(rule_len);
@@ -460,13 +459,17 @@ void %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 
 		if(active_rule)
 			active_rule->retval = retval;
+
+		return true;
 	}
+
+	return false;
 }
 
 /**
  * apply a fully recognised semantic rule
  */
-void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
+bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 {
 	if(t_active_rules::iterator iter_active_rule = m_active_rules.find(rule_id);
 		iter_active_rule != m_active_rules.end())
@@ -482,14 +485,14 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 	if(!m_semantics || !m_semantics->contains(rule_id))
 	{
 		std::cerr << "Error: No semantic rule #" << rule_id << " defined." << std::endl;
-		return;
+		return false;
 	}
 
 	const t_semanticrule& rule = m_semantics->at(rule_id);
 	if(!rule)
 	{
 		std::cerr << "Error: No semantic rule #" << rule_id << " defined." << std::endl;
-		return;
+		return false;
 	}
 
 	t_semanticargs args = GetArguments(m_symbols, rule_len);
@@ -498,6 +501,7 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		retval = active_rule->retval;
 
 	m_symbols.emplace(rule(true, args, retval));
+	return true;
 }
 
 %%DEFINE_CLOSURES%%)raw";
@@ -656,18 +660,19 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			std::ostringstream ostr_partial;
 			if(m_genPartialMatches)
 			{
-				if(auto [uniquematch, rule_id, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+				if(auto [uniquematch, rule_id, rulelen] =
+					GetUniquePartialMatch(elemsFrom, true); uniquematch)
 				{
 					// execute partial semantic rule
 					ostr_partial << "\t\t\t// partial semantic rule "
 						<< rule_id << " with " << rulelen << " recognised argument(s)\n";
-					ostr_partial << "\t\t\tApplyPartialRule(true, "
+					ostr_partial << "\t\t\tbool applied = ApplyPartialRule(true, "
 						<< rule_id << ", " << rulelen << ");\n";
 					has_partial = true;
 
 					if(m_genDebugCode)
 					{
-						ostr_partial << "\t\t\tif(m_debug)\n";
+						ostr_partial << "\t\t\tif(m_debug && applied)\n";
 						ostr_partial << "\t\t\t\tDebugMessagePartialRule("
 							<< rulelen << ", " << rule_id << ");\n";
 					}
@@ -743,6 +748,8 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 					std::ostringstream rule_descr;
 					rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
 
+					// in the table-based parser, num_rhs states are popped,
+					// here we have to count function returns to get to the new top state function
 					std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
 					ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
 
@@ -929,18 +936,19 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			std::ostringstream ostr_partial;
 			if(m_genPartialMatches)
 			{
-				if(auto [uniquematch, rule_id, rulelen] = GetUniquePartialMatch(elemsFrom); uniquematch)
+				if(auto [uniquematch, rule_id, rulelen] =
+					GetUniquePartialMatch(elemsFrom, false); uniquematch)
 				{
 					// execute partial semantic rule
 					ostr_partial << "\t\t\t\t// partial semantic rule "
 						<< rule_id << " with " << rulelen << " arguments\n";
-					ostr_partial << "\t\t\t\tApplyPartialRule(false, "
+					ostr_partial << "\t\t\t\tbool applied = ApplyPartialRule(false, "
 						<< rule_id << ", " << rulelen << ");\n";
 					has_partial = true;
 
 					if(m_genDebugCode)
 					{
-						ostr_partial << "\t\t\t\tif(m_debug)\n";
+						ostr_partial << "\t\t\t\tif(m_debug && applied)\n";
 						ostr_partial << "\t\t\t\t\tDebugMessagePartialRule("
 							<< rulelen << ", " << rule_id << ");\n";
 					}

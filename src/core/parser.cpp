@@ -125,7 +125,7 @@ static void print_input_token(t_index inputidx, const t_toknode& curtok,
  * get the semantic rule index and the matching length of a partial match
  */
 std::tuple<std::optional<t_index>, std::optional<std::size_t>>
-Parser::GetPartialRules(t_state_id topstate, const t_toknode& curtok,
+Parser::GetPartialRule(t_state_id topstate, const t_toknode& curtok,
 	const ParseStack<t_lalrastbaseptr>& symbols, bool term) const
 {
 	const bool has_partial_tables =
@@ -242,7 +242,7 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 		{
 			bool before_shift = is_term;  // before jump otherwise
 
-			auto [partialrule_idx, partialmatchlen] = this->GetPartialRules(
+			auto [partialrule_idx, partialmatchlen] = this->GetPartialRule(
 				topstate, curtok, symbols, is_term);
 
 			if(!partialrule_idx || *partialrule_idx == ERROR_VAL)
@@ -268,9 +268,12 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 					}
 					else  // before jump
 					{
-						already_seen_active_rule = (active_rule.seen_tokens == *partialmatchlen);
-
-						if(!already_seen_active_rule)
+						// new active rules are only pushed before shifts, (possibly of length 0),
+						// not after reductions / before jumps.
+						// TODO: verify that this is actually always correct
+						if(active_rule.seen_tokens == *partialmatchlen)
+							already_seen_active_rule = true;
+						else
 							active_rule.seen_tokens = *partialmatchlen;  // update seen length
 					}
 				}

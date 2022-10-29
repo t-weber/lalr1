@@ -119,7 +119,7 @@ protected:
 
 	static t_hash hash_transition(const t_transition& trans);
 	static std::tuple<bool, t_semantic_id, std::size_t> GetUniquePartialMatch(
-		const t_elements& elemsFrom);
+		const t_elements& elemsFrom, bool termTrans);
 
 
 private:

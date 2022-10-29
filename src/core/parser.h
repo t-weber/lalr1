@@ -50,7 +50,7 @@ public:
 protected:
 	// get the rule index and the matching length of a partial match
 	std::tuple<std::optional<t_index>, std::optional<std::size_t>>
-		GetPartialRules(t_state_id topstate, const t_toknode& curtok,
+		GetPartialRule(t_state_id topstate, const t_toknode& curtok,
 			const ParseStack<t_lalrastbaseptr>& symbols, bool term) const;
 
 	// get a semantic rule id from a rule index

@@ -16,6 +16,7 @@
 %include <std_shared_ptr.i>
 %include <std_string.i>
 %include <std_vector.i>
+%include <std_list.i>
 %include <std_deque.i>
 %include <std_unordered_map.i>
 %include <std_unordered_set.i>
@@ -82,7 +83,16 @@ namespace std
 %template(ElementESFT) std::enable_shared_from_this<Element>;
 %template(ClosureESFT) std::enable_shared_from_this<Closure>;
 %template(CollectionESFT) std::enable_shared_from_this<Collection>;
+
+typedef std::shared_ptr<Symbol> SymbolPtr;
+typedef std::shared_ptr<Word> WordPtr;
+typedef std::shared_ptr<Element> ElementPtr;
+typedef std::shared_ptr<Closure> ClosurePtr;
+typedef std::shared_ptr<Collection> CollectionPtr;
+
 %template(SymbolVec) std::vector<SymbolPtr>;
+//%template(ElementLst) std::list<ElementPtr>;
+//%template(ClosureLst) std::list<ClosurePtr>;
 
 %include "src/core/types.h"
 %include "src/core/symbol.h"

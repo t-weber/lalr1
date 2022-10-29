@@ -51,7 +51,6 @@ struct ActiveRule
 {
 	std::size_t seen_tokens = 0; // number of tokens already seen in partial match
 	t_index handle = 0;          // the same for corresponding partial rules
-
 	t_lalrastbaseptr retval{};   // partial semantic rule return value
 };
 
