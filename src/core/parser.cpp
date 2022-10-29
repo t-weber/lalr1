@@ -237,7 +237,7 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 		};
 
 		// run a partial rule related to either a terminal or a nonterminal transition
-		auto apply_partial_rule = [this, &topstate, &curtok, &symbols, &states,
+		auto apply_partial_rule = [this, &topstate, &curtok, &symbols,
 			&active_rules, &cur_rule_handle](bool is_term)
 		{
 			bool before_shift = is_term;  // before jump otherwise
@@ -314,13 +314,17 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 					throw std::runtime_error("Invalid semantic rule #" +
 						std::to_string(partialrule_id) + ".");
 				}
-				rule(false, symbols.topN<std::deque>(*partialmatchlen));
+
+				t_active_rule_stack& rulestack = iter_active_rule->second;
+				ActiveRule& active_rule = rulestack.top();
+
+				active_rule.retval = rule(
+					false,
+					symbols.topN<std::deque>(*partialmatchlen),
+					active_rule.retval);
 
 				if(m_debug)
 				{
-					t_active_rule_stack& rulestack = iter_active_rule->second;
-					ActiveRule& active_rule = rulestack.top();
-
 					std::cout << "\tPartially matched rule #" << partialrule_id
 						<< " (handle id " << active_rule.handle << ")"
 						<< " of length " << *partialmatchlen
@@ -403,7 +407,7 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 		else if(rule_idx != ERROR_VAL)
 		{
 			// remove fully reduced rule from active rule stack
-			std::optional<t_index> rule_handle;
+			ActiveRule* active_rule = nullptr;
 			if(t_active_rules::iterator iter_active_rule = active_rules.find(rule_id);
 			   iter_active_rule != active_rules.end())
 			{
@@ -411,8 +415,8 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 				if(!rulestack.empty())
 				{
 					t_active_rule_stack& rulestack = iter_active_rule->second;
-					ActiveRule& active_rule = rulestack.top();
-					rule_handle = active_rule.handle;
+					ActiveRule& _active_rule = rulestack.top();
+					active_rule = &_active_rule;
 
 					rulestack.pop();
 				}
@@ -423,8 +427,8 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 			{
 				std::cout << "\tReducing " << numSyms
 					<< " symbol(s) via rule #" << rule_id;
-				if(rule_handle)
-					std::cout << " (handle id " << *rule_handle << ")";
+				if(active_rule)
+					std::cout << " (handle id " << active_rule->handle << ")";
 				std::cout << " (popping " << numSyms << " element(s) from stacks,"
 					<< " pushing result to symbol stack)"
 					<< "." << std::endl;
@@ -457,7 +461,11 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 				throw std::runtime_error("Invalid semantic rule #" +
 					std::to_string(rule_id) + ".");
 			}
-			t_lalrastbaseptr reducedSym = rule(true, args);
+
+			t_lalrastbaseptr retval = nullptr;
+			if(active_rule)
+				retval = active_rule->retval;
+			t_lalrastbaseptr reducedSym = rule(true, args, retval);
 
 			// set return symbol type
 			reducedSym->SetTableIndex((*m_vecLhsIndices)[rule_idx]);

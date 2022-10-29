@@ -67,7 +67,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[0];
@@ -80,7 +80,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -96,7 +96,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -112,7 +112,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -229,7 +229,7 @@ static void lalr1_run_parser()
 
 #else
 
-#include "lalr1/parser.h"
+#include "core/parser.h"
 #include "expr_simple.tab"
 
 static void lalr1_run_parser()

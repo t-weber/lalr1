@@ -39,7 +39,7 @@ bool Collection::SaveParser(const std::string& filename_cpp, const std::string& 
 	// --------------------------------------------------------------------------------
 	// output header file stub
 	// --------------------------------------------------------------------------------
-	std::string outfile_h = R"raw(/*
+	std::string outfile_h = R"raw(/**
  * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
@@ -80,7 +80,10 @@ protected:
 	static t_semanticargs GetArguments(t_stack& symbols, std::size_t num_rhs);
 	t_semanticargs GetCopyArguments(std::size_t num_rhs) const;
 
+	const ActiveRule* GetActiveRule(t_semantic_id rule_id) const;
+	ActiveRule* GetActiveRule(t_semantic_id rule_id);
 	std::optional<t_index> GetActiveRuleHandle(t_semantic_id rule_id) const;
+
 	void ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len);
 	void ApplyRule(t_semantic_id rule_id, std::size_t rule_len);
 
@@ -121,7 +124,7 @@ private:
 	// --------------------------------------------------------------------------------
 	// output cpp file stub
 	// --------------------------------------------------------------------------------
-	std::string outfile_cpp = R"raw(/*
+	std::string outfile_cpp = R"raw(/**
  * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
@@ -309,12 +312,10 @@ void %%PARSER_CLASS%%::TransitionError(t_state_id state_id) const
 }
 
 /**
- * get active (partial) rule handle
+ * get active (partial) rule
  */
-std::optional<t_index> %%PARSER_CLASS%%::GetActiveRuleHandle(t_semantic_id rule_id) const
+const ActiveRule* %%PARSER_CLASS%%::GetActiveRule(t_semantic_id rule_id) const
 {
-	std::optional<t_index> rule_handle;
-
 	if(t_active_rules::const_iterator iter_active_rule = m_active_rules.find(rule_id);
 		iter_active_rule != m_active_rules.end())
 	{
@@ -323,10 +324,30 @@ std::optional<t_index> %%PARSER_CLASS%%::GetActiveRuleHandle(t_semantic_id rule_
 		{
 			const t_active_rule_stack& rulestack = iter_active_rule->second;
 			const ActiveRule& active_rule = rulestack.top();
-			rule_handle = active_rule.handle;
+			return &active_rule;
 		}
 	}
 
+	return nullptr;
+}
+
+/**
+ * get active (partial) rule
+ */
+ActiveRule* %%PARSER_CLASS%%::GetActiveRule(t_semantic_id rule_id)
+{
+	const %%PARSER_CLASS%%* const_this = this;
+	return const_cast<ActiveRule*>(const_this->GetActiveRule(rule_id));
+}
+
+/**
+ * get active (partial) rule handle
+ */
+std::optional<t_index> %%PARSER_CLASS%%::GetActiveRuleHandle(t_semantic_id rule_id) const
+{
+	std::optional<t_index> rule_handle;
+	if(const ActiveRule* active_rule = GetActiveRule(rule_id); active_rule)
+		rule_handle = active_rule->handle;
 	return rule_handle;
 }
 
@@ -385,30 +406,28 @@ void %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 			if(before_shift)
 			{
 				if(active_rule.seen_tokens < rule_len)
-					active_rule.seen_tokens = rule_len;  // update seen length
+					active_rule.seen_tokens = rule_len; // update seen length
 				else
-					insert_new_active_rule = true;               // start of new rule
+					insert_new_active_rule = true;      // start of new rule
 			}
 			else  // before jump
 			{
 				already_seen_active_rule = (active_rule.seen_tokens == rule_len);
 
 				if(!already_seen_active_rule)
-					active_rule.seen_tokens = rule_len;  // update seen length
+					active_rule.seen_tokens = rule_len; // update seen length
 			}
 		}
 		else
 		{
-			// no active rule yet
-			insert_new_active_rule = true;
+			insert_new_active_rule = true;  // no active rule yet
 		}
 	}
 	else
 	{
-		// no active rule yet
 		iter_active_rule = m_active_rules.emplace(
 			std::make_pair(rule_id, t_active_rule_stack{})).first;
-		insert_new_active_rule = true;
+		insert_new_active_rule = true;          // no active rule yet
 	}
 
 	if(insert_new_active_rule)
@@ -432,7 +451,15 @@ void %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 		}
 
 		t_semanticargs args = GetCopyArguments(rule_len);
-		rule(false, args);
+		t_lalrastbaseptr retval = nullptr;
+		ActiveRule *active_rule = GetActiveRule(rule_id);
+		if(active_rule)
+			retval = active_rule->retval;
+
+		retval = rule(false, args, retval);
+
+		if(active_rule)
+			active_rule->retval = retval;
 	}
 }
 
@@ -466,7 +493,11 @@ void %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 	}
 
 	t_semanticargs args = GetArguments(m_symbols, rule_len);
-	m_symbols.emplace(rule(true, args));
+	t_lalrastbaseptr retval = nullptr;
+	if(ActiveRule *active_rule = GetActiveRule(rule_id); active_rule)
+		retval = active_rule->retval;
+
+	m_symbols.emplace(rule(true, args, retval));
 }
 
 %%DEFINE_CLOSURES%%)raw";

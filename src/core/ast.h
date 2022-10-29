@@ -92,7 +92,8 @@ using t_semanticargs = std::deque<t_lalrastbaseptr>;
 // semantic rule: returns an ast pointer and gets an argument vector
 using t_semanticrule = std::function<
 	t_lalrastbaseptr(bool /*full_match*/,
-	const t_semanticargs& /*args*/)>;
+	const t_semanticargs& /*args*/,
+	t_lalrastbaseptr /*retval*/ )>;
 
 // map of semantic rules to their ids
 using t_semanticrules = std::unordered_map<t_semantic_id, t_semanticrule>;

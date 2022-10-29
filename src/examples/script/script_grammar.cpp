@@ -116,7 +116,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[0];
@@ -133,7 +133,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -153,7 +153,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -173,7 +173,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -193,7 +193,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -213,7 +213,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -233,7 +233,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -253,7 +253,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[1];
@@ -270,7 +270,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -300,7 +300,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -322,7 +322,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -344,7 +344,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -366,7 +366,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -388,7 +388,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -407,7 +407,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -426,7 +426,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -458,7 +458,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -479,7 +479,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -497,7 +497,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -517,7 +517,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -539,7 +539,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -561,7 +561,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -582,7 +582,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -612,7 +612,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -631,7 +631,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -651,7 +651,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -670,7 +670,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -690,7 +690,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -710,7 +710,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -730,7 +730,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -749,7 +749,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -769,7 +769,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -789,7 +789,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -808,7 +808,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return  args[1];
@@ -825,7 +825,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -845,7 +845,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -866,7 +866,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -887,7 +887,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -908,7 +908,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -929,7 +929,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -950,7 +950,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -973,7 +973,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -996,7 +996,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -1014,7 +1014,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -1035,7 +1035,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -1056,7 +1056,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, [[maybe_unused]] const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -1074,7 +1074,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -1093,7 +1093,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -1113,7 +1113,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -1133,7 +1133,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -1153,7 +1153,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -1173,7 +1173,7 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 

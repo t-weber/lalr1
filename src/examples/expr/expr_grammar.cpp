@@ -48,7 +48,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::START),
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[0];
@@ -64,7 +64,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::ADD),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -83,7 +83,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::SUB),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -103,7 +103,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::MUL),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -122,7 +122,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::DIV),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -141,7 +141,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::MOD),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -160,7 +160,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::POW),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -180,7 +180,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::BRACKETS),
-		[](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[1];
@@ -197,7 +197,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::CALL0),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -221,7 +221,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::CALL1),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -247,7 +247,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::CALL2),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -274,7 +274,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::REAL),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -295,7 +295,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::INT),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -316,7 +316,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::IDENT),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -337,7 +337,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::USUB),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -355,7 +355,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::UADD),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -373,7 +373,7 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::ASSIGN),
-		[this](bool full_match, const t_semanticargs& args) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
 
