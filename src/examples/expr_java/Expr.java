@@ -6,8 +6,8 @@
  * @license see 'LICENSE' file
  */
 
-// javac -classpath "../../modules/java/:." Expr.java Lexer.java Ids.java ../../modules/java/*.java -Xlint:unchecked
-// java -classpath "../../modules/java/:." Expr
+// javac -classpath "../../modules:." Expr.java Lexer.java Ids.java -Xlint:unchecked
+// java -classpath "../../modules:." Expr
 
 
 import java.util.Vector;
@@ -16,6 +16,8 @@ import java.util.Random;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.io.IOException;
+
+import lalr1_java.*;
 
 
 public class Expr

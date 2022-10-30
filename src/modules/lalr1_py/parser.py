@@ -93,7 +93,7 @@ class Parser:
 	#
 	def apply_rule(self, rule_id, num_rhs, lhs_id):
 		#print(f"Reducing {num_syms} symbols.")
-		args = self.symbols[len(self.symbols)-num_rhs : len(self.symbols)]
+		args = self.symbols[len(self.symbols) - num_rhs : len(self.symbols)]
 		self.symbols = self.symbols[0 : len(self.symbols) - num_rhs]
 		self.states = self.states[0 : len(self.states) - num_rhs]
 

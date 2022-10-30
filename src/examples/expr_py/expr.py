@@ -1,3 +1,4 @@
+#!/bin/env python3
 #
 # expression parser
 # @author Tobias Weber (orcid: 0000-0002-7230-1932)
@@ -14,10 +15,13 @@ import json
 import math
 import random
 
+sys.path.append(".")
+sys.path.append("../../modules")
+
 import lexer
 
 from ids import *
-import parser
+from lalr1_py import parser
 #import expr_parser
 
 

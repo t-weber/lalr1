@@ -56,7 +56,7 @@ public class ExprTest
 		rules.put(Ids.sem_int_id, sem_int);
 
 		// parsing tables
-		ParsingTables tab = new ExprTab();
+		ParsingTableInterface tab = new ExprTab();
 
 		// test input
 		Vector<Symbol<Integer>> input = new Vector<Symbol<Integer>>();

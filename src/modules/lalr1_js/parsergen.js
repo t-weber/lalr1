@@ -339,21 +339,33 @@ function create_parser(tables, outfile)
 }
 
 
+// --------------------------------------------------------------------------------
+// main
+// --------------------------------------------------------------------------------
 /**
  * load tables
  */
 if(process.argv.length < 3)
 {
-	console.error("Please give a LR(1) json table file.");
+	console.error("Please give a json parsing table file.");
 	process.exit(-1);
 }
 
-const tables_file = process.argv[2];
-const ext_idx = tables_file.lastIndexOf(".");
-const parser_file = tables_file.substr(0, ext_idx) + "_parser.js";
+try
+{
+	const tables_file = process.argv[2];
+	const ext_idx = tables_file.lastIndexOf(".");
+	const parser_file = tables_file.substr(0, ext_idx) + "_parser.js";
 
-console.log("Creating parser \"" + tables_file + "\" -> \"" + parser_file + "\".");
-const tables = require(tables_file);
-console.log(tables.infos);
+	console.log("Creating parser \"" + tables_file + "\" -> \"" + parser_file + "\".");
 
-create_parser(tables, parser_file);
+	const tables = require(tables_file);
+	console.log(tables.infos);
+
+	create_parser(tables, parser_file);
+}
+catch(ex)
+{
+	console.error("Error code: " + ex.code + ", message: " + ex.message + ".");
+}
+// --------------------------------------------------------------------------------

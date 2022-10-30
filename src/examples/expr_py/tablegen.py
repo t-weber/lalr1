@@ -1,3 +1,4 @@
+#!/bin/env python3
 #
 # generates the LALR(1) tables for an expression parser
 # @author Tobias Weber (orcid: 0000-0002-7230-1932)

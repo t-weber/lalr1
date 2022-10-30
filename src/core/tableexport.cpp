@@ -235,7 +235,7 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 	ofstr << " * DOI: https://doi.org/10.5281/zenodo.6987396\n";
 	ofstr << " */\n\n";
 
-	ofstr << "public class " << stem << " implements ParsingTables" << "\n{\n";
+	ofstr << "public class " << stem << " implements lalr1_java.ParsingTableInterface" << "\n{\n";
 
 	// save constants
 	if(map_special_vals_to_negative)

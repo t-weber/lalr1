@@ -10,6 +10,8 @@
  * 	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
  */
 
+package lalr1_java;
+
 import java.util.Vector;
 import java.util.Stack;
 import java.util.HashMap;
@@ -17,7 +19,7 @@ import java.util.HashMap;
 
 public class Parser<t_lval> implements ParserInterface<t_lval>
 {
-	protected ParsingTables m_tables;          // parsing tables
+	protected ParsingTableInterface m_tables;  // parsing tables
 
 	// table index and id maps
 	protected HashMap<Integer, Integer> m_map_term_index;
@@ -36,7 +38,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 	protected boolean m_accepted;              // input accepted?
 
 
-	public Parser(ParsingTables tables)
+	public Parser(ParsingTableInterface tables)
 	{
 		m_tables = tables;
 

@@ -11,6 +11,8 @@
  * 	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
  */
 
+package lalr1_java;
+
 import java.util.HashMap;
 import java.util.Vector;
 import java.io.FileWriter;
@@ -22,7 +24,7 @@ import java.io.IOException;
 public class ParserGen
 {
 	// parsing tables
-	protected ParsingTables m_tables;
+	protected ParsingTableInterface m_tables;
 
 	// table index and id maps
 	protected HashMap<Integer, Integer> m_map_term_id;
@@ -34,7 +36,7 @@ public class ParserGen
 	protected int m_end_token = -1;
 
 
-	public ParserGen(ParsingTables tables)
+	public ParserGen(ParsingTableInterface tables)
 	{
 		m_tables = tables;
 
@@ -430,7 +432,7 @@ public class ParserGen
 	{
 		if(args.length == 0)
 		{
-			System.err.println("Please give a ParsingTables class name.");
+			System.err.println("Please give a parsing table class name.");
 			return;
 		}
 
@@ -442,7 +444,8 @@ public class ParserGen
 
 			// create parsing tables
 			Class<?> tab_class = Class.forName(class_name);
-			ParsingTables tab = (ParsingTables)tab_class.getConstructor().newInstance();
+			ParsingTableInterface tab = (ParsingTableInterface)
+				tab_class.getConstructor().newInstance();
 
 			// create parser generator
 			ParserGen parsergen = new ParserGen(tab);

@@ -6,6 +6,8 @@
  * @license see 'LICENSE' file
  */
 
+package lalr1_java;
+
 public class Symbol<t_lval>
 {
 	protected boolean m_is_term;  // symbol is a terminal

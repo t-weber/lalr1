@@ -1,0 +1,1 @@
+javac -d . lalr1_java/*.java

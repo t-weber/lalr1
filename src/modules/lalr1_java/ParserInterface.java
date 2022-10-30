@@ -6,6 +6,8 @@
  * @license see 'LICENSE' file
  */
 
+package lalr1_java;
+
 import java.util.Vector;
 import java.util.Stack;
 import java.util.HashMap;

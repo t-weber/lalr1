@@ -10,6 +10,8 @@ import java.util.Vector;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
+import lalr1_java.*;
+
 
 interface Converter<t_lval>
 {
