@@ -129,9 +129,10 @@ install(TARGETS lalr1-parser
 # external bindings
 # see: https://cmake.org/cmake/help/latest/module/UseSWIG.html
 find_package(SWIG COMPONENTS python java)
-find_package(Python COMPONENTS Development)
-find_package(Java COMPONENTS Development)
+find_package(Python COMPONENTS Development Interpreter)
+find_package(Java COMPONENTS Development Runtime)
 find_package(JNI)
+
 if(SWIG_FOUND)
 	cmake_policy(SET CMP0078 NEW)
 	cmake_policy(SET CMP0086 NEW)
@@ -146,6 +147,9 @@ if(SWIG_FOUND)
 		set_source_files_properties(
 			"${PROJECT_BINARY_DIR}/CMakeFiles/lalr1_py.dir/lalr1PYTHON_wrap.cxx"
 			PROPERTIES COMPILE_OPTIONS "-Wno-extra;-Wno-effc++")
+
+		message("Python install dirs: \"${Python_SITEARCH}\", \"${Python_SITELIB}\".")
+		install(TARGETS lalr1_py DESTINATION ${Python_SITEARCH})
 	endif()
 
 	if(SWIG_java_FOUND AND Java_FOUND AND JNI_FOUND)
@@ -155,7 +159,7 @@ if(SWIG_FOUND)
 
 		set_source_files_properties(
 			"${PROJECT_BINARY_DIR}/CMakeFiles/lalr1_java.dir/lalr1JAVA_wrap.cxx"
-			PROPERTIES COMPILE_OPTIONS "-Wno-extra;-Wno-effc++")
+			PROPERTIES COMPILE_OPTIONS "-Wno-extra;-Wno-effc++;-Wno-strict-aliasing")
 	endif()
 else()
 	message("Disabling Swig bindings.")
