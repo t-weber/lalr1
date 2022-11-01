@@ -57,6 +57,14 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/core/tableexport.h
 		${PROJECT_SOURCE_DIR}/src/core/options.h
 		${PROJECT_SOURCE_DIR}/src/core/ast.h
+		${PROJECT_SOURCE_DIR}/src/core/types.h
+		${PROJECT_SOURCE_DIR}/src/core/element.h
+		${PROJECT_SOURCE_DIR}/src/core/closure.h
+		${PROJECT_SOURCE_DIR}/src/core/table.h
+		${PROJECT_SOURCE_DIR}/src/core/common.h
+		${PROJECT_SOURCE_DIR}/src/core/timer.h
+		${PROJECT_SOURCE_DIR}/src/core/stack.h
+
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/src/core/symbol.cpp
 		${PROJECT_SOURCE_DIR}/src/core/element.cpp
@@ -66,11 +74,6 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/core/parsergen.cpp
 		${PROJECT_SOURCE_DIR}/src/core/tablegen.cpp
 		${PROJECT_SOURCE_DIR}/src/core/tableexport.cpp
-		${PROJECT_SOURCE_DIR}/src/core/element.h
-		${PROJECT_SOURCE_DIR}/src/core/closure.h
-		${PROJECT_SOURCE_DIR}/src/core/table.h
-		${PROJECT_SOURCE_DIR}/src/core/common.h
-		${PROJECT_SOURCE_DIR}/src/core/timer.h
 )
 
 set_target_properties(lalr1 PROPERTIES PUBLIC_HEADER
@@ -83,6 +86,8 @@ ${PROJECT_SOURCE_DIR}/src/core/tableexport.h;\
 ${PROJECT_SOURCE_DIR}/src/core/table.h;\
 ${PROJECT_SOURCE_DIR}/src/core/ast.h;\
 ${PROJECT_SOURCE_DIR}/src/core/common.h;\
+${PROJECT_SOURCE_DIR}/src/core/types.h;\
+${PROJECT_SOURCE_DIR}/src/core/stack.h;\
 ${PROJECT_SOURCE_DIR}/src/core/timer.h"
 )
 
@@ -104,12 +109,14 @@ add_library(lalr1-parser STATIC)
 target_sources(lalr1-parser
 	PUBLIC
 		${PROJECT_SOURCE_DIR}/src/core/parser.h
+		${PROJECT_SOURCE_DIR}/src/core/types.h
+		${PROJECT_SOURCE_DIR}/src/core/ast.h
+		${PROJECT_SOURCE_DIR}/src/core/table.h
+		${PROJECT_SOURCE_DIR}/src/core/common.h
+		${PROJECT_SOURCE_DIR}/src/core/stack.h
 
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/src/core/parser.cpp
-		${PROJECT_SOURCE_DIR}/src/core/table.h
-		${PROJECT_SOURCE_DIR}/src/core/common.h
-		${PROJECT_SOURCE_DIR}/src/core/ast.h
 )
 
 set_target_properties(lalr1-parser PROPERTIES PUBLIC_HEADER
@@ -148,8 +155,15 @@ if(SWIG_FOUND)
 			"${PROJECT_BINARY_DIR}/CMakeFiles/lalr1_py.dir/lalr1PYTHON_wrap.cxx"
 			PROPERTIES COMPILE_OPTIONS "-Wno-extra;-Wno-effc++")
 
+		get_property(LALR1_PY_WRAPPER TARGET lalr1_py PROPERTY SWIG_SUPPORT_FILES)
+		message("Generating python wrapper file(s): ${LALR1_PY_WRAPPER}.")
+
+		#add_custom_command(TARGET lalr1_py POST_BUILD
+		#	COMMAND echo -e "Generated python native library: $<TARGET_FILE:lalr1_py>.")
+
 		message("Python install dirs: \"${Python_SITEARCH}\", \"${Python_SITELIB}\".")
 		install(TARGETS lalr1_py DESTINATION ${Python_SITEARCH})
+		install(FILES ${LALR1_PY_WRAPPER} DESTINATION ${Python_SITEARCH})
 	endif()
 
 	if(SWIG_java_FOUND AND Java_FOUND AND JNI_FOUND)
@@ -160,6 +174,12 @@ if(SWIG_FOUND)
 		set_source_files_properties(
 			"${PROJECT_BINARY_DIR}/CMakeFiles/lalr1_java.dir/lalr1JAVA_wrap.cxx"
 			PROPERTIES COMPILE_OPTIONS "-Wno-extra;-Wno-effc++;-Wno-strict-aliasing")
+
+		get_property(LALR1_JAVA_WRAPPER TARGET lalr1_java PROPERTY SWIG_SUPPORT_FILES)
+		message("Generating java wrapper file(s): ${LALR1_JAVA_WRAPPER}.")
+
+		#add_custom_command(TARGET lalr1_java POST_BUILD
+		#	COMMAND echo -e "Generated java native library: $<TARGET_FILE:lalr1_java>.")
 	endif()
 else()
 	message("Disabling Swig bindings.")
