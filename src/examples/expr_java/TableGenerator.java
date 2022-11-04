@@ -8,7 +8,7 @@
 import java.util.Vector;
 import java.io.File;
 
-public class TableGen
+public class TableGenerator
 {
 	public static void main(String[] args)
 	{
@@ -124,7 +124,7 @@ public class TableGen
 		// function call with two arguments
 		SymbolVec expr_call2 = new SymbolVec();
 		expr_call2.add(ident); expr_call2.add(bracket_open);
-		expr_call2.add(expr); expr_call2.add(comma); 
+		expr_call2.add(expr); expr_call2.add(comma);
 		expr_call2.add(expr); expr_call2.add(bracket_close);
 		expr.AddARule(lalr1.make_word(expr_call2), Ids.sem_call2_id);
 
@@ -148,9 +148,9 @@ public class TableGen
 		coll.DoTransitions();
 
 		String tables_name = "ExprTab.java";
-		if(coll.CreateParseTables())
+		TableGen tables = lalr1.make_tablegen(coll, start);
+		if(tables.CreateParseTables())
 		{
-			TableExporter tables = new TableExporter(coll);
 			tables.SaveParseTablesJava(tables_name);
 			System.out.println("Created parsing tables \""
 				+ tables_name + "\".");

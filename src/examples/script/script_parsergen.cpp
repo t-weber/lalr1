@@ -7,7 +7,8 @@
 
 #include "script_grammar.h"
 #include "core/collection.h"
-#include "core/tableexport.h"
+#include "core/tablegen.h"
+#include "core/parsergen.h"
 #include "core/timer.h"
 #include "core/options.h"
 #include "lexer.h"
@@ -90,22 +91,25 @@ static bool lr1_create_parser(
 			std::cout << std::flush;
 		};
 
-		Collection collsLALR{ closure };
-		collsLALR.SetGenDebugCode(gen_debug_code);
-		collsLALR.SetGenErrorCode(gen_error_code);
-		collsLALR.SetAcceptingRule(0);
-		collsLALR.SetProgressObserver(progress);
-		collsLALR.DoTransitions();
+		CollectionPtr collsLALR = std::make_shared<Collection>(closure);
+		collsLALR->SetProgressObserver(progress);
+ 		collsLALR->DoTransitions();
 
 		if(verbose)
-			std::cout << "\n\n" << collsLALR << std::endl;
+			std::cout << "\n\n" << (*collsLALR) << std::endl;
 		if(write_graph)
-			collsLALR.SaveGraph("script_lalr", 1);
+			collsLALR->SaveGraph("script_lalr", 1);
 
 		if(create_ascent_parser)
 		{
 			const char* parser_file = "script_parser.cpp";
-			collsLALR.SaveParser(parser_file, "ScriptParser");
+			ParserGen parsergen(collsLALR);
+			parsergen.SetGenDebugCode(gen_debug_code);
+			parsergen.SetGenErrorCode(gen_error_code);
+			parsergen.SetAcceptingRule(0);
+			parsergen.SetUseStateNames(false);
+
+			parsergen.SaveParser(parser_file, "ScriptParser");
 
 			std::cout << "Created recursive ascent parser \""
 				<< parser_file << "\"." << std::endl;
@@ -114,10 +118,12 @@ static bool lr1_create_parser(
 		if(create_tables)
 		{
 			bool tables_ok = false;
-			if(collsLALR.CreateParseTables())
+			TableGen exporter{collsLALR};
+			exporter.SetAcceptingRule(0);
+
+			if(exporter.CreateParseTables())
 			{
 				const char* lalr_tables = "script.tab";
-				TableExporter exporter{&collsLALR};
 				tables_ok = exporter.SaveParseTablesCXX(lalr_tables);
 				std::cout << "Created LALR(1) tables \""
 					<< lalr_tables << "\"." << std::endl;
@@ -193,7 +199,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 
 	g_options.SetUseColour(colours);
 	g_options.SetUseAsciiChars(ascii);
-	g_options.SetUseStateNames(name_states);
 
 	if(!create_asc && !create_tables)
 	{

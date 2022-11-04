@@ -87,21 +87,27 @@ public:
 	// get terminal or non-terminal transitions originating from the given closure
 	t_transitions GetTransitions(const ClosurePtr& closure, bool term = true) const;
 
-	bool CreateParseTables();
-	bool SaveParser(const std::string& file, const std::string& class_name = "ParserRecAsc") const;
-
 	bool SaveGraph(std::ostream& ostr, bool write_full_coll = true) const;
 	bool SaveGraph(const std::string& file, bool write_full_coll = true) const;
 
 	void SetStopOnConflicts(bool b = true);
-	void SetUseOpChar(bool b = true);
-	void SetGenDebugCode(bool b = true);
-	void SetGenErrorCode(bool b = true);
-	void SetGenPartialMatches(bool b = true);
-	void SetAcceptingRule(t_semantic_id rule_id);
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
+
+	bool SolveConflict(
+		const SymbolPtr& sym_at_cursor, const Terminal::t_terminalset& lookbacks,
+		t_index* shiftEntry, t_index* reduceEntry) const;
+
+	// getters
+	const t_closures& GetClosures() const;
+	const t_transitions& GetTransitions() const;
+	bool GetStopOnConflicts() const;
+
+
+public:
+	static std::tuple<bool, t_semantic_id, std::size_t> GetUniquePartialMatch(
+		const t_elements& elemsFrom, bool termTrans);
 
 
 protected:
@@ -110,78 +116,21 @@ protected:
 	void DoTransitions(const ClosurePtr& closure);
 	void Simplify();
 
-	bool SolveConflict(
-		const SymbolPtr& sym_at_cursor, const Terminal::t_terminalset& lookbacks,
-		t_index* shiftEntry, t_index* reduceEntry) const;
-
-	void CreateTableIndices();
-	t_index GetTableIndex(t_symbol_id id, IndexTableKind table_kind) const;
-
 	static t_hash hash_transition(const t_transition& trans);
-	static std::tuple<bool, t_semantic_id, std::size_t> GetUniquePartialMatch(
-		const t_elements& elemsFrom, bool termTrans);
 
 
 private:
 	t_closures m_collection{};                  // collection of LR(1) closures
 	t_transitions m_transitions{};              // transitions between collection, [from, to, transition symbol]
 
-	t_mapIdIdx m_mapTermIdx{};                  // maps the terminal ids to table indices
-	t_mapIdIdx m_mapNonTermIdx{};               // maps the non-terminal ids to table indices
-	t_mapIdIdx m_mapSemanticIdx{};              // maps the semantic ids to tables indices
 	t_closurecache m_closure_cache{};           // seen closures
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures
 
-	t_mapIdStrId m_mapNonTermStrIds{};          // maps the non-terminal ids to the respective string identifiers
-	t_mapIdStrId m_mapTermStrIds{};             // maps the terminal ids to the respective string identifiers
-
 	bool m_stopOnConflicts{true};               // stop table/code generation on conflicts
-	bool m_useOpChar{true};                     // use printable character for operators if possible
-	bool m_genDebugCode{true};                  // generate debug code in parser output
-	bool m_genErrorCode{true};                  // generate error handling code in parser output
-	bool m_genPartialMatches{true};             // generates code for handling partial rule matches
-	t_semantic_id m_accepting_rule{0};          // rule which leads to accepting the grammar
-
-	t_table m_tabActionShift{};                 // lalr(1) tables
-	t_table m_tabActionReduce{};
-	t_table m_tabJump{};
-
-	t_table m_tabPartialRuleTerm{};             // partial match tables
-	t_table m_tabPartialMatchLenTerm{};
-	t_table m_tabPartialRuleNonterm{};
-	t_table m_tabPartialMatchLenNonterm{};
-
-	std::vector<std::size_t> m_numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
-	std::vector<t_index> m_ruleLhsIdx{};            // nonterminal index of the rule's result type
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Collection& colls);
-
-
-public:
-	// getters
-	const t_table& GetShiftTable() const { return m_tabActionShift; }
-	const t_table& GetReduceTable() const { return m_tabActionReduce; }
-	const t_table& GetJumpTable() const { return m_tabJump; }
-
-	const t_mapIdStrId& GetNontermStringIdMap() const { return m_mapNonTermStrIds; }
-	const t_mapIdStrId& GetTermStringIdMap() const { return m_mapTermStrIds; }
-
-	const t_table& GetPartialsRuleTerm() const { return m_tabPartialRuleTerm; }
-	const t_table& GetPartialsRuleNonterm() const { return m_tabPartialRuleNonterm; }
-	const t_table& GetPartialsMatchLengthTerm() const { return m_tabPartialMatchLenTerm; }
-	const t_table& GetPartialsMatchLengthNonterm() const { return m_tabPartialMatchLenNonterm; }
-
-	const t_mapIdIdx& GetTermIndexMap() const { return m_mapTermIdx; }
-	const t_mapIdIdx& GetNontermIndexMap() const { return m_mapNonTermIdx; }
-	const t_mapIdIdx& GetSemanticIndexMap() const { return m_mapSemanticIdx; }
-
-	const std::vector<std::size_t>& GetNumRhsSymbolsPerRule() const { return m_numRhsSymsPerRule; }
-	const std::vector<t_index>& GetRuleLhsIndices() const { return m_ruleLhsIdx; }
-
-	bool GetGenPartialMatches() const { return m_genPartialMatches; }
-	bool GetUseOpChar() const { return m_useOpChar; }
 };
 
 

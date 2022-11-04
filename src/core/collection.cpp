@@ -99,28 +99,10 @@ const Collection& Collection::operator=(const Collection& coll)
 {
 	this->m_collection = coll.m_collection;
 	this->m_transitions = coll.m_transitions;
-	this->m_mapTermIdx = coll.m_mapTermIdx;
-	this->m_mapNonTermIdx = coll.m_mapNonTermIdx;
-	this->m_mapSemanticIdx = coll.m_mapSemanticIdx;
-	this->m_mapNonTermStrIds = coll.m_mapNonTermStrIds;
-	this->m_mapTermStrIds = coll.m_mapNonTermStrIds;
 	this->m_closure_cache = coll.m_closure_cache;
 	this->m_seen_closures = coll.m_seen_closures;
 	this->m_stopOnConflicts = coll.m_stopOnConflicts;
-	this->m_useOpChar = coll.m_useOpChar;
-	this->m_genDebugCode = coll.m_genDebugCode;
-	this->m_genErrorCode = coll.m_genErrorCode;
-	this->m_genPartialMatches = coll.m_genPartialMatches;
 	this->m_progress_observer = coll.m_progress_observer;
-	this->m_tabActionShift = coll.m_tabActionShift;
-	this->m_tabActionReduce = coll.m_tabActionReduce;
-	this->m_tabJump = coll.m_tabJump;
-	this->m_tabPartialRuleTerm = coll.m_tabPartialRuleTerm;
-	this->m_tabPartialMatchLenTerm = coll.m_tabPartialMatchLenTerm;
-	this->m_tabPartialRuleNonterm = coll.m_tabPartialRuleNonterm;
-	this->m_tabPartialMatchLenNonterm = coll.m_tabPartialMatchLenNonterm;
-	this->m_numRhsSymsPerRule = coll.m_numRhsSymsPerRule;
-	this->m_ruleLhsIdx = coll.m_ruleLhsIdx;
 
 	return *this;
 }
@@ -338,8 +320,7 @@ void Collection::DoTransitions()
 	report_conflicts(HasReduceConflicts(), "reduce/reduce");
 	report_conflicts(HasShiftReduceConflicts(), "shift/reduce");
 
-	CreateTableIndices();
-	ReportProgress("Created table indices.", true);
+	ReportProgress("Calculated transitions.", true);
 }
 
 
@@ -494,168 +475,11 @@ Collection::GetUniquePartialMatch(
 
 
 /**
- * creates indices for the parse tables from the symbol ids
- */
-void Collection::CreateTableIndices()
-{
-	// generate table indices for terminals
-	m_mapTermIdx.clear();
-	m_mapTermStrIds.clear();
-	t_index curTermIdx = 0;
-
-	for(const t_transition& tup : m_transitions)
-	{
-		const SymbolPtr& symTrans = std::get<2>(tup);
-
-		if(symTrans->IsEps() || !symTrans->IsTerminal())
-			continue;
-
-		if(auto [iter, inserted] = m_mapTermIdx.try_emplace(
-			symTrans->GetId(), curTermIdx); inserted)
-			++curTermIdx;
-
-		// nonterminal string id map
-		const std::string& sym_strid = symTrans->GetStrId();
-		m_mapTermStrIds.try_emplace(symTrans->GetId(), sym_strid);
-	}
-
-	// add end symbol
-	m_mapTermIdx.try_emplace(g_end->GetId(), curTermIdx++);
-	m_mapTermStrIds.try_emplace(g_end->GetId(), g_end->GetStrId());
-
-	// generate table indices for non-terminals and semantic rules
-	m_mapNonTermIdx.clear();
-	m_mapSemanticIdx.clear();
-	m_mapNonTermStrIds.clear();
-	t_index curNonTermIdx = 0;
-	t_index curSemanticIdx = 0;
-
-	for(const ClosurePtr& closure : m_collection)
-	{
-		for(const ElementPtr& elem : closure->GetElements())
-		{
-			if(!elem->IsCursorAtEnd())
-				continue;
-
-			// nonterminal id map
-			t_symbol_id sym_id = elem->GetLhs()->GetId();
-			if(auto [iter, inserted] = m_mapNonTermIdx.try_emplace(
-				sym_id, curNonTermIdx); inserted)
-				++curNonTermIdx;
-
-			// nonterminal string id map
-			const std::string& sym_strid = elem->GetLhs()->GetStrId();
-			m_mapNonTermStrIds.try_emplace(sym_id, sym_strid);
-
-			if(std::optional<t_semantic_id> semantic_id =
-				elem->GetSemanticRule(); semantic_id)
-			{
-				if(auto [iter, inserted] = m_mapSemanticIdx.try_emplace(
-					*semantic_id, curSemanticIdx); inserted)
-					++curSemanticIdx;
-			}
-		}
-	}
-}
-
-
-/**
- * translates symbol id to table index
- */
-t_index Collection::GetTableIndex(t_symbol_id id, IndexTableKind table_kind) const
-{
-	const t_mapIdIdx* map = nullptr;
-	switch(table_kind)
-	{
-		case IndexTableKind::TERMINAL:
-			map = &m_mapTermIdx;
-			break;
-		case IndexTableKind::NONTERMINAL:
-			map = &m_mapNonTermIdx;
-			break;
-		case IndexTableKind::SEMANTIC:
-			map = &m_mapSemanticIdx;
-			break;
-	}
-	if(!map)
-		throw std::runtime_error("Unknown index table selected.");
-
-	auto iter = map->find(id);
-	if(iter == map->end())
-	{
-		std::ostringstream ostrErr;
-		ostrErr << "No table index is available for ";
-		switch(table_kind)
-		{
-			case IndexTableKind::TERMINAL:
-				ostrErr << "terminal";
-				break;
-			case IndexTableKind::NONTERMINAL:
-				ostrErr << "non-terminal";
-				break;
-			case IndexTableKind::SEMANTIC:
-				ostrErr << "semantic rule";
-				break;
-			default:
-				ostrErr << "<unknown>";
-				break;
-		}
-		ostrErr << " with id " << id << ".";
-		throw std::runtime_error(ostrErr.str());
-	}
-
-	return iter->second;
-}
-
-
-/**
  * stop table/code generation on shift/reduce conflicts
  */
 void Collection::SetStopOnConflicts(bool b)
 {
 	m_stopOnConflicts = b;
-}
-
-
-/**
- * use printable operator character if possible
- */
-void Collection::SetUseOpChar(bool b)
-{
-	m_useOpChar = b;
-}
-
-
-/**
- * generate debug code in parser output
- */
-void Collection::SetGenDebugCode(bool b)
-{
-	m_genDebugCode = b;
-}
-
-
-/**
- * generate error handling code in parser output
- */
-void Collection::SetGenErrorCode(bool b)
-{
-	m_genErrorCode = b;
-}
-
-
-/**
- * generate code for handling partial matches
- */
-void Collection::SetGenPartialMatches(bool b)
-{
-	m_genPartialMatches = b;
-}
-
-
-void Collection::SetAcceptingRule(t_semantic_id rule_id)
-{
-	m_accepting_rule = rule_id;
 }
 
 
@@ -1048,4 +872,22 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 		<< ostrActionReduce.str() << "\n"
 		<< ostrJump.str() << "\n";
 	return ostr;
+}
+
+
+const Collection::t_closures& Collection::GetClosures() const
+{
+	return m_collection;
+}
+
+
+const Collection::t_transitions& Collection::GetTransitions() const
+{
+	return m_transitions;
+}
+
+
+bool Collection::GetStopOnConflicts() const
+{
+	return m_stopOnConflicts;
 }

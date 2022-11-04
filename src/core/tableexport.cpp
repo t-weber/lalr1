@@ -14,7 +14,7 @@
  *	- https://doi.org/10.1016/0020-0190(88)90061-0
  */
 
-#include "tableexport.h"
+#include "tablegen.h"
 #include "options.h"
 #include "timer.h"
 
@@ -29,15 +29,10 @@
 #include <boost/algorithm/string.hpp>
 
 
-TableExporter::TableExporter(const Collection* coll)
-	: m_collection{coll}
-{ }
-
-
 /**
  * save the parsing tables to C++ code
  */
-bool TableExporter::SaveParseTablesCXX(const std::string& file) const
+bool TableGen::SaveParseTablesCXX(const std::string& file) const
 {
 	std::ofstream ofstr{file};
 	if(!ofstr)
@@ -78,21 +73,21 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "\n";
 
 	// save lalr(1) tables
-	const t_table& tabActionShift = m_collection->GetShiftTable();
-	const t_table& tabActionReduce = m_collection->GetReduceTable();
-	const t_table& tabJump = m_collection->GetJumpTable();
+	const t_table& tabActionShift = GetShiftTable();
+	const t_table& tabActionReduce = GetReduceTable();
+	const t_table& tabJump = GetJumpTable();
 
 	tabActionShift.SaveCXX(ofstr, "tab_action_shift", "state", "terminal");
 	tabActionReduce.SaveCXX(ofstr, "tab_action_reduce", "state", "lookahead");
 	tabJump.SaveCXX(ofstr, "tab_jump", "state", "nonterminal");
 
 	// save partial match tables
-	if(m_collection->GetGenPartialMatches())
+	if(GetGenPartialMatches())
 	{
-		const t_table& tabPartialRuleTerm = m_collection->GetPartialsRuleTerm();
-		const t_table& tabPartialRuleNonterm = m_collection->GetPartialsRuleNonterm();
-		const t_table& tabPartialMatchLenTerm = m_collection->GetPartialsMatchLengthTerm();
-		const t_table& tabPartialMatchLenNonterm = m_collection->GetPartialsMatchLengthNonterm();
+		const t_table& tabPartialRuleTerm = GetPartialsRuleTerm();
+		const t_table& tabPartialRuleNonterm = GetPartialsRuleNonterm();
+		const t_table& tabPartialMatchLenTerm = GetPartialsMatchLengthTerm();
+		const t_table& tabPartialMatchLenNonterm = GetPartialsMatchLengthNonterm();
 
 		tabPartialRuleTerm.SaveCXX(ofstr, "tab_partials_rule_term", "state", "terminal");
 		tabPartialMatchLenTerm.SaveCXX(ofstr, "tab_partials_matchlen_term", "state", "terminal");
@@ -101,8 +96,8 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 	}
 
 	// terminal symbol indices
-	const t_mapIdIdx& mapTermIdx = m_collection->GetTermIndexMap();
-	const t_mapIdStrId& mapTermStrIds = m_collection->GetTermStringIdMap();
+	const t_mapIdIdx& mapTermIdx = GetTermIndexMap();
+	const t_mapIdStrId& mapTermStrIds = GetTermStringIdMap();
 	ofstr << "const t_mapIdIdx map_term_idx\n{{\n";
 	for(const auto& [id, idx] : mapTermIdx)
 	{
@@ -111,7 +106,7 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 			ofstr << "eps";
 		else if(id == END_IDENT)
 			ofstr << "end";
-		else if(m_collection->GetUseOpChar() && isprintable(id))
+		else if(GetUseOpChar() && isprintable(id))
 			ofstr << "'" << char(id) << "'";
 		else
 			ofstr << id;
@@ -129,8 +124,8 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "}};\n\n";
 
 	// non-terminal symbol indices
-	const t_mapIdIdx& mapNonTermIdx = m_collection->GetNontermIndexMap();
-	const t_mapIdStrId& mapNonTermStrIds = m_collection->GetNontermStringIdMap();
+	const t_mapIdIdx& mapNonTermIdx = GetNontermIndexMap();
+	const t_mapIdStrId& mapNonTermStrIds = GetNontermStringIdMap();
 	ofstr << "const t_mapIdIdx map_nonterm_idx\n{{\n";
 	for(const auto& [id, idx] : mapNonTermIdx)
 	{
@@ -148,21 +143,21 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "}};\n\n";
 
 	// semantic rule indices
-	const t_mapIdIdx& mapSemanticIdx = m_collection->GetSemanticIndexMap();
+	const t_mapIdIdx& mapSemanticIdx = GetSemanticIndexMap();
 	ofstr << "const t_mapSemanticIdIdx map_semantic_idx\n{{\n";
 	for(const auto& [id, idx] : mapSemanticIdx)
 		ofstr << "\t{ " << id << ", " << idx << " },\n";
 	ofstr << "}};\n\n";
 
 	// number of symbols on right-hand side of rule
-	const auto& numRhsSymsPerRule = m_collection->GetNumRhsSymbolsPerRule();
+	const auto& numRhsSymsPerRule = GetNumRhsSymbolsPerRule();
 	ofstr << "const t_vecIdx vec_num_rhs_syms{{ ";
 	for(const auto& val : numRhsSymsPerRule)
 		ofstr << val << ", ";
 	ofstr << "}};\n\n";
 
 	// index of lhs nonterminal in rule
-	const auto& ruleLhsIdx = m_collection->GetRuleLhsIndices();
+	const auto& ruleLhsIdx = GetRuleLhsIndices();
 	ofstr << "const t_vecIdx vec_lhs_idx{{ ";
 	for(const auto& val : ruleLhsIdx)
 		ofstr << val << ", ";
@@ -185,7 +180,7 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "\tconst t_table*, const t_table*>\n";
 	ofstr << "get_lalr1_partials_tables()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n";
-	if(m_collection->GetGenPartialMatches())
+	if(GetGenPartialMatches())
 	{
 		ofstr << "\t\t&_lalr1_tables::tab_partials_rule_term, &_lalr1_tables::tab_partials_matchlen_term,\n";
 		ofstr << "\t\t&_lalr1_tables::tab_partials_rule_nonterm, &_lalr1_tables::tab_partials_matchlen_nonterm);\n";
@@ -219,10 +214,8 @@ bool TableExporter::SaveParseTablesCXX(const std::string& file) const
 /**
  * save the parsing tables to Java code
  */
-bool TableExporter::SaveParseTablesJava(const std::string& file) const
+bool TableGen::SaveParseTablesJava(const std::string& file) const
 {
-	const bool map_special_vals_to_negative = g_options.GetUseNegativeTableValues();
-
 	std::ofstream ofstr{file};
 	if(!ofstr)
 		return false;
@@ -238,7 +231,7 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 	ofstr << "public class " << stem << " implements lalr1_java.ParsingTableInterface" << "\n{\n";
 
 	// save constants
-	if(map_special_vals_to_negative)
+	if(GetUseNegativeTableValues())
 	{
 		ofstr << "\tprivate final int err = -1;\n";
 		ofstr << "\tprivate final int acc = -2;\n";
@@ -271,21 +264,21 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 	ofstr << "\n";
 
 	// save lalr(1) tables
-	const t_table& tabActionShift = m_collection->GetShiftTable();
-	const t_table& tabActionReduce = m_collection->GetReduceTable();
-	const t_table& tabJump = m_collection->GetJumpTable();
+	const t_table& tabActionShift = GetShiftTable();
+	const t_table& tabActionReduce = GetReduceTable();
+	const t_table& tabJump = GetJumpTable();
 
 	tabActionShift.SaveJava(ofstr, "tab_action_shift", "state", "terminal", "private", 1);
 	tabActionReduce.SaveJava(ofstr, "tab_action_reduce", "state", "lookahead", "private", 1);
 	tabJump.SaveJava(ofstr, "tab_jump", "state", "nonterminal", "private", 1);
 
 	// save partial match tables
-	if(m_collection->GetGenPartialMatches())
+	if(GetGenPartialMatches())
 	{
-		const t_table& tabPartialRuleTerm = m_collection->GetPartialsRuleTerm();
-		const t_table& tabPartialRuleNonterm = m_collection->GetPartialsRuleNonterm();
-		const t_table& tabPartialMatchLenTerm = m_collection->GetPartialsMatchLengthTerm();
-		const t_table& tabPartialMatchLenNonterm = m_collection->GetPartialsMatchLengthNonterm();
+		const t_table& tabPartialRuleTerm = GetPartialsRuleTerm();
+		const t_table& tabPartialRuleNonterm = GetPartialsRuleNonterm();
+		const t_table& tabPartialMatchLenTerm = GetPartialsMatchLengthTerm();
+		const t_table& tabPartialMatchLenNonterm = GetPartialsMatchLengthNonterm();
 
 		tabPartialRuleTerm.SaveJava(ofstr, "tab_partials_rule_term", "state", "terminal", "private", 1);
 		tabPartialMatchLenTerm.SaveJava(ofstr, "tab_partials_matchlen_term", "state", "terminal", "private", 1);
@@ -294,8 +287,8 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 	}
 
 	// terminal symbol indices
-	const t_mapIdIdx& mapTermIdx = m_collection->GetTermIndexMap();
-	const t_mapIdStrId& mapTermStrIds = m_collection->GetTermStringIdMap();
+	const t_mapIdIdx& mapTermIdx = GetTermIndexMap();
+	const t_mapIdStrId& mapTermStrIds = GetTermStringIdMap();
 	ofstr << "\tprivate final int[][] map_term_idx =\n\t{\n";
 	for(const auto& [id, idx] : mapTermIdx)
 	{
@@ -304,7 +297,7 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 			ofstr << "eps";
 		else if(id == END_IDENT)
 			ofstr << "end";
-		else if(m_collection->GetUseOpChar() && isprintable(id))
+		else if(GetUseOpChar() && isprintable(id))
 			ofstr << "'" << char(id) << "'";
 		else
 			ofstr << id;
@@ -322,8 +315,8 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 	ofstr << "\t};\n\n";
 
 	// non-terminal symbol indices
-	const t_mapIdIdx& mapNonTermIdx = m_collection->GetNontermIndexMap();
-	const t_mapIdStrId& mapNonTermStrIds = m_collection->GetNontermStringIdMap();
+	const t_mapIdIdx& mapNonTermIdx = GetNontermIndexMap();
+	const t_mapIdStrId& mapNonTermStrIds = GetNontermStringIdMap();
 	ofstr << "\tprivate final int[][] map_nonterm_idx =\n\t{\n";
 	for(const auto& [id, idx] : mapNonTermIdx)
 	{
@@ -341,21 +334,21 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
 	ofstr << "\t};\n\n";
 
 	// semantic rule indices
-	const t_mapIdIdx& mapSemanticIdx = m_collection->GetSemanticIndexMap();
+	const t_mapIdIdx& mapSemanticIdx = GetSemanticIndexMap();
 	ofstr << "\tprivate final int[][] map_semantic_idx =\n\t{\n";
 	for(const auto& [id, idx] : mapSemanticIdx)
 		ofstr << "\t\t{ " << id << ", " << idx << " },\n";
 	ofstr << "\t};\n\n";
 
 	// number of symbols on right-hand side of rule
-	const auto& numRhsSymsPerRule = m_collection->GetNumRhsSymbolsPerRule();
+	const auto& numRhsSymsPerRule = GetNumRhsSymbolsPerRule();
 	ofstr << "\tprivate final int[] vec_num_rhs_syms =\n\t{\n\t\t";
 	for(const auto& val : numRhsSymsPerRule)
 		ofstr << val << ", ";
 	ofstr << "\n\t};\n\n";
 
 	// index of lhs nonterminal in rule
-	const auto& ruleLhsIdx = m_collection->GetRuleLhsIndices();
+	const auto& ruleLhsIdx = GetRuleLhsIndices();
 	ofstr << "\tprivate final int[] vec_lhs_idx =\n\t{\n\t\t";
 	for(const auto& val : ruleLhsIdx)
 		ofstr << val << ", ";
@@ -392,10 +385,8 @@ bool TableExporter::SaveParseTablesJava(const std::string& file) const
  * save the parsing tables to json
  * @see https://en.wikipedia.org/wiki/JSON
  */
-bool TableExporter::SaveParseTablesJSON(const std::string& file) const
+bool TableGen::SaveParseTablesJSON(const std::string& file) const
 {
-	const bool map_special_vals_to_negative = g_options.GetUseNegativeTableValues();
-
 	std::unordered_map<t_index, int> special_values
 	{
 		{ ERROR_VAL, -1 },
@@ -423,7 +414,7 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 	ofstr << "\n\"consts\" : {\n";
 	//ofstr << "\t\"acc_rule\" : " << m_accepting_rule << ",\n";
 
-	if(map_special_vals_to_negative)
+	if(GetUseNegativeTableValues())
 	{
 		ofstr << "\t\"err\" : " << special_values[ERROR_VAL] << ",\n";
 		ofstr << "\t\"acc\" : " << special_values[ACCEPT_VAL] << ",\n";
@@ -445,9 +436,9 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 	ofstr << "},\n\n";
 
 	// lalr(1) tables
-	const t_table& tabActionShift = m_collection->GetShiftTable();
-	const t_table& tabActionReduce = m_collection->GetReduceTable();
-	const t_table& tabJump = m_collection->GetJumpTable();
+	const t_table& tabActionShift = GetShiftTable();
+	const t_table& tabActionReduce = GetReduceTable();
+	const t_table& tabJump = GetJumpTable();
 
 	tabActionShift.SaveJSON(ofstr, "shift", "state", "terminal", &special_values);
 	ofstr << ",\n\n";
@@ -457,12 +448,12 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 	ofstr << ",\n\n";
 
 	// partial match tables
-	if(m_collection->GetGenPartialMatches())
+	if(GetGenPartialMatches())
 	{
-		const t_table& tabPartialRuleTerm = m_collection->GetPartialsRuleTerm();
-		const t_table& tabPartialRuleNonterm = m_collection->GetPartialsRuleNonterm();
-		const t_table& tabPartialMatchLenTerm = m_collection->GetPartialsMatchLengthTerm();
-		const t_table& tabPartialMatchLenNonterm = m_collection->GetPartialsMatchLengthNonterm();
+		const t_table& tabPartialRuleTerm = GetPartialsRuleTerm();
+		const t_table& tabPartialRuleNonterm = GetPartialsRuleNonterm();
+		const t_table& tabPartialMatchLenTerm = GetPartialsMatchLengthTerm();
+		const t_table& tabPartialMatchLenNonterm = GetPartialsMatchLengthNonterm();
 
 		tabPartialRuleTerm.SaveJSON(ofstr,
 			"partials_rule_term", "state", "terminal", &special_values);
@@ -479,8 +470,8 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 	}
 
 	// terminal symbol indices
-	const t_mapIdIdx& mapTermIdx = m_collection->GetTermIndexMap();
-	const t_mapIdStrId& mapTermStrIds = m_collection->GetTermStringIdMap();
+	const t_mapIdIdx& mapTermIdx = GetTermIndexMap();
+	const t_mapIdStrId& mapTermStrIds = GetTermStringIdMap();
 	ofstr << "\n\"term_idx\" : [\n";
 	for(auto iter = mapTermIdx.begin(); iter != mapTermIdx.end(); std::advance(iter, 1))
 	{
@@ -493,7 +484,7 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 		}
 		else
 		{
-			if(m_collection->GetUseOpChar() && isprintable(id))
+			if(GetUseOpChar() && isprintable(id))
 				ofstr << "\"" << char(id) << "\"";
 			else
 				ofstr << id;
@@ -513,8 +504,8 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 	ofstr << "],\n";
 
 	// non-terminal symbol indices
-	const t_mapIdIdx& mapNonTermIdx = m_collection->GetNontermIndexMap();
-	const t_mapIdStrId& mapNonTermStrIds = m_collection->GetNontermStringIdMap();
+	const t_mapIdIdx& mapNonTermIdx = GetNontermIndexMap();
+	const t_mapIdStrId& mapNonTermStrIds = GetNontermStringIdMap();
 	ofstr << "\n\"nonterm_idx\" : [\n";
 	for(auto iter = mapNonTermIdx.begin(); iter != mapNonTermIdx.end(); std::advance(iter, 1))
 	{
@@ -534,7 +525,7 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 	ofstr << "],\n";
 
 	// semantic rule indices
-	const t_mapIdIdx& mapSemanticIdx = m_collection->GetSemanticIndexMap();
+	const t_mapIdIdx& mapSemanticIdx = GetSemanticIndexMap();
 	ofstr << "\n\"semantic_idx\" : [\n";
 	for(auto iter = mapSemanticIdx.begin(); iter != mapSemanticIdx.end(); std::advance(iter, 1))
 	{
@@ -547,7 +538,7 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 	ofstr << "],\n";
 
 	// number of symbols on right-hand side of rule
-	const auto& numRhsSymsPerRule = m_collection->GetNumRhsSymbolsPerRule();
+	const auto& numRhsSymsPerRule = GetNumRhsSymbolsPerRule();
 	ofstr << "\n\"num_rhs_syms\" : [ ";
 	for(auto iter = numRhsSymsPerRule.begin(); iter != numRhsSymsPerRule.end(); std::advance(iter, 1))
 	{
@@ -559,7 +550,7 @@ bool TableExporter::SaveParseTablesJSON(const std::string& file) const
 	ofstr << "],\n";
 
 	// index of lhs nonterminal in rule
-	const auto& ruleLhsIdx = m_collection->GetRuleLhsIndices();
+	const auto& ruleLhsIdx = GetRuleLhsIndices();
 	ofstr << "\n\"lhs_idx\" : [ ";
 	for(auto iter = ruleLhsIdx.begin(); iter != ruleLhsIdx.end(); std::advance(iter, 1))
 	{

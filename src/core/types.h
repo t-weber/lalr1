@@ -8,6 +8,8 @@
 #ifndef __LALR1_TYPES_H__
 #define __LALR1_TYPES_H__
 
+#include <cstddef>
+
 
 using t_index       = std::size_t;
 using t_hash        = std::size_t;

@@ -15,7 +15,7 @@
  *	- https://en.wikipedia.org/wiki/LR_parser
  */
 
-#include "collection.h"
+#include "parsergen.h"
 #include "timer.h"
 #include "options.h"
 
@@ -29,12 +29,17 @@
 #include <boost/algorithm/string.hpp>
 
 
+ParserGen::ParserGen(const CollectionPtr& coll) : m_collection{coll}
+{ }
+
+
+
 /**
  * export an explicit recursive ascent parser
  * @see https://doi.org/10.1016/0020-0190(88)90061-0
  * @see https://en.wikipedia.org/wiki/Recursive_ascent_parser
  */
-bool Collection::SaveParser(const std::string& filename_cpp, const std::string& class_name) const
+bool ParserGen::SaveParser(const std::string& filename_cpp, const std::string& class_name) const
 {
 	// --------------------------------------------------------------------------------
 	// output header file stub
@@ -524,7 +529,6 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 
 	// generate closures
 	bool use_col_saved = g_options.GetUseColour();
-	bool use_names = g_options.GetUseStateNames();
 	g_options.SetUseColour(false);
 
 	std::ostringstream ostr_h, ostr_cpp;
@@ -534,7 +538,13 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 	std::unordered_map<t_state_id, std::string> closure_names;
 	std::unordered_map<std::string, std::size_t> name_counts;
 
-	for(const ClosurePtr& closure : m_collection)
+	using t_transitions = Collection::t_transitions;
+	using t_transition = Collection::t_transition;
+	using t_closures = Collection::t_closures;
+
+	const t_closures& closures = m_collection->GetClosures();
+
+	for(const ClosurePtr& closure : closures)
 	{
 		bool name_valid = false;
 		std::ostringstream closure_name;
@@ -542,7 +552,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		const t_state_id closure_id = closure->GetId();
 		const Closure::t_elements& elems = closure->GetElements();
 
-		if(use_names && elems.size())
+		if(GetUseStateNames() && elems.size())
 		{
 			// name the state function
 			const std::string& lhsname = (*elems.begin())->GetLhs()->GetStrId();
@@ -575,7 +585,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 	}
 
 	// create closure functions
-	for(const ClosurePtr& closure : m_collection)
+	for(const ClosurePtr& closure : closures)
 	{
 		const t_state_id closure_id = closure->GetId();
 		const std::string& closure_name = closure_names[closure_id];
@@ -585,7 +595,8 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		// write comment
 		ostr_cpp << "/**\n" << *closure;
 
-		if(Terminal::t_terminalset lookbacks = GetLookbackTerminals(closure);
+		if(Terminal::t_terminalset lookbacks =
+			m_collection->GetLookbackTerminals(closure);
 			lookbacks.size())
 		{
 			ostr_cpp << "Lookback terminals:";
@@ -594,7 +605,8 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			ostr_cpp << "\n";
 		}
 
-		if(t_transitions terminal_transitions = GetTransitions(closure, true);
+		if(t_transitions terminal_transitions =
+			m_collection->GetTransitions(closure, true);
 			terminal_transitions.size())
 		{
 			ostr_cpp << "Terminal transitions:\n";
@@ -611,7 +623,8 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			}
 		}
 
-		if(t_transitions nonterminal_transitions = GetTransitions(closure, false);
+		if(t_transitions nonterminal_transitions =
+			m_collection->GetTransitions(closure, false);
 			nonterminal_transitions.size())
 		{
 			ostr_cpp << "Non-Terminal transitions:\n";
@@ -634,7 +647,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		ostr_cpp << "void " << class_name << "::" << closure_name << "()\n";
 		ostr_cpp << "{\n";
 
-		if(m_genDebugCode)
+		if(GetGenDebugCode())
 		{
 			ostr_cpp << "\tif(m_debug)\n";
 			ostr_cpp << "\t\tDebugMessageState(" << closure_id
@@ -645,7 +658,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		// shift actions
 		std::unordered_map<t_symbol_id, std::string> shifts;
 
-		for(const t_transition& transition : GetTransitions(closure, true))
+		for(const t_transition& transition : m_collection->GetTransitions(closure, true))
 		{
 			const ClosurePtr& closure_to = std::get<1>(transition);
 			const SymbolPtr& symTrans = std::get<2>(transition);
@@ -658,10 +671,10 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			// unique partial match
 			bool has_partial = false;
 			std::ostringstream ostr_partial;
-			if(m_genPartialMatches)
+			if(GetGenPartialMatches())
 			{
 				if(auto [uniquematch, rule_id, rulelen] =
-					GetUniquePartialMatch(elemsFrom, true); uniquematch)
+					m_collection->GetUniquePartialMatch(elemsFrom, true); uniquematch)
 				{
 					// execute partial semantic rule
 					ostr_partial << "\t\t\t// partial semantic rule "
@@ -670,7 +683,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 						<< rule_id << ", " << rulelen << ");\n";
 					has_partial = true;
 
-					if(m_genDebugCode)
+					if(GetGenDebugCode())
 					{
 						ostr_partial << "\t\t\tif(m_debug && applied)\n";
 						ostr_partial << "\t\t\t\tDebugMessagePartialRule("
@@ -684,7 +697,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			{
 				ostr_shift << "\t\tcase s_end_id:\n";
 			}
-			else if(m_useOpChar && isprintable(symTrans->GetId()))
+			else if(GetUseOpChar() && isprintable(symTrans->GetId()))
 			{
 				ostr_shift << "\t\tcase \'"
 					<< char(symTrans->GetId()) << "\':\n";
@@ -738,7 +751,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 				ostr_reduce << "\t\t{\n";
 
 				// in extended grammar, first production (rule 0) is of the form start -> ...
-				if(*rule_id == m_accepting_rule)
+				if(*rule_id == GetAcceptingRule())
 				{
 					ostr_reduce << "\t\t\tm_accepted = true;\n";
 					ostr_reduce << "\t\t\tbreak;\n";
@@ -753,7 +766,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 					std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
 					ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
 
-					if(m_genDebugCode)
+					if(GetGenDebugCode())
 					{
 						ostr_reduce << "\t\t\tif(m_debug)\n";
 						ostr_reduce << "\t\t\t\tDebugMessageReduce("
@@ -796,10 +809,10 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 				if(ElementPtr conflictelem = closure->GetElementWithCursorAtSymbol(la); conflictelem)
 				{
 					if(!lookbacks)
-						lookbacks = GetLookbackTerminals(closure);
+						lookbacks = m_collection->GetLookbackTerminals(closure);
 
 					t_index shift_val = 0, reduce_val = 0;  // dummy values (only need to check for ERROR_VAL)
-					if(SolveConflict(la, *lookbacks, &shift_val, &reduce_val))
+					if(m_collection->SolveConflict(la, *lookbacks, &shift_val, &reduce_val))
 					{
 						if(shift_val == ERROR_VAL && reduce_val != ERROR_VAL)
 						{
@@ -835,7 +848,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 						ostrErr << " and lookahead terminal " << la->GetId();
 						ostrErr << ".";
 
-						if(m_stopOnConflicts)
+						if(GetStopOnConflicts())
 							throw std::runtime_error(ostrErr.str());
 						else
 							std::cerr << "Error: " << ostrErr.str() << std::endl;
@@ -872,7 +885,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 				{
 					ostr_cpp << "\t\tcase s_end_id:\n";
 				}
-				else if(m_useOpChar && isprintable(la->GetId()))
+				else if(GetUseOpChar() && isprintable(la->GetId()))
 				{
 					ostr_cpp << "\t\tcase \'"
 						<< char(la->GetId())
@@ -887,7 +900,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			ostr_cpp << reduce;
 		}
 
-		if(m_genErrorCode)
+		if(GetGenErrorCode())
 		{
 			// default: error
 			ostr_cpp << "\t\tdefault:\n";
@@ -921,7 +934,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		ostr_cpp_while << "\t\t{\n";
 
 		bool while_has_entries = false;
-		for(const t_transition& transition : GetTransitions(closure, false))
+		for(const t_transition& transition : m_collection->GetTransitions(closure, false))
 		{
 			const ClosurePtr& closure_to = std::get<1>(transition);
 			const SymbolPtr& symTrans = std::get<2>(transition);
@@ -934,10 +947,10 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			// unique partial match
 			bool has_partial = false;
 			std::ostringstream ostr_partial;
-			if(m_genPartialMatches)
+			if(GetGenPartialMatches())
 			{
 				if(auto [uniquematch, rule_id, rulelen] =
-					GetUniquePartialMatch(elemsFrom, false); uniquematch)
+					m_collection->GetUniquePartialMatch(elemsFrom, false); uniquematch)
 				{
 					// execute partial semantic rule
 					ostr_partial << "\t\t\t\t// partial semantic rule "
@@ -946,7 +959,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 						<< rule_id << ", " << rulelen << ");\n";
 					has_partial = true;
 
-					if(m_genDebugCode)
+					if(GetGenDebugCode())
 					{
 						ostr_partial << "\t\t\t\tif(m_debug && applied)\n";
 						ostr_partial << "\t\t\t\t\tDebugMessagePartialRule("
@@ -968,7 +981,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 			while_has_entries = true;
 		}
 
-		if(m_genErrorCode)
+		if(GetGenErrorCode())
 		{
 			ostr_cpp_while << "\t\t\tdefault:\n";
 			ostr_cpp_while << "\t\t\t{\n";
@@ -986,7 +999,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 		// return from closure -> decrement distance counter
 		ostr_cpp << "\tif(m_dist_to_jump > 0)\n\t\t--m_dist_to_jump;\n";
 
-		if(m_genDebugCode)
+		if(GetGenDebugCode())
 		{
 			ostr_cpp << "\tif(m_debug)\n";
 			ostr_cpp << "\t\tDebugMessageReturn(" << closure_id << ");\n";
@@ -1025,4 +1038,10 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 	// restore options
 	g_options.SetUseColour(use_col_saved);
 	return true;
+}
+
+
+bool ParserGen::GetStopOnConflicts() const
+{
+	return m_collection->GetStopOnConflicts();
 }

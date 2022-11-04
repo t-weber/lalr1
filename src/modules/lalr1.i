@@ -62,7 +62,8 @@ namespace std
 	#include "src/core/element.h"
 	#include "src/core/closure.h"
 	#include "src/core/collection.h"
-	#include "src/core/tableexport.h"
+	#include "src/core/tablegen.h"
+	#include "src/core/parsergen.h"
 %}
 
 %shared_ptr(std::enable_shared_from_this<Symbol>);
@@ -77,6 +78,8 @@ namespace std
 %shared_ptr(Element);
 %shared_ptr(Closure);
 %shared_ptr(Collection);
+%shared_ptr(TableGen);
+%shared_ptr(ParserGen);
 
 %template(SymbolESFT) std::enable_shared_from_this<Symbol>;
 %template(WordESFT) std::enable_shared_from_this<Word>;
@@ -89,6 +92,8 @@ typedef std::shared_ptr<Word> WordPtr;
 typedef std::shared_ptr<Element> ElementPtr;
 typedef std::shared_ptr<Closure> ClosurePtr;
 typedef std::shared_ptr<Collection> CollectionPtr;
+typedef std::shared_ptr<TableGen> TableGenPtr;
+typedef std::shared_ptr<ParserGen> ParserGenPtr;
 
 %template(SymbolVec) std::vector<SymbolPtr>;
 //%template(ElementLst) std::list<ElementPtr>;
@@ -99,7 +104,8 @@ typedef std::shared_ptr<Collection> CollectionPtr;
 %include "src/core/element.h"
 %include "src/core/closure.h"
 %include "src/core/collection.h"
-%include "src/core/tableexport.h"
+%include "src/core/tablegen.h"
+%include "src/core/parsergen.h"
 // --------------------------------------------------------------------------------
 
 
@@ -140,9 +146,27 @@ typedef std::shared_ptr<Collection> CollectionPtr;
 		closure->AddElement(elem);
 
 		CollectionPtr coll = std::make_shared<Collection>(closure);
-		if(std::optional<t_semantic_id> sema = start->GetSemanticRule(0); sema)
-			coll->SetAcceptingRule(*sema);
 		return coll;
+	}
+
+	TableGenPtr make_tablegen(const CollectionPtr& coll, const NonTerminalPtr& start)
+	{
+		TableGenPtr tablegen = std::make_shared<TableGen>(coll);
+
+		if(std::optional<t_semantic_id> sema = start->GetSemanticRule(0); sema)
+			tablegen->SetAcceptingRule(*sema);
+
+		return tablegen;
+	}
+
+	ParserGenPtr make_parsergen(const CollectionPtr& coll, const NonTerminalPtr& start)
+	{
+		ParserGenPtr parsergen = std::make_shared<ParserGen>(coll);
+
+		if(std::optional<t_semantic_id> sema = start->GetSemanticRule(0); sema)
+			parsergen->SetAcceptingRule(*sema);
+
+		return parsergen;
 	}
 %}
 // --------------------------------------------------------------------------------

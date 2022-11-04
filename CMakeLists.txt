@@ -54,7 +54,8 @@ target_sources(lalr1
 	PUBLIC
 		${PROJECT_SOURCE_DIR}/src/core/symbol.h
 		${PROJECT_SOURCE_DIR}/src/core/collection.h
-		${PROJECT_SOURCE_DIR}/src/core/tableexport.h
+		${PROJECT_SOURCE_DIR}/src/core/tablegen.h
+		${PROJECT_SOURCE_DIR}/src/core/parsergen.h
 		${PROJECT_SOURCE_DIR}/src/core/options.h
 		${PROJECT_SOURCE_DIR}/src/core/ast.h
 		${PROJECT_SOURCE_DIR}/src/core/types.h
@@ -71,6 +72,7 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/core/closure.cpp
 		${PROJECT_SOURCE_DIR}/src/core/collection.cpp
 		${PROJECT_SOURCE_DIR}/src/core/options.cpp
+		${PROJECT_SOURCE_DIR}/src/core/genoptions.cpp
 		${PROJECT_SOURCE_DIR}/src/core/parsergen.cpp
 		${PROJECT_SOURCE_DIR}/src/core/tablegen.cpp
 		${PROJECT_SOURCE_DIR}/src/core/tableexport.cpp
@@ -82,7 +84,8 @@ ${PROJECT_SOURCE_DIR}/src/core/element.h;\
 ${PROJECT_SOURCE_DIR}/src/core/closure.h;\
 ${PROJECT_SOURCE_DIR}/src/core/collection.h;\
 ${PROJECT_SOURCE_DIR}/src/core/options.h;\
-${PROJECT_SOURCE_DIR}/src/core/tableexport.h;\
+${PROJECT_SOURCE_DIR}/src/core/tablegen.h;\
+${PROJECT_SOURCE_DIR}/src/core/parsergen.h;\
 ${PROJECT_SOURCE_DIR}/src/core/table.h;\
 ${PROJECT_SOURCE_DIR}/src/core/ast.h;\
 ${PROJECT_SOURCE_DIR}/src/core/common.h;\
@@ -194,6 +197,7 @@ if(BUILD_EXAMPLES)
 	add_library(script STATIC
 		src/core/symbol.cpp src/core/symbol.h
 		src/core/options.cpp src/core/options.h
+		src/core/genoptions.cpp src/core/genoptions.h
 		src/examples/script/lexer.cpp src/examples/script/lexer.h
 		src/examples/script/ast_printer.cpp src/examples/script/ast_printer.h
 		src/examples/script/ast_asm.cpp src/examples/script/ast_asm.h

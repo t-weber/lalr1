@@ -6,7 +6,8 @@
  */
 
 #include "core/collection.h"
-#include "core/tableexport.h"
+#include "core/tablegen.h"
+#include "core/parsergen.h"
 #include "core/options.h"
 #include "expr_grammar.h"
 #include "script/lexer.h"
@@ -73,7 +74,6 @@ static void lr1_create_parser()
 		std::cout << std::endl;
 #endif
 
-
 		ElementPtr elem = std::make_shared<Element>(
 			start, 0, 0, Terminal::t_terminalset{{ g_end }});
 		ClosurePtr closure = std::make_shared<Closure>();
@@ -88,23 +88,27 @@ static void lr1_create_parser()
 			std::cout.flush();
 		};
 
-		Collection collsLALR{ closure };
-		collsLALR.SetAcceptingRule(static_cast<t_semantic_id>(Semantics::START));
-		collsLALR.SetProgressObserver(progress);
-		collsLALR.DoTransitions();
+		CollectionPtr collsLALR = std::make_shared<Collection>(closure);
+		collsLALR->SetProgressObserver(progress);
+		collsLALR->DoTransitions();
 
 #if DEBUG_PARSERGEN != 0
-		std::cout << "\n\n" << collsLALR << std::endl;
-		collsLALR.SaveGraph("expr", 1);
+		std::cout << "\n\n" << (*collsLALR) << std::endl;
+		collsLALR->SaveGraph("expr", 1);
 #endif
 
 #if USE_RECASC != 0
-		collsLALR.SaveParser("expr_parser.cpp", "ExprParser");
+		ParserGen parsergen{collsLALR};
+		parsergen.SetAcceptingRule(static_cast<t_semantic_id>(Semantics::START));
+		parsergen.SetUseStateNames(true);
+		parsergen.SaveParser("expr_parser.cpp", "ExprParser");
 #else
 		bool tables_ok = false;
-		if(collsLALR.CreateParseTables())
+		TableGen exporter{collsLALR};
+		exporter.SetAcceptingRule(static_cast<t_semantic_id>(Semantics::START));
+
+		if(exporter.CreateParseTables())
 		{
-			TableExporter exporter{&collsLALR};
 			tables_ok = exporter.SaveParseTablesCXX("expr.tab");
 			exporter.SaveParseTablesJSON("expr.json");
 			exporter.SaveParseTablesJava("ExprTab.java");
@@ -127,8 +131,6 @@ int main()
 	std::ios_base::sync_with_stdio(false);
 
 	g_options.SetUseColour(true);
-	g_options.SetUseStateNames(true);
-
 	lr1_create_parser();
 	return 0;
 }

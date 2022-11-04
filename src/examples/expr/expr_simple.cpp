@@ -6,7 +6,8 @@
  */
 
 #include "core/collection.h"
-#include "core/tableexport.h"
+#include "core/tablegen.h"
+#include "core/parsergen.h"
 #include "script/lexer.h"
 #include "script/ast.h"
 #include "script/ast_printer.h"
@@ -187,24 +188,27 @@ static void lr1_create_parser()
 			std::cout.flush();
 		};
 
-		Collection collsLALR{ closure };
-		collsLALR.SetProgressObserver(progress);
-		collsLALR.DoTransitions();
+		CollectionPtr collsLALR = std::make_shared<Collection>(closure);
+		collsLALR->SetProgressObserver(progress);
+		collsLALR->DoTransitions();
 
 #if DEBUG_PARSERGEN != 0
-		std::cout << "\n\n" << collsLALR << std::endl;
+		std::cout << "\n\n" << (*collsLALR) << std::endl;
 #endif
 
 #if DEBUG_WRITEGRAPH != 0
-		collsLALR.SaveGraph("expr_simple", 1);
+		collsLALR->SaveGraph("expr_simple", 1);
 #endif
 
-		if(collsLALR.CreateParseTables())
-		{
-			TableExporter exporter{&collsLALR};
+		TableGen exporter{collsLALR};
+		exporter.SetAcceptingRule(static_cast<t_semantic_id>(START));
+
+		if(exporter.CreateParseTables())
 			exporter.SaveParseTablesCXX("expr_simple.tab");
-		}
-		collsLALR.SaveParser("expr_simple_parser.cpp");
+
+		ParserGen parsergen(collsLALR);
+		parsergen.SetAcceptingRule(static_cast<t_semantic_id>(START));
+		parsergen.SaveParser("expr_simple_parser.cpp");
 	}
 	catch(const std::exception& err)
 	{
