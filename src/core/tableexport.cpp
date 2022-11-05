@@ -23,7 +23,6 @@
 #include <filesystem>
 #include <algorithm>
 #include <unordered_map>
-#include <type_traits>
 
 #include <boost/functional/hash.hpp>
 #include <boost/algorithm/string.hpp>
@@ -211,6 +210,7 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 }
 
 
+
 /**
  * save the parsing tables to Java code
  */
@@ -379,6 +379,7 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 	ofstr << "}\n";  // end class
 	return true;
 }
+
 
 
 /**
@@ -562,5 +563,151 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 	ofstr << "]\n";
 
 	ofstr << "}" << std::endl;
+	return true;
+}
+
+
+
+/**
+ * save the parsing tables to rust code
+ */
+bool TableGen::SaveParseTablesRS(const std::string& file) const
+{
+	std::ofstream ofstr{file};
+	if(!ofstr)
+		return false;
+
+	// meta infos
+	ofstr << "/*\n";
+	ofstr << " * Parsing tables created on " << get_timestamp() << "\n";
+	ofstr << " * using liblalr1 by Tobias Weber, 2020-2022\n";
+	ofstr << " * (DOI: https://doi.org/10.5281/zenodo.6987396).\n";
+	ofstr << " */\n\n";
+
+	// basic data types
+	std::string ty_idx = get_rs_typename<t_index>();
+	std::string ty_sym = get_rs_typename<t_symbol_id>();
+	std::string ty_sem = get_rs_typename<t_semantic_id>();
+
+	// constants
+	ofstr << "pub const err : " << ty_idx << " = 0x" << std::hex << ERROR_VAL << std::dec << ";\n";
+	ofstr << "pub const acc : " << ty_idx << " = 0x" << std::hex << ACCEPT_VAL << std::dec << ";\n";
+	ofstr << "pub const eps : " << ty_sym << " = 0x" << std::hex << EPS_IDENT << std::dec << ";\n";
+	ofstr << "pub const end : " << ty_sym << " = 0x" << std::hex << END_IDENT << std::dec << ";\n";
+
+	ofstr << "\n";
+
+	// lalr(1) tables
+	GetShiftTable().SaveRS(ofstr, "shift", "state", "terminal");
+	GetReduceTable().SaveRS(ofstr, "reduce", "state", "lookahead");
+	GetJumpTable().SaveRS(ofstr, "jump", "state", "nonterminal");
+	ofstr << "\n";
+
+	// partial match tables
+	if(GetGenPartialMatches())
+	{
+		GetPartialsRuleTerm().SaveRS(
+			ofstr, "partials_rule_term", "state", "terminal");
+		GetPartialsMatchLengthTerm().SaveRS(
+			ofstr, "partials_matchlen_term", "state", "terminal");
+		GetPartialsRuleNonterm().SaveRS(
+			ofstr, "partials_rule_nonterm", "state", "nonterminal");
+		GetPartialsMatchLengthNonterm().SaveRS(
+			ofstr, "partials_matchlen_nonterm", "state", "nonterminal");
+		ofstr << "\n";
+	}
+
+
+	// terminal symbol indices
+	const t_mapIdIdx& mapTermIdx = GetTermIndexMap();
+	const t_mapIdStrId& mapTermStrIds = GetTermStringIdMap();
+	ofstr << "pub const term_idx : [(" << ty_sym << ", " << ty_idx << ", &str); " << mapTermIdx.size() << "] =\n[\n";
+	for(auto iter = mapTermIdx.begin(); iter != mapTermIdx.end(); std::advance(iter, 1))
+	{
+		const auto& [id, idx] = *iter;
+
+		ofstr << "\t( ";
+		if(id == END_IDENT)
+			ofstr << "end";
+		else if(id == EPS_IDENT)
+			ofstr << "eps";
+		else if(GetUseOpChar() && isprintable(id))
+			ofstr << "'" << char(id) << "' as " << ty_sym;
+		else
+			ofstr << id;
+		ofstr << ", " << idx;
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id); iterStrId != mapTermStrIds.end())
+			ofstr << ", \"" << iterStrId->second << "\"";
+
+		ofstr << " )";
+
+		if(std::next(iter, 1) != mapTermIdx.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "];\n";
+
+	// non-terminal symbol indices
+	const t_mapIdIdx& mapNonTermIdx = GetNontermIndexMap();
+	const t_mapIdStrId& mapNonTermStrIds = GetNontermStringIdMap();
+	ofstr << "pub const nonterm_idx : [(" << ty_sym << ", " << ty_idx << ", &str); " << mapNonTermIdx.size() << "] =\n[\n";
+	for(auto iter = mapNonTermIdx.begin(); iter != mapNonTermIdx.end(); std::advance(iter, 1))
+	{
+		const auto& [id, idx] = *iter;
+		ofstr << "\t( " << id << ", " << idx;
+
+		// get string identifier
+		if(auto iterStrId = mapNonTermStrIds.find(id); iterStrId != mapNonTermStrIds.end())
+			ofstr << ", \"" << iterStrId->second << "\"";
+
+		ofstr << " )";
+
+		if(std::next(iter, 1) != mapNonTermIdx.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "];\n";
+
+	// semantic rule indices
+	const t_mapIdIdx& mapSemanticIdx = GetSemanticIndexMap();
+	ofstr << "pub const semantic_idx : [(" << ty_sem << ", " << ty_idx << "); " << mapSemanticIdx.size() << "] =\n[\n";
+	for(auto iter = mapSemanticIdx.begin(); iter != mapSemanticIdx.end(); std::advance(iter, 1))
+	{
+		const auto& [id, idx] = *iter;
+		ofstr << "\t( " << id << ", " << idx << " )";
+		if(std::next(iter, 1) != mapSemanticIdx.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "];\n\n";
+
+	// number of symbols on right-hand side of rule
+	const auto& numRhsSymsPerRule = GetNumRhsSymbolsPerRule();
+	ofstr << "pub const num_rhs_syms : [" << ty_idx << "; "
+		<< numRhsSymsPerRule.size() << "] = [ ";
+	for(auto iter = numRhsSymsPerRule.begin(); iter != numRhsSymsPerRule.end(); std::advance(iter, 1))
+	{
+		ofstr << *iter;
+		if(std::next(iter, 1) != numRhsSymsPerRule.end())
+			ofstr << ",";
+		ofstr << " ";
+	}
+	ofstr << "];\n";
+
+	// index of lhs nonterminal in rule
+	const auto& ruleLhsIdx = GetRuleLhsIndices();
+	ofstr << "pub const lhs_idx : [" << ty_idx << "; "
+		<< ruleLhsIdx.size() << "] = [ ";
+	for(auto iter = ruleLhsIdx.begin(); iter != ruleLhsIdx.end(); std::advance(iter, 1))
+	{
+		ofstr << *iter;
+		if(std::next(iter, 1) != ruleLhsIdx.end())
+			ofstr << ",";
+		ofstr << " ";
+	}
+	ofstr << "];\n";
+
 	return true;
 }

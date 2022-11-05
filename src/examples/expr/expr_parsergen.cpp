@@ -112,6 +112,7 @@ static void lr1_create_parser()
 			tables_ok = exporter.SaveParseTablesCXX("expr.tab");
 			exporter.SaveParseTablesJSON("expr.json");
 			exporter.SaveParseTablesJava("ExprTab.java");
+			exporter.SaveParseTablesRS("expr.rs");
 		}
 
 		if(!tables_ok)

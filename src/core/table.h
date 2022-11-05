@@ -266,6 +266,54 @@ public:
 
 
 	/**
+	 * export table to rust
+	 */
+	void SaveRS(std::ostream& ostr, const std::string& var,
+		const std::string& row_label = "", const std::string& col_label = "") const
+	{
+		std::string ty = get_rs_typename<value_type>();
+
+		ostr << "pub const " << var;
+		ostr << " : [[" << ty << "; " << size2();
+		if(col_label != "")
+			ostr << " /* " << col_label << " */";
+		ostr << "]; " << size1();
+		if(row_label != "")
+			ostr << " /* " << row_label << " */";
+		ostr << "]";
+		ostr << " =\n[\n";
+
+		for(std::size_t row=0; row<size1(); ++row)
+		{
+			ostr << "\t[ ";
+			for(std::size_t col=0; col<size2(); ++col)
+			{
+				value_type entry = operator()(row, col);
+				if(entry == m_errorval)
+					ostr << "err";
+				else if(entry == m_acceptval)
+					ostr << "acc";
+				else
+					ostr << entry;
+
+				if(col < size2()-1)
+					ostr << ",";
+				ostr << " ";
+			}
+			ostr << "]";
+			if(row < size1()-1)
+				ostr << ",";
+
+			if(row_label != "")
+				ostr << " // " << row_label << " " << row;
+
+			ostr << "\n";
+		}
+		ostr << "];\n";
+	}
+
+
+	/**
 	 * print table
 	 */
 	friend std::ostream& operator<<(std::ostream& ostr, const Table<T, t_cont>& tab)

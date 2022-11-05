@@ -31,13 +31,13 @@ using t_toknode = t_lalrastbaseptr;
 using t_toknodes = std::vector<t_lalrastbaseptr>;
 
 // LALR(1) table types
-using t_table = Table<std::size_t, std::vector>;
-using t_mapIdIdx = std::unordered_map<t_symbol_id, std::size_t>;
+using t_table = Table<t_index, std::vector>;
+using t_mapIdIdx = std::unordered_map<t_symbol_id, t_index>;
 using t_mapIdStrId = std::unordered_map<t_symbol_id, std::string>;
-using t_vecIdx = std::vector<std::size_t>;
+using t_vecIdx = std::vector<t_index>;
 
-using t_mapSemanticIdIdx = std::unordered_map<t_semantic_id, std::size_t>;
-using t_mapSemanticIdxId = std::unordered_map<std::size_t, t_semantic_id>;
+using t_mapSemanticIdIdx = std::unordered_map<t_semantic_id, t_index>;
+using t_mapSemanticIdxId = std::unordered_map<t_index, t_semantic_id>;
 
 enum class IndexTableKind
 {
@@ -49,7 +49,7 @@ enum class IndexTableKind
 
 struct ActiveRule
 {
-	std::size_t seen_tokens = 0; // number of tokens already seen in partial match
+	t_index seen_tokens = 0;     // number of tokens already seen in partial match
 	t_index handle = 0;          // the same for corresponding partial rules
 	t_lalrastbaseptr retval{};   // partial semantic rule return value
 };
