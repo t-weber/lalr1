@@ -70,6 +70,7 @@ def id_to_str(id, end_token):
 
 def write_parser_class(tables, outfile):
 	end_token = tables["consts"]["end"]
+	start_idx = tables["consts"]["start"]
 
 	# shortcut for writing to the file
 	def pr(str): print(str, file = outfile)
@@ -123,7 +124,7 @@ def write_parser_class(tables, outfile):
 	pr("\tdef parse(self):")
 	pr("\t\tself.reset()")
 	pr("\t\tself.get_next_lookahead()")
-	pr("\t\tself.state_0()")
+	pr(f"\t\tself.state_{start_idx}()")
 	pr("\t\tif len(self.symbols) < 1 or not self.accepted:")
 	pr("\t\t\treturn None")
 	pr("\t\treturn self.symbols[-1]\n")

@@ -34,6 +34,7 @@ public class ParserGen
 	protected int m_err_token = -1;
 	protected int m_acc_token = -2;
 	protected int m_end_token = -1;
+	protected int m_start_idx = 0;
 
 
 	public ParserGen(ParsingTableInterface tables)
@@ -62,6 +63,7 @@ public class ParserGen
 		m_err_token = m_tables.GetErrConst();
 		m_acc_token = m_tables.GetAccConst();
 		m_end_token = m_tables.GetEndConst();
+		m_start_idx = m_tables.GetStartConst();
 	}
 
 
@@ -324,7 +326,7 @@ public class ParserGen
 			pw.print("\tpublic Symbol<t_lval> Parse()\n\t{\n");
 			pw.print("\t\tReset();\n");
 			pw.print("\t\tNextLookahead();\n");
-			pw.print("\t\tState0();\n");
+			pw.print("\t\tState" + m_start_idx + "();\n");
 			pw.print("\t\tif(m_symbols.size() >= 1)\n");
 			pw.print("\t\t\treturn m_symbols.peek();\n");
 			pw.print("\t\treturn null;\n");

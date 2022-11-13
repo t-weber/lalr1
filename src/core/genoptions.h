@@ -19,12 +19,14 @@ public:
 	void SetGenErrorCode(bool b = true);
 	void SetGenPartialMatches(bool b = true);
 	void SetAcceptingRule(t_semantic_id rule_id);
+	void SetStartingState(t_index start);
 
 	bool GetUseOpChar() const;
 	bool GetGenDebugCode() const;
 	bool GetGenErrorCode() const;
 	bool GetGenPartialMatches() const;
 	t_semantic_id GetAcceptingRule() const;
+	t_index GetStartingState() const;
 
 	bool GetUseStateNames() const;
 	void SetUseStateNames(bool b = true);
@@ -38,9 +40,11 @@ private:
 	bool m_genDebugCode{true};                  // generate debug code in parser output
 	bool m_genErrorCode{true};                  // generate error handling code in parser output
 	bool m_genPartialMatches{true};             // generates code for handling partial rule matches
-	t_semantic_id m_accepting_rule{0};          // rule which leads to accepting the grammar
 	bool m_useStateNames{false};                // name closure functions
 	bool m_useNegativeTableValues{true};
+
+	t_semantic_id m_accepting_rule{0};          // rule which leads to accepting the grammar
+	t_index m_starting_state{0};                // parser starting state
 };
 
 

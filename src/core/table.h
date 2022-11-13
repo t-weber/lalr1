@@ -16,6 +16,8 @@
 #include <iomanip>
 #include <cmath>
 
+#include "types.h"
+
 
 template<
 	class T = std::size_t, template<class...>
@@ -269,9 +271,15 @@ public:
 	 * export table to rust
 	 */
 	void SaveRS(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "", const std::string& col_label = "") const
+		const std::string& row_label = "", const std::string& col_label = "",
+		std::optional<std::string> ty_override = std::nullopt) const
 	{
-		std::string ty = get_rs_typename<value_type>();
+		// get the data type name
+		std::string ty;
+		if(ty_override)
+			ty = *ty_override;
+		else
+			ty = get_rs_typename<value_type>();
 
 		ostr << "pub const " << var;
 		ostr << " : [[" << ty << "; " << size2();
@@ -290,9 +298,9 @@ public:
 			{
 				value_type entry = operator()(row, col);
 				if(entry == m_errorval)
-					ostr << "err";
+					ostr << "ERR";
 				else if(entry == m_acceptval)
-					ostr << "acc";
+					ostr << "ACC";
 				else
 					ostr << entry;
 

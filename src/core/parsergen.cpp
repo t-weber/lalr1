@@ -1028,7 +1028,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 	boost::replace_all(outfile_cpp, "%%DEFINE_CLOSURES%%", ostr_cpp.str());
 	boost::replace_all(outfile_h, "%%DECLARE_CLOSURES%%", ostr_h.str());
 	boost::replace_all(outfile_h, "%%END_ID%%", end_id_ostr.str());
-	boost::replace_all(outfile_cpp, "%%START_STATE%%", closure_names[0]);
+	boost::replace_all(outfile_cpp, "%%START_STATE%%", closure_names[GetStartingState()]);
 	boost::replace_all(outfile_cpp, "%%TIME_STAMP%%", time_stamp);
 	boost::replace_all(outfile_h, "%%TIME_STAMP%%", time_stamp);
 

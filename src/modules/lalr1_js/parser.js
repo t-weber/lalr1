@@ -68,6 +68,7 @@ class Parser
 		this.acc_token = tables.consts.acc;
 		this.err_token = tables.consts.err;
 		this.end_token = tables.consts.end;
+		this.start_idx = tables.consts.start;
 
 		this.input_tokens = [ ];
 		this.semantics = null;
@@ -81,8 +82,8 @@ class Parser
 		this.lookahead = null;
 		this.lookahead_idx = null;
 		this.accepted = false;
-		this.states = [ 0 ];    // parser states
-		this.symbols = [ ];     // symbol stack
+		this.states = [ this.start_idx ]; // parser states
+		this.symbols = [ ];               // symbol stack
 	}
 
 

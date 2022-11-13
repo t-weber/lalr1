@@ -26,14 +26,15 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 	protected HashMap<Integer, Integer> m_map_nonterm_id;
 	protected HashMap<Integer, Integer> m_map_semantic_id;
 
-	protected Vector<Symbol<t_lval>> m_input;  // input tokens
 	protected Stack<Symbol<t_lval>> m_symbols; // symbol stack
 	protected Stack<Integer> m_states;         // state stack
 	protected HashMap<Integer, SemanticRuleInterface<t_lval>> m_semantics;
 
-	protected int m_input_index;               // current input token
 	protected int m_lookahead_index;           // lookahead index
 	protected Symbol<t_lval> m_lookahead;      // lookahead token
+
+	protected int m_input_index;               // current input token
+	protected Vector<Symbol<t_lval>> m_input;  // input tokens
 
 	protected boolean m_accepted;              // input accepted?
 
@@ -61,7 +62,6 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 			m_map_semantic_id.put(semantic_idx[i][1], semantic_idx[i][0]);
 
 		m_input = new Vector<Symbol<t_lval>>();
-		m_input.clear();
 
 		m_symbols = new Stack<Symbol<t_lval>>();
 		m_states = new Stack<Integer>();
@@ -82,7 +82,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 		m_symbols.clear();
 
 		m_states.clear();
-		m_states.add(0);   // start state
+		m_states.add(m_tables.GetStartConst());   // start state
 	}
 
 

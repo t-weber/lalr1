@@ -73,7 +73,7 @@ static void lalr1_run_parser()
 		auto [partials_rules_term, partials_matchlen_term,
 			partials_rules_nonterm, partials_matchlen_nonterm]
 				= get_lalr1_partials_tables();
-		auto [err_idx, acc_idx, eps_id, end_id] = get_lalr1_constants();
+		auto [err_idx, acc_idx, eps_id, end_id, start_idx] = get_lalr1_constants();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);
@@ -87,6 +87,7 @@ static void lalr1_run_parser()
 		parser.SetPartialsRulesNonTerm(partials_rules_nonterm);
 		parser.SetPartialsMatchLenNonTerm(partials_matchlen_nonterm);
 		parser.SetEndId(end_id);
+		parser.SetStartingState(start_idx);
 #endif
 		parser.SetSemanticRules(&rules);
 		parser.SetDebug(true);

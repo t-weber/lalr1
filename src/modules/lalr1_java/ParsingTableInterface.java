@@ -14,6 +14,7 @@ public interface ParsingTableInterface
 	public int GetAccConst();
 	public int GetEndConst();
 	public int GetEpsConst();
+	public int GetStartConst();
 
 	public int[][] GetShiftTab();
 	public int[][] GetReduceTab();

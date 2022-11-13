@@ -87,7 +87,7 @@ lalr1_run_parser(const std::string& script_file,
 		// get created parsing tables
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
 		auto [term_idx, nonterm_idx, semantic_idx] = get_lalr1_table_indices();
-		auto [err_idx, acc_idx, eps_id, end_id] = get_lalr1_constants();
+		auto [err_idx, acc_idx, eps_id, end_id, start_idx] = get_lalr1_constants();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);
@@ -97,6 +97,7 @@ lalr1_run_parser(const std::string& script_file,
 		parser.SetNumRhsSymsPerRule(num_rhs);
 		parser.SetLhsIndices(lhs_idx);
 		parser.SetEndId(end_id);
+		parser.SetStartingState(start_idx);
 #endif
 		parser.SetSemanticRules(&rules);
 		parser.SetDebug(debug_parser);

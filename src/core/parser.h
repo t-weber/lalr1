@@ -42,6 +42,8 @@ public:
 	void SetSemanticRules(const t_semanticrules* rules) { m_semantics = rules; }
 
 	void SetEndId(t_symbol_id id) { m_end = id; }
+	void SetStartingState(t_index state) { m_starting_state = state; }
+
 	void SetDebug(bool b) { m_debug = b; }
 
 	t_lalrastbaseptr Parse(const t_toknodes& input) const;
@@ -84,6 +86,9 @@ private:
 
 	// end token id
 	t_symbol_id m_end{END_IDENT};
+
+	// state index to begin parsing with
+	t_index m_starting_state{0};
 
 	// debug output
 	bool m_debug{false};

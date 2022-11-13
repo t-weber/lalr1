@@ -113,6 +113,7 @@ function create_parser(tables, outfile)
 	const acc_token = tables.consts.acc;
 	const err_token = tables.consts.err;
 	const end_token = tables.consts.end;
+	const start_idx = tables.consts.start;
 
 	const num_states = shift_tab.length;
 	if(num_states == 0)
@@ -196,7 +197,7 @@ function create_parser(tables, outfile)
 	fs.writeFileSync(outfile, "\tparse()\n\t{\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.reset();\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.get_next_lookahead();\n", {"flag":"a"});
-	fs.writeFileSync(outfile, "\t\tthis.state_0();\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\tthis.state_" + start_idx + "();\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tif(this.symbols.length < 1 || !this.accepted)\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\t\treturn null;\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\treturn this.symbols[this.symbols.length - 1];\n", {"flag":"a"});

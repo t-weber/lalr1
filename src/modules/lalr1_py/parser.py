@@ -53,6 +53,7 @@ class Parser:
 		self.acc_token = tables["consts"]["acc"]
 		self.err_token = tables["consts"]["err"]
 		self.end_token = tables["consts"]["end"]
+		self.start_idx = tables["consts"]["start"]
 
 		self.input_tokens = []
 		self.semantics = None
@@ -64,8 +65,8 @@ class Parser:
 		self.lookahead = None
 		self.lookahead_idx = None
 		self.accepted = False
-		self.states = [ 0 ]    # parser states
-		self.symbols = [ ]     # symbol stack
+		self.states = [ self.start_idx ] # parser states
+		self.symbols = [ ]               # symbol stack
 
 
 	#

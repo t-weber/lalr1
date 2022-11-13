@@ -206,7 +206,7 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 	ParseStack<t_lalrastbaseptr> symbols;
 
 	// starting state
-	states.push(0);
+	states.push(m_starting_state);
 	t_index inputidx = 0;
 
 	// corresponding partial rule matches have the same handle

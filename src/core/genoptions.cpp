@@ -55,6 +55,13 @@ t_semantic_id GenOptions::GetAcceptingRule() const
 { return m_accepting_rule; }
 
 
+void GenOptions::SetStartingState(t_index start)
+{ m_starting_state = start; }
+
+t_index GenOptions::GetStartingState() const
+{ return m_starting_state; }
+
+
 /**
  * use non-terminal names for closures functions
  */
