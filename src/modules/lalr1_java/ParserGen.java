@@ -79,8 +79,8 @@ public class ParserGen
 		int num_terms = shift.length;
 		int num_nonterms = jump.length;
 
-		boolean has_shift_entry = HasTableEntry(shift, state_idx);
-		boolean has_jump_entry = HasTableEntry(jump, state_idx);
+		boolean has_shift_entry = HasTableEntry(shift);
+		boolean has_jump_entry = HasTableEntry(jump);
 
 		pw.print("\tprotected void State" + state_idx + "()\n\t{\n");
 
@@ -418,7 +418,7 @@ public class ParserGen
 	/**
 	 * check if the given table row has at least one non-error entry
 	 */
-	protected boolean HasTableEntry(int[] tab, int row)
+	protected boolean HasTableEntry(int[] tab)
 	{
 		for(int entry : tab)
 		{
