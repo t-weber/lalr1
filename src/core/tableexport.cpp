@@ -427,7 +427,7 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 		ofstr << "\t\"err\" : " << special_values[ERROR_VAL] << ",\n";
 		ofstr << "\t\"acc\" : " << special_values[ACCEPT_VAL] << ",\n";
 		ofstr << "\t\"eps\" : " << special_idents[EPS_IDENT] << ",\n";
-		ofstr << "\t\"end\" : " << special_idents[END_IDENT] << "\n";
+		ofstr << "\t\"end\" : " << special_idents[END_IDENT] << ",\n";
 		ofstr << "\t\"start\" : " << GetStartingState() << "\n";
 	}
 	else

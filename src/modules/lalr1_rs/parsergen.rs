@@ -31,9 +31,9 @@ use std::collections::HashMap;
 use std::mem::take;
 
 // TODO
-//mod types;
-//mod common;
-//mod expr;
+mod types;
+mod common;
+mod expr;
 
 use types::{*};
 use common::{*};
@@ -172,6 +172,15 @@ impl Parsable for Parser
 		self.dist_to_jump = 0;
 		self.accepted = false;
 	}
+
+	fn parse(&mut self) -> bool
+	{
+		self.reset();
+		self.next_lookahead();
+		self.state_%%START_IDX%%();
+
+		self.accepted
+	}
 }
 "#;
 
@@ -205,6 +214,21 @@ fn get_table_id(tab : &[(TSymbolId, TIndex, &str)], idx : TIndex) -> TSymbolId
 }
 
 
+fn get_semantic_table_id(tab : &[(TSemanticId, TIndex)], idx : TIndex) -> TSemanticId
+{
+	for entry in tab
+	{
+		if entry.1 == idx
+		{
+			return entry.0;
+		}
+	}
+
+	println!("Error: Semantic table index {idx} was not found.");
+	lalr1_tables::ERR
+}
+
+
 fn create_states() -> String
 {
 	let mut states : String = String::new();
@@ -217,7 +241,7 @@ fn create_states() -> String
 		let jump = &lalr1_tables::JUMP[state_idx];
 
 		let num_terms = shift.len();
-		let num_numterms = jump.len();
+		let num_nonterms = jump.len();
 
 		let has_shift_entry = has_table_entry(shift);
 		let has_jump_entry = has_table_entry(jump);
@@ -271,10 +295,11 @@ fn create_states() -> String
 			let cases : String = sym_ids.iter().map(|elem| elem.to_string()).
 				collect::<Vec<String>>().join(" | ");
 
-			// TODO
-			let rule_id : TSemanticId = 0;
-			let num_rhs : TIndex = 0;
-			let lhs_id : TSymbolId = 0;
+			let rule_id : TSemanticId = get_semantic_table_id(
+				&lalr1_tables::SEMANTIC_IDX, *rule_idx);
+			let num_rhs : TIndex = lalr1_tables::NUM_RHS_SYMS[*rule_idx];
+			let lhs_id : TSymbolId = get_table_id(
+				&lalr1_tables::NONTERM_IDX, lalr1_tables::LHS_IDX[*rule_idx]);
 
 			states += &format!("\t\t\t{cases} => self.apply_rule({rule_id}, {num_rhs}, {lhs_id}),\n");
 		}
@@ -290,8 +315,44 @@ fn create_states() -> String
 		states += "\t\t\t_ => println!(\"Invalid terminal transition.\"),\n";
 		states += "\t\t}\n";  // end match
 
-		// TODO
+		if has_shift_entry
+		{
+			states += "\t\tif next_state.is_some()\n\t\t{\n";
+			states += "\t\t\tself.push_lookahead();\n";
+			states += "\t\t\tnext_state.unwrap()(self);\n";
+			states += "\t\t}\n";
+		}
 
+		if has_jump_entry
+		{
+			states += "\t\twhile self.dist_to_jump == 0 && self.symbol.len() > 0 && !self.accepted\n\t\t{\n";
+
+			states += "\t\t\tlet top_sym : &Symbol = self.get_top_symbol().unwrap();\n";
+			states += "\t\t\tif top_sym.is_term\n\t\t\t{\n";
+			states += "\t\t\t\tbreak;\n";
+			states += "\t\t\t}\n";  // end if
+
+			states += "\t\t\tmatch top_sym.id\n\t\t\t{\n";
+
+			for nonterm_idx in 0..num_nonterms
+			{
+				let jump_state_idx = jump[nonterm_idx];
+				if jump_state_idx != lalr1_tables::ERR
+				{
+					let nonterm_id : TSymbolId = get_table_id(
+						&lalr1_tables::NONTERM_IDX, nonterm_idx);
+
+					states += &format!("\t\t\t\t{nonterm_id} => self.state_{jump_state_idx}(),\n");
+				}
+			}
+
+			states += "\t\t\t\t_ => println!(\"Invalid nonterminal transition.\"),\n";
+
+			states += "\t\t\t}\n";  // end match
+			states += "\t\t}\n";  // end while
+		}
+
+		states += "\t\tself.dist_to_jump -= 1;\n";
 		states += "\t}\n";  // end state function
 		if state_idx < num_states-1 { states += "\n"; }
 	}
@@ -304,7 +365,9 @@ fn main()
 {
 	let mut code = CODE.to_string();
 	let states : String = create_states();
-	code = code.replace("%%STATES%%", &states);
+	code = code
+		.replace("%%STATES%%", &states)
+		.replace("%%START_IDX%%", &lalr1_tables::START.to_string());
 
 	let mut outfile = File::create("generated_parser.rs").expect("Cannot create file.");
 	outfile.write(code.as_bytes());
