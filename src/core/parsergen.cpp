@@ -95,6 +95,7 @@ protected:
 	void DebugMessageState(t_state_id state_id, const char* state_func) const;
 	void DebugMessageReturn(t_state_id state_id) const;
 	void DebugMessageReduce(std::size_t num_rhs, t_semantic_id rule_id, const char* rule_descr) const;
+	void DebugMessageJump(t_state_id state_id);
 	void DebugMessagePartialRule(std::size_t rulelen, t_semantic_id rule_id) const;
 	void TransitionError(t_state_id state_id) const;
 
@@ -275,6 +276,19 @@ void %%PARSER_CLASS%%::DebugMessageReduce(std::size_t num_rhs,
 	if(rule_handle)
 		std::cout << " (handle id " << *rule_handle << ")";
 	std::cout << " (" << rule_descr << ")." << std::endl;
+}
+
+/**
+ * check if there's a remaining reduction without its corresponding jump reached
+ */
+void %%PARSER_CLASS%%::DebugMessageJump(t_state_id state_id)
+{
+	if(m_dist_to_jump)
+	{
+		std::cerr << "Error: Expected distance to jump to be zero"
+			<< " (state " << state_id << ")."
+			<< std::endl;
+	}
 }
 
 /**
@@ -760,6 +774,9 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 				{
 					std::ostringstream rule_descr;
 					rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
+
+					if(GetGenDebugCode())
+						ostr_reduce << "\t\t\tDebugMessageJump(" << closure_id << ");\n";
 
 					// in the table-based parser, num_rhs states are popped,
 					// here we have to count function returns to get to the new top state function

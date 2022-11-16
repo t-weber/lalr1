@@ -30,11 +30,6 @@ const CODE : &str = r#"/*
 use std::collections::HashMap;
 use std::mem::take;
 
-// TODO
-mod types;
-mod common;
-mod expr;
-
 use types::{*};
 use common::{*};
 
@@ -53,6 +48,7 @@ pub struct Parser
 	semantics : HashMap<TSemanticId, TSemantics>,
 
 	debug : bool,
+	end : TSymbolId,
 }
 
 impl Parser
@@ -72,6 +68,7 @@ impl Parser
 			next_input_index : 0,
 
 			debug : false,
+			end : lalr1_tables::END,
 		};
 
 		parser.reset();
@@ -81,6 +78,11 @@ impl Parser
 	pub fn set_debug(&mut self, debug : bool)
 	{
 		self.debug = debug;
+	}
+
+	pub fn get_end_id(&self) -> TSymbolId
+	{
+		self.end
 	}
 
 	fn next_lookahead(&mut self)
@@ -254,7 +256,7 @@ fn create_states() -> String
 			states += "\t\tlet mut next_state : Option<fn(&mut Parser)> = None;\n"
 		}
 
-		states += "\t\tmatch self.lookahead.unwrap().id\n\t\t{\n";
+		states += "\t\tmatch self.lookahead.as_ref().unwrap().id\n\t\t{\n";
 
 		let mut rules_term_id : HashMap<TIndex, Vec<TSymbolId>> = HashMap::<TIndex, Vec<TSymbolId>>::new();
 		let mut acc_term_id : Vec<TSymbolId> = Vec::<TSymbolId>::new();
@@ -352,7 +354,10 @@ fn create_states() -> String
 			states += "\t\t}\n";  // end while
 		}
 
-		states += "\t\tself.dist_to_jump -= 1;\n";
+		states += "\t\tif !self.accepted\n\t\t{\n";
+		states += "\t\t\tself.dist_to_jump -= 1;\n";
+		states += "\t\t}\n";  // end if
+
 		states += "\t}\n";  // end state function
 		if state_idx < num_states-1 { states += "\n"; }
 	}

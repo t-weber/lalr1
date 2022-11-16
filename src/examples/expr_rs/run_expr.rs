@@ -12,13 +12,15 @@ mod expr;
 mod idents;
 mod types;
 mod common;
-mod parser;
+//mod parser;
+mod generated_parser;
 
-use expr::lalr1_tables::END;
+//use expr::lalr1_tables::END;
 use common::{Parsable, Symbol, TSemantics};
-use parser::Parser;
 use types::*;
 use idents::*;
+//use parser::Parser;
+use generated_parser::Parser;
 
 
 fn main()
@@ -121,12 +123,14 @@ fn main()
 	let mut parser = Parser::new();
 	parser.set_debug(true);
 	parser.set_semantics(&SEMANTICS);
+	let end = parser.get_end_id();
+	//let end = END;
 
 	parser.set_input(&[
 		Symbol{is_term:true, id:1001, val:123},
 		Symbol{is_term:true, id:'+' as usize, val:0},
 		Symbol{is_term:true, id:1001, val:987},
-		Symbol{is_term:true, id:END, val:0},
+		Symbol{is_term:true, id:end, val:0},
 	]);
 
 	if parser.parse()
