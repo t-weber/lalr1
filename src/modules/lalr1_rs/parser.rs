@@ -91,15 +91,6 @@ impl Parser
 
 
 	/*
-	 * enable debugging
-	 */
-	pub fn set_debug(&mut self, debug : bool)
-	{
-		self.debug = debug;
-	}
-
-
-	/*
 	 * get the terminal table index from its id
 	 */
 	fn get_term_table_index(&self, id : TSymbolId) -> TIndex
@@ -206,12 +197,27 @@ impl Parser
 
 impl Parsable for Parser
 {
+	/*
+	 * set the input tokens
+	 */
 	fn set_input(&mut self, input: &[Symbol])
 	{
 		self.input = (*input).to_vec();
 	}
 
 
+	/*
+	 * enable debugging
+	 */
+	fn set_debug(&mut self, debug : bool)
+	{
+		self.debug = debug;
+	}
+
+
+	/*
+	 * set the semantic functions for the rules
+	 */
 	fn set_semantics(&mut self, sema : &[(TSemanticId, TSemantics)])
 	{
 		self.semantics.clear();
@@ -233,6 +239,12 @@ impl Parsable for Parser
 		{
 			self.symbol.last()
 		}
+	}
+
+
+	fn get_end_id(&self) -> TSymbolId
+	{
+		lalr1_tables::END
 	}
 
 

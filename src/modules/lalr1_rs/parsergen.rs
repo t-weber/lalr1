@@ -75,16 +75,6 @@ impl Parser
 		parser
 	}
 
-	pub fn set_debug(&mut self, debug : bool)
-	{
-		self.debug = debug;
-	}
-
-	pub fn get_end_id(&self) -> TSymbolId
-	{
-		self.end
-	}
-
 	fn next_lookahead(&mut self)
 	{
 		self.lookahead = Some(self.input[self.next_input_index].clone());
@@ -136,6 +126,16 @@ impl Parser
 
 impl Parsable for Parser
 {
+	fn set_debug(&mut self, debug : bool)
+	{
+		self.debug = debug;
+	}
+
+	fn get_end_id(&self) -> TSymbolId
+	{
+		self.end
+	}
+
 	fn set_input(&mut self, input: &[Symbol])
 	{
 		self.input = (*input).to_vec();
@@ -279,7 +279,7 @@ fn create_states() -> String
 				}
 				else
 				{
-					let mut elem = rules_term_id.get_mut(&rule_idx);
+					let elem = rules_term_id.get_mut(&rule_idx);
 					if elem.is_some()
 					{
 						elem.unwrap().push(term_id);
@@ -374,6 +374,11 @@ fn main()
 		.replace("%%STATES%%", &states)
 		.replace("%%START_IDX%%", &lalr1_tables::START.to_string());
 
-	let mut outfile = File::create("generated_parser.rs").expect("Cannot create file.");
-	outfile.write(code.as_bytes());
+	let outfilename : &str = &"generated_parser.rs";
+	let mut outfile = File::create(outfilename).expect("Cannot create file.");
+	match outfile.write(code.as_bytes())
+	{
+		Ok(res) => println!("Successfully wrote parser \"{outfilename}\" with {res:?} bytes."),
+		Err(res) => println!("Failed to write parser \"{outfilename}\": {res:?}."),
+	}
 }

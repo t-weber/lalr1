@@ -25,7 +25,9 @@ pub trait Parsable
 {
 	fn set_semantics(&mut self, sema : &[(types::TSemanticId, TSemantics)]);
 	fn set_input(&mut self, input: &[Symbol]);
+	fn set_debug(&mut self, debug : bool);
 
+	fn get_end_id(&self) -> types::TSymbolId;
 	fn get_top_symbol(&self) -> Option<&Symbol>;
 
 	fn reset(&mut self);

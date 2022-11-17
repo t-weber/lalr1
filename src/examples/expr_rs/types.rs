@@ -6,6 +6,7 @@
  * @license see 'LICENSE' file
  */
 
+#![allow(unused)]
 pub use expr::lalr1_tables;
 
 
