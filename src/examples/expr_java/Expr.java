@@ -6,7 +6,13 @@
  * @license see 'LICENSE' file
  */
 
-// javac -classpath "../../modules:." Expr.java Lexer.java Ids.java -Xlint:unchecked
+// table-based version:
+// javac -classpath "../../modules:." Expr.java Lexer.java Ids.java ExprTab.java -Xlint:unchecked
+// java -classpath "../../modules:." Expr
+
+// recursive-ascent version
+// java -classpath "../../modules:." lalr1_java.ParserGen ExprTab
+// javac -classpath "../../modules:." Expr.java Lexer.java Ids.java ExprParser.java -Xlint:unchecked
 // java -classpath "../../modules:." Expr
 
 
@@ -110,7 +116,7 @@ public class Expr
 		rules.put(Ids.sem_call1_id, sem_func1);
 		rules.put(Ids.sem_call2_id, sem_func2);
 
-		// parser
+		// parser (select either table-based or recursive-ascent version)
 		ParserInterface<Double> parser = new Parser<Double>(new ExprTab());
 		//ParserInterface<Double> parser = new ExprParser<Double>();
 		parser.SetSemantics(rules);

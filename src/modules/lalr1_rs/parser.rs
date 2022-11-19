@@ -192,6 +192,11 @@ impl Parser
 		// push result
 		self.symbol.push(Symbol{is_term:false, id:lhs_id, val:retval});
 	}
+
+	fn error(&mut self, str : &str)
+	{
+		println!("Error: {}", str);
+	}
 }
 
 
@@ -284,12 +289,12 @@ impl Parsable for Parser
 
 			if new_state == lalr1_tables::ERR && rule_index == lalr1_tables::ERR
 			{
-				println!("No shift or reduce action defined.");
+				self.error("No shift or reduce action defined.");
 				return false;
 			}
 			else if new_state != lalr1_tables::ERR && rule_index != lalr1_tables::ERR
 			{
-				println!("Shift/reduce conflict.");
+				self.error("Shift/reduce conflict.");
 				return false;
 			}
 			else if rule_index == lalr1_tables::ACC

@@ -236,6 +236,10 @@ public class ParserGen
 			pw.print(" * DOI: https://doi.org/10.5281/zenodo.6987396\n");
 			pw.print(" */\n\n");
 
+			pw.print("import lalr1_java.Symbol;\n");
+			pw.print("import lalr1_java.ParserInterface;\n");
+			pw.print("import lalr1_java.SemanticRuleInterface;\n");
+
 			pw.print("import java.util.Vector;\n");
 			pw.print("import java.util.Stack;\n");
 			pw.print("import java.util.HashMap;\n\n");

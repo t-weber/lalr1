@@ -14,17 +14,19 @@ mod idents;
 mod types;
 mod common;
 mod lexer;
-//mod parser;
-mod generated_parser;
+mod parser;
+//mod generated_parser;
 
 use common::{Parsable, Symbol, TSemantics};
 use types::*;
 use idents::*;
-//use parser::Parser;
-use generated_parser::Parser;
+use parser::Parser;
+//use generated_parser::Parser;
+
+const SET_DEBUG : bool = false;
 
 
-fn main()
+fn set_semantics(parser : &mut dyn Parsable)
 {
 	const SEMANTICS : [(TSemanticId, TSemantics); 16] =
 	[
@@ -121,9 +123,13 @@ fn main()
 		// ----------------------------------------------------------------------
 	];
 
-	let mut parser = Parser::new();
-	parser.set_debug(false);
 	parser.set_semantics(&SEMANTICS);
+}
+
+
+fn run_parser(parser : &mut dyn Parsable)
+{
+	parser.set_debug(SET_DEBUG);
 	let end = parser.get_end_id();
 
 	loop
@@ -139,6 +145,10 @@ fn main()
 		let mut tokens = lexer::get_all_matches(&line);
 		tokens.push(Symbol{is_term:true, id:end, val:0});
 		parser.set_input(&tokens);
+		if SET_DEBUG
+		{
+			println!("Tokens: {:?}.", tokens);
+		}
 
 		if parser.parse()
 		{
@@ -150,4 +160,12 @@ fn main()
 			println!("Error: Parsing failed.");
 		}
 	}
+}
+
+
+fn main()
+{
+	let mut parser = Parser::new();
+	set_semantics(&mut parser);
+	run_parser(&mut parser);
 }

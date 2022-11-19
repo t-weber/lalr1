@@ -38,6 +38,8 @@ pub struct Parser
 	symbol : Vec<Symbol>,
 
 	dist_to_jump : usize,
+
+	failed : bool,
 	accepted : bool,
 
 	lookahead : Option<Symbol>,
@@ -59,6 +61,8 @@ impl Parser
 		{
 			symbol : Vec::<Symbol>::new(),
 			dist_to_jump : 0,
+
+			failed : false,
 			accepted : false,
 
 			lookahead : None,
@@ -121,6 +125,12 @@ impl Parser
 		self.symbol.push(Symbol{is_term:false, id:lhs_id, val:retval});
         }
 
+	fn error(&mut self, str : &str)
+	{
+		println!("Error: {}", str);
+		self.failed = true;
+	}
+
 %%STATES%%
 }
 
@@ -166,12 +176,11 @@ impl Parsable for Parser
 	fn reset(&mut self)
 	{
 		self.next_input_index = 0;
-
 		self.lookahead = None;
-
 		self.symbol.clear();
-
 		self.dist_to_jump = 0;
+
+		self.failed = false;
 		self.accepted = false;
 	}
 
@@ -314,7 +323,7 @@ fn create_states() -> String
 			states += &format!("\t\t\t{acc_cases} => self.accepted = true,\n");
 		}
 
-		states += "\t\t\t_ => println!(\"Invalid terminal transition.\"),\n";
+		states += &format!("\t\t\t_ => self.error(\"Invalid terminal transition in state {}.\"),\n", state_idx);
 		states += "\t\t}\n";  // end match
 
 		if has_shift_entry
@@ -327,7 +336,7 @@ fn create_states() -> String
 
 		if has_jump_entry
 		{
-			states += "\t\twhile self.dist_to_jump == 0 && self.symbol.len() > 0 && !self.accepted\n\t\t{\n";
+			states += "\t\twhile self.dist_to_jump == 0 && self.symbol.len() > 0 && !self.accepted && !self.failed\n\t\t{\n";
 
 			states += "\t\t\tlet top_sym : &Symbol = self.get_top_symbol().unwrap();\n";
 			states += "\t\t\tif top_sym.is_term\n\t\t\t{\n";
@@ -348,13 +357,13 @@ fn create_states() -> String
 				}
 			}
 
-			states += "\t\t\t\t_ => println!(\"Invalid nonterminal transition.\"),\n";
+			states += &format!("\t\t\t\t_ => self.error(\"Invalid nonterminal transition in state {}.\"),\n", state_idx);
 
 			states += "\t\t\t}\n";  // end match
 			states += "\t\t}\n";  // end while
 		}
 
-		states += "\t\tif !self.accepted\n\t\t{\n";
+		states += "\t\tif !self.accepted && !self.failed\n\t\t{\n";
 		states += "\t\t\tself.dist_to_jump -= 1;\n";
 		states += "\t\t}\n";  // end if
 
