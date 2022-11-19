@@ -7,19 +7,21 @@
  */
 
 use std::convert::TryInto;
+use std::io::stdin;
 
 mod expr;
 mod idents;
 mod types;
 mod common;
-mod parser;
-//mod generated_parser;
+mod lexer;
+//mod parser;
+mod generated_parser;
 
 use common::{Parsable, Symbol, TSemantics};
 use types::*;
 use idents::*;
-use parser::Parser;
-//use generated_parser::Parser;
+//use parser::Parser;
+use generated_parser::Parser;
 
 
 fn main()
@@ -120,24 +122,32 @@ fn main()
 	];
 
 	let mut parser = Parser::new();
-	parser.set_debug(true);
+	parser.set_debug(false);
 	parser.set_semantics(&SEMANTICS);
 	let end = parser.get_end_id();
 
-	parser.set_input(&[
-		Symbol{is_term:true, id:1001, val:123},
-		Symbol{is_term:true, id:'+' as usize, val:0},
-		Symbol{is_term:true, id:1001, val:987},
-		Symbol{is_term:true, id:end, val:0},
-	]);
+	loop
+	{
+		let mut line : String = String::new();
+		stdin().read_line(&mut line).expect("Could not read input.");
+		line = line.trim().to_string();
+		if line.len() == 0
+		{
+			continue
+		}
 
-	if parser.parse()
-	{
-		let topsym = parser.get_top_symbol().unwrap();
-		println!("{:?}", topsym);
-	}
-	else
-	{
-		println!("Error: Parsing failed.");
+		let mut tokens = lexer::get_all_matches(&line);
+		tokens.push(Symbol{is_term:true, id:end, val:0});
+		parser.set_input(&tokens);
+
+		if parser.parse()
+		{
+			let topsym = parser.get_top_symbol().unwrap();
+			println!("{}", topsym.val);
+		}
+		else
+		{
+			println!("Error: Parsing failed.");
+		}
 	}
 }
