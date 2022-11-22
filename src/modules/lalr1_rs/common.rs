@@ -15,6 +15,7 @@ pub struct Symbol
 	pub is_term : bool,
 	pub id : types::TSymbolId,
 	pub val : types::TLVal,
+	pub strval : Option<String>,
 }
 
 

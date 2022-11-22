@@ -68,6 +68,25 @@ fn match_real(str : &str, base : u32) -> bool
 }
 
 
+fn match_ident(str : &str) -> bool
+{
+	for (idx, ch) in str.chars().enumerate()
+	{
+		if idx==0 && !ch.is_alphabetic()
+		{
+			return false;
+		}
+		else if idx>0 && !ch.is_alphanumeric()
+		{
+			return false;
+		}
+	}
+
+	true
+}
+
+
+
 fn match_str(str : &str) -> bool
 {
 	let mut str_opened : bool = false;
@@ -109,24 +128,50 @@ fn get_match(str : &str) -> Option<Symbol>
 	if match_int(str, 10)
 	{
 		let lval = str.parse::<TLVal>().unwrap();
-		return Some(Symbol{is_term:true, id:TOK_INT_ID, val:lval});
+		return Some(Symbol{
+			is_term : true,
+			id : TOK_INT_ID,
+			val : lval,
+			strval : Some(str.to_string())
+		});
 	}
 
 	// match real
-	/*else if match_real(str, 10)
+	else if match_real(str, 10)
 	{
 		let lval = str.parse::<TLVal>().unwrap();
-		return Some(Symbol{is_term:true, id:TOK_REAL_ID, val:lval});
-	}*/
+		return Some(Symbol{
+			is_term : true,
+			id : TOK_REAL_ID,
+			val : lval,
+			strval : Some(str.to_string())
+		});
+	}
+
+	// match identifier
+	else if match_ident(str)
+	{
+		return Some(Symbol{
+			is_term : true,
+			id : TOK_IDENT_ID,
+			val : 0 as TLVal,
+			strval : Some(str.to_string())
+		});
+	}
 
 	// match single-char operators
 	else if str.len() == 1
 	{
 		let ch : char = str.chars().nth(0).unwrap();
 		if ch=='+' || ch=='-' || ch=='*' || ch=='/' || ch=='%' || ch=='^'
-			|| ch=='(' || ch==')'
+			|| ch=='(' || ch==')' || ch==','
 		{
-			return Some(Symbol{is_term:true, id:ch as TSymbolId, val:0});
+			return Some(Symbol{
+				is_term : true,
+				id : ch as TSymbolId,
+				val : 0 as TLVal,
+				strval : Some(str.to_string())
+			});
 		}
 		else
 		{

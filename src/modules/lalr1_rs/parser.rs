@@ -182,7 +182,7 @@ impl Parser
 		}
 
 		// call semantic function
-		let mut retval : TLVal = 0;
+		let mut retval : TLVal = 0 as TLVal;
 		let semantics : Option<&TSemantics> = self.semantics.get(&rule_id);
 		if semantics != None
 		{
@@ -190,7 +190,12 @@ impl Parser
 		}
 
 		// push result
-		self.symbol.push(Symbol{is_term:false, id:lhs_id, val:retval});
+		self.symbol.push(Symbol{
+			is_term : false,
+			id : lhs_id,
+			val : retval,
+			strval : None,
+		});
 	}
 
 	fn error(&mut self, str : &str)

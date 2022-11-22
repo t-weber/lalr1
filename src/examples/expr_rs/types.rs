@@ -10,7 +10,7 @@
 pub use expr::lalr1_tables;
 
 
-pub type TLVal = i64;
+pub type TLVal = f64;
 pub type TIndex = lalr1_tables::TIndex;
 pub type TSymbolId = lalr1_tables::TSymbolId;
 pub type TSemanticId = lalr1_tables::TSemanticId;

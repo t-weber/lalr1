@@ -8,6 +8,7 @@
 
 use std::convert::TryInto;
 use std::io::stdin;
+use std::f64::consts::PI;
 
 mod expr;
 mod idents;
@@ -24,6 +25,74 @@ use parser::Parser;
 //use generated_parser::Parser;
 
 const SET_DEBUG : bool = false;
+
+
+fn get_symbol(args : Vec<Symbol>) -> TLVal
+{
+	if args[0].strval.is_none()
+	{
+		return 0 as TLVal;
+	}
+
+	let ident : &str = &args[0].strval.as_ref().unwrap();
+	match ident
+	{
+		"pi" => { PI as TLVal },
+		_ =>
+		{
+			println!("Identifier \"{}\" is unknown.", ident);
+			0 as TLVal
+		}
+	}
+}
+
+
+fn call_func1(args : Vec<Symbol>) -> TLVal
+{
+	if args[0].strval.is_none()
+	{
+		return 0 as TLVal;
+	}
+
+	let arg1 : TLVal = args[2].val;
+
+	let ident : &str = &args[0].strval.as_ref().unwrap();
+	match ident
+	{
+		"sqrt" => { arg1.sqrt() as TLVal },
+		"sin" => { arg1.sin() as TLVal },
+		"cos" => { arg1.cos() as TLVal },
+		"tan" => { arg1.tan() as TLVal },
+		_ =>
+		{
+			println!("Function \"{}\" is unknown.", ident);
+			0 as TLVal
+		}
+	}
+}
+
+
+fn call_func2(args : Vec<Symbol>) -> TLVal
+{
+	if args[0].strval.is_none()
+	{
+		return 0 as TLVal;
+	}
+
+	let arg1 : TLVal = args[2].val;
+	let arg2 : TLVal = args[4].val;
+
+	let ident : &str = &args[0].strval.as_ref().unwrap();
+	match ident
+	{
+		"pow" => { arg1.powf(arg2) as TLVal },
+		_ =>
+		{
+			println!("Function \"{}\" is unknown.", ident);
+			0 as TLVal
+		}
+	}
+}
 
 
 fn set_semantics(parser : &mut dyn Parsable)
@@ -71,7 +140,7 @@ fn set_semantics(parser : &mut dyn Parsable)
 
 		( SEM_POW_ID, |args : Vec<Symbol>| -> TLVal
 		{
-			TLVal::pow(args[0].val, args[2].val.try_into().unwrap())
+			TLVal::powf(args[0].val, args[2].val.try_into().unwrap())
 		} ),
 
 		( SEM_UADD_ID, |args : Vec<Symbol>| -> TLVal
@@ -97,29 +166,18 @@ fn set_semantics(parser : &mut dyn Parsable)
 			args[0].val
 		} ),
 
-		( SEM_IDENT_ID, |_args : Vec<Symbol>| -> TLVal
-		{
-			//args[0].val
-			0 // TODO
-		} ),
+		( SEM_IDENT_ID, get_symbol),
 		// ----------------------------------------------------------------------
 
 		// ----------------------------------------------------------------------
 		// functions
 		( SEM_CALL0_ID, |_args : Vec<Symbol>| -> TLVal
 		{
-			0 // TODO
+			0 as TLVal // TODO
 		} ),
 
-		( SEM_CALL1_ID, |_args : Vec<Symbol>| -> TLVal
-		{
-			0 // TODO
-		} ),
-
-		( SEM_CALL2_ID, |_args : Vec<Symbol>| -> TLVal
-		{
-			0 // TODO
-		} ),
+		( SEM_CALL1_ID, call_func1),
+		( SEM_CALL2_ID, call_func2),
 		// ----------------------------------------------------------------------
 	];
 
@@ -143,7 +201,12 @@ fn run_parser(parser : &mut dyn Parsable)
 		}
 
 		let mut tokens = lexer::get_all_matches(&line);
-		tokens.push(Symbol{is_term:true, id:end, val:0});
+		tokens.push(Symbol{
+			is_term : true,
+			id : end,
+			val : 0 as TLVal,
+			strval : Some("<end>".to_string())
+		});
 		parser.set_input(&tokens);
 		if SET_DEBUG
 		{

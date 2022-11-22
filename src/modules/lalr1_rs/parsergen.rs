@@ -115,14 +115,19 @@ impl Parser
 			args.insert(0, self.symbol.pop().unwrap());
 		}
 
-		let mut retval : TLVal = 0;
+		let mut retval : TLVal = 0 as TLVal;
 		let semantics : Option<&TSemantics> = self.semantics.get(&rule_id);
 		if semantics != None
 		{
 			retval = (*semantics.unwrap())(args);
 		}
 
-		self.symbol.push(Symbol{is_term:false, id:lhs_id, val:retval});
+		self.symbol.push(Symbol{
+			is_term : false,
+			id : lhs_id,
+			val : retval,
+			strval : None,
+		});
         }
 
 	fn error(&mut self, str : &str)
