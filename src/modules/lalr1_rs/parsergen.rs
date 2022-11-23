@@ -130,9 +130,15 @@ impl Parser
 		});
         }
 
-	fn error(&mut self, str : &str)
+	fn error_term(&mut self, state_idx : usize, sym_id : TSymbolId)
 	{
-		println!("Error: {}", str);
+		println!("Error: Invalid terminal transition {sym_id} in state {state_idx}.");
+		self.failed = true;
+	}
+
+	fn error_nonterm(&mut self, state_idx : usize, sym_id : TSymbolId)
+	{
+		println!("Error: Invalid non-terminal transition {sym_id} in state {state_idx}.");
 		self.failed = true;
 	}
 
@@ -230,6 +236,21 @@ fn get_table_id(tab : &[(TSymbolId, TIndex, &str)], idx : TIndex) -> TSymbolId
 }
 
 
+fn get_table_id_str(tab : &[(TSymbolId, TIndex, &str)], idx : TIndex) -> (TSymbolId, String)
+{
+	for entry in tab
+	{
+		if entry.1 == idx
+		{
+			return (entry.0, entry.2.to_string());
+		}
+	}
+
+	println!("Error: Table index {idx} was not found.");
+	(lalr1_tables::ERR, "err".to_string())
+}
+
+
 fn get_semantic_table_id(tab : &[(TSemanticId, TIndex)], idx : TIndex) -> TSemanticId
 {
 	for entry in tab
@@ -270,37 +291,39 @@ fn create_states() -> String
 			states += "\t\tlet mut next_state : Option<fn(&mut Parser)> = None;\n"
 		}
 
-		states += "\t\tmatch self.lookahead.as_ref().unwrap().id\n\t\t{\n";
+		states += "\t\tlet sym_id : TSymbolId = self.lookahead.as_ref().unwrap().id;\n";
+		states += "\t\tmatch sym_id\n\t\t{\n";
 
-		let mut rules_term_id : HashMap<TIndex, Vec<TSymbolId>> = HashMap::<TIndex, Vec<TSymbolId>>::new();
-		let mut acc_term_id : Vec<TSymbolId> = Vec::<TSymbolId>::new();
+		let mut rules_term_id : HashMap<TIndex, Vec<(TSymbolId, String)>>
+			= HashMap::<TIndex, Vec<(TSymbolId, String)>>::new();
+		let mut acc_term_id : Vec<(TSymbolId, String)> = Vec::<(TSymbolId, String)>::new();
 
 		for term_idx in 0..num_terms
 		{
 			let newstate_idx = shift[term_idx];
 			let rule_idx = reduce[term_idx];
-			let term_id = get_table_id(&lalr1_tables::TERM_IDX, term_idx);
+			let (term_id, term_str) : (TSymbolId, String) = get_table_id_str(&lalr1_tables::TERM_IDX, term_idx);
 
 			if newstate_idx != lalr1_tables::ERR
 			{
-				states += &format!("\t\t\t{term_id} => next_state = Some(Parser::state_{newstate_idx}),\n");
+				states += &format!("\t\t\t{term_id} => next_state = Some(Parser::state_{newstate_idx}), // {term_str}\n");
 			}
 			else if rule_idx != lalr1_tables::ERR
 			{
 				if rule_idx == lalr1_tables::ACC
 				{
-					acc_term_id.push(term_id);
+					acc_term_id.push((term_id, term_str));
 				}
 				else
 				{
 					let elem = rules_term_id.get_mut(&rule_idx);
 					if elem.is_some()
 					{
-						elem.unwrap().push(term_id);
+						elem.unwrap().push((term_id, term_str));
 					}
 					else
 					{
-						rules_term_id.insert(rule_idx, [term_id].to_vec());
+						rules_term_id.insert(rule_idx, [(term_id, term_str)].to_vec());
 					}
 				}
 			}
@@ -308,7 +331,9 @@ fn create_states() -> String
 
 		for (rule_idx, sym_ids) in &rules_term_id
 		{
-			let cases : String = sym_ids.iter().map(|elem| elem.to_string()).
+			let cases : String = sym_ids.iter().map(|elem| elem.0.to_string()).
+				collect::<Vec<String>>().join(" | ");
+			let comment : String = sym_ids.iter().map(|elem| elem.1.clone()).
 				collect::<Vec<String>>().join(" | ");
 
 			let rule_id : TSemanticId = get_semantic_table_id(
@@ -317,18 +342,21 @@ fn create_states() -> String
 			let lhs_id : TSymbolId = get_table_id(
 				&lalr1_tables::NONTERM_IDX, lalr1_tables::LHS_IDX[*rule_idx]);
 
+			states += &format!("\t\t\t// {comment}\n");
 			states += &format!("\t\t\t{cases} => self.apply_rule({rule_id}, {num_rhs}, {lhs_id}),\n");
 		}
 
 		if acc_term_id.len() > 0
 		{
-			let acc_cases : String = acc_term_id.iter().map(|elem| elem.to_string()).
+			let acc_cases : String = acc_term_id.iter().map(|elem| elem.0.to_string()).
+				collect::<Vec<String>>().join(" | ");
+			let acc_comment : String = acc_term_id.iter().map(|elem| elem.1.clone()).
 				collect::<Vec<String>>().join(" | ");
 
+			states += &format!("\t\t\t// {acc_comment}\n");
 			states += &format!("\t\t\t{acc_cases} => self.accepted = true,\n");
 		}
-
-		states += &format!("\t\t\t_ => self.error(\"Invalid terminal transition in state {}.\"),\n", state_idx);
+		states += &format!("\t\t\t_ => self.error_term({}, sym_id),\n", state_idx);
 		states += "\t\t}\n";  // end match
 
 		if has_shift_entry
@@ -355,14 +383,14 @@ fn create_states() -> String
 				let jump_state_idx = jump[nonterm_idx];
 				if jump_state_idx != lalr1_tables::ERR
 				{
-					let nonterm_id : TSymbolId = get_table_id(
+					let (nonterm_id, nonterm_str) : (TSymbolId, String) = get_table_id_str(
 						&lalr1_tables::NONTERM_IDX, nonterm_idx);
 
-					states += &format!("\t\t\t\t{nonterm_id} => self.state_{jump_state_idx}(),\n");
+					states += &format!("\t\t\t\t{nonterm_id} => self.state_{jump_state_idx}(), // {nonterm_str}\n");
 				}
 			}
 
-			states += &format!("\t\t\t\t_ => self.error(\"Invalid nonterminal transition in state {}.\"),\n", state_idx);
+			states += &format!("\t\t\t\t_ => self.error_nonterm({}, top_sym.id),\n", state_idx);
 
 			states += "\t\t\t}\n";  // end match
 			states += "\t\t}\n";  // end while

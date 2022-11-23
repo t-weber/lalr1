@@ -294,12 +294,14 @@ impl Parsable for Parser
 
 			if new_state == lalr1_tables::ERR && rule_index == lalr1_tables::ERR
 			{
-				self.error("No shift or reduce action defined.");
+				self.error(&format!("No shift or reduce action defined for state {0} and lookahead {1}.",
+					top_state, self.lookahead_index));
 				return false;
 			}
 			else if new_state != lalr1_tables::ERR && rule_index != lalr1_tables::ERR
 			{
-				self.error("Shift/reduce conflict.");
+				self.error(&format!("Shift/reduce conflict for state {0} and lookahead {1}.",
+					top_state, self.lookahead_index));
 				return false;
 			}
 			else if rule_index == lalr1_tables::ACC
