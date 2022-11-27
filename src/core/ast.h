@@ -29,26 +29,27 @@ public:
 
 
 public:
-	ASTLALR1Base(std::size_t id, std::optional<std::size_t> tableidx=std::nullopt)
+	ASTLALR1Base(t_symbol_id id=t_symbol_id{},
+		std::optional<t_index> tableidx=std::nullopt)
 		: m_id{id}, m_tableidx{tableidx}
 	{}
 
 	virtual ~ASTLALR1Base() = default;
 
-	std::size_t GetId() const { return m_id; }
-	void SetId(std::size_t id) { m_id = id; }
+	t_symbol_id GetId() const { return m_id; }
+	void SetId(t_symbol_id id) { m_id = id; }
 
 	std::size_t hash() const
 	{
 		std::size_t hashTerm = std::hash<bool>{}(IsTerminal());
-		std::size_t hashId = std::hash<std::size_t>{}(GetId());
+		std::size_t hashId = std::hash<t_symbol_id>{}(GetId());
 
 		boost::hash_combine(hashId, hashTerm);
 		return hashId;
 	}
 
-	std::size_t GetTableIndex() const { return *m_tableidx; }
-	void SetTableIndex(std::size_t tableidx) { m_tableidx = tableidx; }
+	t_index GetTableIndex() const { return *m_tableidx; }
+	void SetTableIndex(t_index tableidx) { m_tableidx = tableidx; }
 
 	virtual bool IsTerminal() const
 	{
@@ -70,10 +71,10 @@ public:
 
 private:
 	// symbol id (from symbol.h)
-	std::size_t m_id{};
+	t_symbol_id m_id{};
 
 	// index used in parse tables
-	std::optional<std::size_t> m_tableidx{};
+	std::optional<t_index> m_tableidx{};
 
 	// line number range
 	std::optional<t_line_range> m_line_range{std::nullopt};
