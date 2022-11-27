@@ -110,7 +110,7 @@ static void lalr1_run_parser()
 			for(const t_toknode& tok : tokens)
 			{
 				std::size_t tokid = tok->GetId();
-				if(tokid == static_cast<t_tok>(Token::END))
+				if(tokid == static_cast<t_symbol_id>(Token::END))
 					std::cout << "END";
 				else
 					std::cout << tokid;

@@ -19,13 +19,11 @@
 #include "core/common.h"
 
 
-using t_tok = t_symbol_id;
-
 // [ token, lvalue, line number ]
-using t_lexer_match = std::tuple<t_tok, t_lval, std::size_t>;
+using t_lexer_match = std::tuple<t_symbol_id, t_lval, std::size_t>;
 
 
-enum class Token : t_tok
+enum class Token : t_symbol_id
 {
 	REAL        = 1000,
 	INT         = 1001,

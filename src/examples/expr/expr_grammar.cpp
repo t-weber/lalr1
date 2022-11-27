@@ -26,9 +26,9 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	bracket_open = std::make_shared<Terminal>('(', "(");
 	bracket_close = std::make_shared<Terminal>(')', ")");
 	comma = std::make_shared<Terminal>(',', ",");
-	sym_real = std::make_shared<Terminal>(static_cast<t_tok>(Token::REAL), "real");
-	sym_int = std::make_shared<Terminal>(static_cast<t_tok>(Token::INT), "integer");
-	ident = std::make_shared<Terminal>(static_cast<t_tok>(Token::IDENT), "ident");
+	sym_real = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::REAL), "real");
+	sym_int = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::INT), "integer");
+	ident = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::IDENT), "ident");
 
 	// precedences and associativities
 	//op_assign->SetPrecedence(10, 'r');
