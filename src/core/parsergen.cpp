@@ -89,7 +89,8 @@ protected:
 	ActiveRule* GetActiveRule(t_semantic_id rule_id);
 	std::optional<t_index> GetActiveRuleHandle(t_semantic_id rule_id) const;
 
-	bool ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len);
+	bool CheckReturnSymbol(t_symbol& retsym, t_symbol_id expected_retid, t_semantic_id ruleid);
+	bool ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len, t_symbol_id expected_retid);
 	bool ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_symbol_id expected_retid);
 
 	void DebugMessageState(t_state_id state_id, const char* state_func) const;
@@ -148,7 +149,7 @@ void %%PARSER_CLASS%%::PrintSymbols() const
 	std::size_t i = 0;
 	for(auto iter = m_symbols.rbegin(); iter != m_symbols.rend(); std::advance(iter, 1))
 	{
-		const t_lalrastbaseptr& sym = *iter;
+		const t_symbol& sym = *iter;
 
 		std::cout << sym->GetId();
 		if(sym->IsTerminal() && isprintable(sym->GetId()))
@@ -401,9 +402,33 @@ void %%PARSER_CLASS%%::SetSemanticRules(const t_semanticrules* rules)
 }
 
 /**
+ * check if the return symbol from a semantic rule is consistent
+ */
+bool %%PARSER_CLASS%%::CheckReturnSymbol(t_symbol& retsym, t_symbol_id expected_retid,
+	t_semantic_id rule_id)
+{
+	if(!retsym)
+		return true;
+	// check if the return symbol's id is correct
+	t_symbol_id retid = retsym->GetId();
+	if(retid != expected_retid)
+	{
+		std::cerr << "Warning: Expected return symbol id " << expected_retid
+			<< " in rule #" << rule_id
+			<< ", but received id " << retid << "."
+			<< std::endl;
+		retsym->SetId(expected_retid);
+		return false;
+	}
+
+	return true;
+}
+
+/**
  * execute a partially recognised semantic rule
  */
-bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len)
+bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id,
+	std::size_t rule_len, t_symbol_id expected_retid)
 {
 	if(!m_semantics || !m_semantics->contains(rule_id))
 	{
@@ -469,12 +494,13 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 		}
 
 		t_semanticargs args = GetCopyArguments(rule_len);
-		t_lalrastbaseptr retval = nullptr;
+		t_symbol retval = nullptr;
 		ActiveRule *active_rule = GetActiveRule(rule_id);
 		if(active_rule)
 			retval = active_rule->retval;
 
 		retval = rule(false, args, retval);
+		CheckReturnSymbol(retval, expected_retid, rule_id);
 
 		if(active_rule)
 			active_rule->retval = retval;
@@ -515,22 +541,12 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 	}
 
 	t_semanticargs args = GetArguments(m_symbols, rule_len);
-	t_lalrastbaseptr retval = nullptr;
+	t_symbol retval = nullptr;
 	if(ActiveRule *active_rule = GetActiveRule(rule_id); active_rule)
 		retval = active_rule->retval;
 
 	t_symbol retsym = rule(true, args, retval);
-
-	// check if the return symbol's id is correct
-	t_symbol_id retid = retsym->GetId();
-	if(retid != expected_retid)
-	{
-		std::cerr << "Warning: Expected return symbol id " << expected_retid
-			<< " in rule #" << rule_id
-			<< " but received id " << retid << "."
-			<< std::endl;
-		retsym->SetId(expected_retid);
-	}
+	CheckReturnSymbol(retsym, expected_retid, rule_id);
 
 	m_symbols.emplace(std::move(retsym));
 	return true;
@@ -700,14 +716,14 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 			std::ostringstream ostr_partial;
 			if(GetGenPartialMatches())
 			{
-				if(auto [uniquematch, rule_id, rulelen] =
+				if(auto [uniquematch, rule_id, rulelen, lhs_id] =
 					m_collection->GetUniquePartialMatch(elemsFrom, true); uniquematch)
 				{
 					// execute partial semantic rule
 					ostr_partial << "\t\t\t// partial semantic rule "
 						<< rule_id << " with " << rulelen << " recognised argument(s)\n";
 					ostr_partial << "\t\t\tbool applied = ApplyPartialRule(true, "
-						<< rule_id << ", " << rulelen << ");\n";
+						<< rule_id << ", " << rulelen << ", " << lhs_id << ");\n";
 					has_partial = true;
 
 					if(GetGenDebugCode())
@@ -981,14 +997,14 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 			std::ostringstream ostr_partial;
 			if(GetGenPartialMatches())
 			{
-				if(auto [uniquematch, rule_id, rulelen] =
+				if(auto [uniquematch, rule_id, rulelen, lhs_id] =
 					m_collection->GetUniquePartialMatch(elemsFrom, false); uniquematch)
 				{
 					// execute partial semantic rule
 					ostr_partial << "\t\t\t\t// partial semantic rule "
 						<< rule_id << " with " << rulelen << " arguments\n";
 					ostr_partial << "\t\t\t\tbool applied = ApplyPartialRule(false, "
-						<< rule_id << ", " << rulelen << ");\n";
+						<< rule_id << ", " << rulelen << ", " << lhs_id << ");\n";
 					has_partial = true;
 
 					if(GetGenDebugCode())

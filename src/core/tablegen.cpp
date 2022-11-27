@@ -185,23 +185,25 @@ bool TableGen::CreateParseTables()
 		if(GetGenPartialMatches())
 		{
 			// unique partial match for terminal transition?
-			if(auto [uniquematch, rule_id, rule_len] =
+			if(auto [uniquematch, rule_id, rule_len, lhs_id] =
 				m_collection->GetUniquePartialMatch(elemsFrom, true); uniquematch)
 			{
 				// set partial match table elements
 				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
 				set_tab_elem(partials_rule_term[stateFrom->GetId()], symIdx, rule_idx);
 				set_tab_elem(partials_matchlen_term[stateFrom->GetId()], symIdx, rule_len, 0);
+				// TODO: also save lhs_id in table to check agains semantic rule's return type
 			}
 
 			// unique partial match for non-terminal transition?
-			if(auto [uniquematch, rule_id, rule_len] =
+			if(auto [uniquematch, rule_id, rule_len, lhs_is] =
 				m_collection->GetUniquePartialMatch(elemsFrom, false); uniquematch)
 			{
 				// set partial match table elements
 				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
 				set_tab_elem(partials_rule_nonterm[stateFrom->GetId()], symIdx, rule_idx);
 				set_tab_elem(partials_matchlen_nonterm[stateFrom->GetId()], symIdx, rule_len, 0);
+				// TODO: also save lhs_id in table to check agains semantic rule's return type
 			}
 		}
 	}

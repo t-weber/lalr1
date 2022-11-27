@@ -421,7 +421,7 @@ std::set<t_state_id> Collection::HasShiftReduceConflicts() const
 /**
  * get the rule number and length of a partial match
  */
-std::tuple<bool, t_semantic_id /*rule #*/, std::size_t /*match length*/>
+std::tuple<bool, t_semantic_id /*rule #*/, std::size_t /*match length*/, t_symbol_id /*lhs id*/>
 Collection::GetUniquePartialMatch(
 	const Collection::t_elements& elemsFrom, bool termTrans)
 {
@@ -465,12 +465,13 @@ Collection::GetUniquePartialMatch(
 	// unique partial match?
 	if(matching_rules.size() == 1)
 	{
-		return std::make_tuple(true,                          // partial match found
-			matching_rules.begin()->first,                // rule number
-			matching_rules.begin()->second->GetCursor()); // length of partial rule match
+		return std::make_tuple(true,                                // partial match found
+			matching_rules.begin()->first,                      // rule number
+			matching_rules.begin()->second->GetCursor(),        // length of partial rule match
+			matching_rules.begin()->second->GetLhs()->GetId()); // lhs symbol id
 	}
 
-	return std::make_tuple(false, 0, 0);
+	return std::make_tuple(false, 0, 0, 0);
 }
 
 

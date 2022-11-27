@@ -106,7 +106,7 @@ public:
 
 
 public:
-	static std::tuple<bool, t_semantic_id, std::size_t> GetUniquePartialMatch(
+	static std::tuple<bool, t_semantic_id, std::size_t, t_symbol_id> GetUniquePartialMatch(
 		const t_elements& elemsFrom, bool termTrans);
 
 
