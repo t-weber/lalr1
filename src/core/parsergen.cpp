@@ -90,7 +90,7 @@ protected:
 	std::optional<t_index> GetActiveRuleHandle(t_semantic_id rule_id) const;
 
 	bool ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len);
-	bool ApplyRule(t_semantic_id rule_id, std::size_t rule_len);
+	bool ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_symbol_id expected_retid);
 
 	void DebugMessageState(t_state_id state_id, const char* state_func) const;
 	void DebugMessageReturn(t_state_id state_id) const;
@@ -488,7 +488,7 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 /**
  * apply a fully recognised semantic rule
  */
-bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
+bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_symbol_id expected_retid)
 {
 	if(t_active_rules::iterator iter_active_rule = m_active_rules.find(rule_id);
 		iter_active_rule != m_active_rules.end())
@@ -519,7 +519,20 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 	if(ActiveRule *active_rule = GetActiveRule(rule_id); active_rule)
 		retval = active_rule->retval;
 
-	m_symbols.emplace(rule(true, args, retval));
+	t_symbol retsym = rule(true, args, retval);
+
+	// check if the return symbol's id is correct
+	t_symbol_id retid = retsym->GetId();
+	if(retid != expected_retid)
+	{
+		std::cerr << "Warning: Expected return symbol id " << expected_retid
+			<< " in rule #" << rule_id
+			<< " but received id " << retid << "."
+			<< std::endl;
+		retsym->SetId(expected_retid);
+	}
+
+	m_symbols.emplace(std::move(retsym));
 	return true;
 }
 
@@ -793,8 +806,10 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len)
 					}
 
 					// execute semantic rule
+					const t_symbol_id lhs_id = elem->GetLhs()->GetId();
 					ostr_reduce << "\t\t\t// semantic rule " << *rule_id << ": " << rule_descr.str() << "\n";
-					ostr_reduce << "\t\t\tApplyRule(" << *rule_id << ", " << num_rhs << ");\n";
+					ostr_reduce << "\t\t\tApplyRule(" << *rule_id << ", "
+						<< num_rhs << ", " << lhs_id << ");\n";
 					ostr_reduce << "\t\t\tbreak;\n";
 				}
 
