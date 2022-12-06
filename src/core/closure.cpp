@@ -22,6 +22,9 @@
 #include <boost/functional/hash.hpp>
 
 
+namespace lalr1 {
+
+
 // global closure id counter
 t_state_id Closure::g_id = 0;
 
@@ -348,3 +351,4 @@ std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
 	return ostr;
 }
 
+} // namespace lalr1

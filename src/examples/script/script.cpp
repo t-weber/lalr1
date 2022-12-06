@@ -25,6 +25,9 @@
 namespace args = boost::program_options;
 
 
+using namespace lalr1;
+
+
 #if __has_include(<filesystem>)
 	#include <filesystem>
 	namespace fs = std::filesystem;
@@ -87,7 +90,7 @@ lalr1_run_parser(const std::string& script_file,
 		// get created parsing tables
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
 		auto [term_idx, nonterm_idx, semantic_idx] = get_lalr1_table_indices();
-		auto [err_idx, acc_idx, eps_id, end_id, start_idx] = get_lalr1_constants();
+		auto [err_idx, acc_idx, eps_id, end_id, start_idx, acc_rule_idx] = get_lalr1_constants();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);
@@ -98,6 +101,7 @@ lalr1_run_parser(const std::string& script_file,
 		parser.SetLhsIndices(lhs_idx);
 		parser.SetEndId(end_id);
 		parser.SetStartingState(start_idx);
+		parser.SetAcceptingRule(acc_rule_idx);
 #endif
 		parser.SetSemanticRules(&rules);
 		parser.SetDebug(debug_parser);
@@ -155,7 +159,7 @@ lalr1_run_parser(const std::string& script_file,
 				std::cout << std::endl;
 			}
 
-			t_astbaseptr ast = std::dynamic_pointer_cast<ASTBase>(parser.Parse(tokens));
+			::t_astbaseptr ast = std::dynamic_pointer_cast<::ASTBase>(parser.Parse(tokens));
 			ast->AssignLineNumbers();
 			ast->DeriveDataType();
 

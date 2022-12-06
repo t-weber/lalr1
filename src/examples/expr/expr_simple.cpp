@@ -21,7 +21,6 @@
 #include <iomanip>
 #include <cstdint>
 
-
 #define DEBUG_PARSERGEN   1
 #define DEBUG_WRITEGRAPH  1
 #define DEBUG_CODEGEN     1
@@ -36,24 +35,24 @@ enum : std::size_t
 
 
 // non-terminals
-static NonTerminalPtr start, expr;
+static lalr1::NonTerminalPtr start, expr;
 
 // terminals
-static TerminalPtr op_plus, op_mult;
-static TerminalPtr sym_real;
+static lalr1::TerminalPtr op_plus, op_mult;
+static lalr1::TerminalPtr sym_real;
 
 // semantic rules
-static t_semanticrules rules;
+static lalr1::t_semanticrules rules;
 
 
 static void create_grammar(bool add_semantics = true)
 {
-	start = std::make_shared<NonTerminal>(START, "start");
-	expr = std::make_shared<NonTerminal>(EXPR, "expr");
+	start = std::make_shared<lalr1::NonTerminal>(START, "start");
+	expr = std::make_shared<lalr1::NonTerminal>(EXPR, "expr");
 
-	op_plus = std::make_shared<Terminal>('+', "+");
-	op_mult = std::make_shared<Terminal>('*', "*");
-	sym_real = std::make_shared<Terminal>((std::size_t)Token::REAL, "real");
+	op_plus = std::make_shared<lalr1::Terminal>('+', "+");
+	op_mult = std::make_shared<lalr1::Terminal>('*', "*");
+	sym_real = std::make_shared<lalr1::Terminal>((std::size_t)Token::REAL, "real");
 
 	// precedences and associativities
 	op_plus->SetPrecedence(70, 'l');
@@ -61,14 +60,14 @@ static void create_grammar(bool add_semantics = true)
 
 
 	// rule number
-	t_semantic_id semanticindex = 0;
+	lalr1::t_semantic_id semanticindex = 0;
 
 	// rule 0: start -> expr
 	start->AddRule({ expr }, semanticindex);
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
+		[](bool full_match, const lalr1::t_semanticargs& args, [[maybe_unused]] lalr1::t_astbaseptr retval) -> lalr1::t_astbaseptr
 		{
 			if(!full_match) return nullptr;
 			return args[0];
@@ -81,7 +80,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
+		[](bool full_match, const lalr1::t_semanticargs& args, [[maybe_unused]] lalr1::t_astbaseptr retval) -> lalr1::t_astbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -97,7 +96,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
+		[](bool full_match, const lalr1::t_semanticargs& args, [[maybe_unused]] lalr1::t_astbaseptr retval) -> lalr1::t_astbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -113,7 +112,7 @@ static void create_grammar(bool add_semantics = true)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(semanticindex,
-		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
+		[](bool full_match, const lalr1::t_semanticargs& args, [[maybe_unused]] lalr1::t_astbaseptr retval) -> lalr1::t_astbaseptr
 		{
 			if(!full_match) return nullptr;
 
@@ -136,18 +135,18 @@ static void lr1_create_parser()
 	try
 	{
 #if DEBUG_PARSERGEN != 0
-		std::vector<NonTerminalPtr> all_nonterminals{{ start, expr }};
+		std::vector<lalr1::NonTerminalPtr> all_nonterminals{{ start, expr }};
 
 		std::cout << "Productions:\n";
-		for(NonTerminalPtr nonterm : all_nonterminals)
+		for(lalr1::NonTerminalPtr nonterm : all_nonterminals)
 			nonterm->print(std::cout);
 		std::cout << std::endl;
 
 
 		std::cout << "FIRST sets:\n";
-		t_map_first first;
-		t_map_first_perrule first_per_rule;
-		for(const NonTerminalPtr& nonterminal : all_nonterminals)
+		lalr1::t_map_first first;
+		lalr1::t_map_first_perrule first_per_rule;
+		for(const lalr1::NonTerminalPtr& nonterminal : all_nonterminals)
 			nonterminal->CalcFirst(first, &first_per_rule);
 
 		for(const auto& pair : first)
@@ -160,8 +159,8 @@ static void lr1_create_parser()
 		std::cout << std::endl;
 
 		std::cout << "FOLLOW sets:\n";
-		t_map_follow follow;
-		for(const NonTerminalPtr& nonterminal : all_nonterminals)
+		lalr1::t_map_follow follow;
+		for(const lalr1::NonTerminalPtr& nonterminal : all_nonterminals)
 			nonterminal->CalcFollow(all_nonterminals, start, first, follow);
 
 		for(const auto& pair : follow)
@@ -175,9 +174,9 @@ static void lr1_create_parser()
 #endif
 
 
-		ElementPtr elem = std::make_shared<Element>(
-			start, 0, 0, Terminal::t_terminalset{{g_end}});
-		ClosurePtr closure = std::make_shared<Closure>();
+		lalr1::ElementPtr elem = std::make_shared<lalr1::Element>(
+			start, 0, 0, lalr1::Terminal::t_terminalset{{lalr1::g_end}});
+		lalr1::ClosurePtr closure = std::make_shared<lalr1::Closure>();
 		closure->AddElement(elem);
 
 		auto progress = [](const std::string& msg, [[maybe_unused]] bool done)
@@ -188,7 +187,7 @@ static void lr1_create_parser()
 			std::cout.flush();
 		};
 
-		CollectionPtr collsLALR = std::make_shared<Collection>(closure);
+		lalr1::CollectionPtr collsLALR = std::make_shared<lalr1::Collection>(closure);
 		collsLALR->SetProgressObserver(progress);
 		collsLALR->DoTransitions();
 
@@ -200,14 +199,14 @@ static void lr1_create_parser()
 		collsLALR->SaveGraph("expr_simple", 1);
 #endif
 
-		TableGen exporter{collsLALR};
-		exporter.SetAcceptingRule(static_cast<t_semantic_id>(START));
+		lalr1::TableGen exporter{collsLALR};
+		exporter.SetAcceptingRule(static_cast<lalr1::t_semantic_id>(START));
 
 		if(exporter.CreateParseTables())
 			exporter.SaveParseTablesCXX("expr_simple.tab");
 
-		ParserGen parsergen(collsLALR);
-		parsergen.SetAcceptingRule(static_cast<t_semantic_id>(START));
+		lalr1::ParserGen parsergen(collsLALR);
+		parsergen.SetAcceptingRule(static_cast<lalr1::t_semantic_id>(START));
 		parsergen.SaveParser("expr_simple_parser.cpp");
 	}
 	catch(const std::exception& err)
@@ -243,9 +242,9 @@ static void lalr1_run_parser()
 		// get created parsing tables
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
 		auto [term_idx, nonterm_idx, semantic_idx] = get_lalr1_table_indices();
-		auto [err_idx, acc_idx, eps_id, end_id, start_idx] = get_lalr1_constants();
+		auto [err_idx, acc_idx, eps_id, end_id, start_idx, acc_rule_idx] = get_lalr1_constants();
 
-		Parser parser;
+		lalr1::Parser parser;
 		parser.SetShiftTable(shift_tab);
 		parser.SetReduceTable(reduce_tab);
 		parser.SetJumpTable(jump_tab);
@@ -255,6 +254,7 @@ static void lalr1_run_parser()
 		parser.SetSemanticRules(&rules);
 		parser.SetEndId(end_id);
 		parser.SetStartingState(start_idx);
+		parser.SetAcceptingRule(acc_rule_idx);
 		parser.SetDebug(true);
 
 		while(1)

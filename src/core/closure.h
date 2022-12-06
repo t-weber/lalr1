@@ -25,6 +25,8 @@
 #include <iostream>
 
 
+namespace lalr1 {
+
 class Closure;
 using ClosurePtr = std::shared_ptr<Closure>;
 
@@ -92,5 +94,6 @@ private:
 		m_cached_transitions {};
 };
 
+} // namespace lalr1
 
 #endif

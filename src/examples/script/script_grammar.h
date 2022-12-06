@@ -10,6 +10,10 @@
 #include "core/symbol.h"
 #include "ast.h"
 
+using lalr1::NonTerminalPtr;
+using lalr1::TerminalPtr;
+using lalr1::t_semanticrules;
+
 
 /**
  * non-terminals identifiers

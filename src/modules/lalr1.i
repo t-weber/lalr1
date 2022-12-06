@@ -64,7 +64,19 @@ namespace std
 	#include "src/core/collection.h"
 	#include "src/core/tablegen.h"
 	#include "src/core/parsergen.h"
+
+	using namespace lalr1;
 %}
+
+%include "src/core/types.h"
+%include "src/core/symbol.h"
+%include "src/core/element.h"
+%include "src/core/closure.h"
+%include "src/core/collection.h"
+%include "src/core/tablegen.h"
+%include "src/core/parsergen.h"
+
+using namespace lalr1;
 
 %shared_ptr(std::enable_shared_from_this<Symbol>);
 %shared_ptr(std::enable_shared_from_this<Word>);
@@ -98,14 +110,6 @@ typedef std::shared_ptr<ParserGen> ParserGenPtr;
 %template(SymbolVec) std::vector<SymbolPtr>;
 //%template(ElementLst) std::list<ElementPtr>;
 //%template(ClosureLst) std::list<ClosurePtr>;
-
-%include "src/core/types.h"
-%include "src/core/symbol.h"
-%include "src/core/element.h"
-%include "src/core/closure.h"
-%include "src/core/collection.h"
-%include "src/core/tablegen.h"
-%include "src/core/parsergen.h"
 // --------------------------------------------------------------------------------
 
 

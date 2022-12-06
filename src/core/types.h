@@ -12,6 +12,8 @@
 #include <type_traits>
 
 
+namespace lalr1 {
+
 using t_index       = std::size_t;
 using t_hash        = std::size_t;
 
@@ -80,5 +82,6 @@ constexpr const char* get_rs_typename()
 	}
 }
 
+} // namespace lalr1
 
 #endif

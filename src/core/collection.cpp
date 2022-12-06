@@ -25,6 +25,9 @@
 #include <boost/functional/hash.hpp>
 
 
+namespace lalr1 {
+
+
 // ----------------------------------------------------------------------------
 /**
  * hash a transition element
@@ -892,3 +895,5 @@ bool Collection::GetStopOnConflicts() const
 {
 	return m_stopOnConflicts;
 }
+
+} // namespace lalr1

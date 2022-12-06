@@ -14,6 +14,8 @@
 #include <optional>
 
 
+namespace lalr1 {
+
 /**
  * lalr(1) parser
  */
@@ -43,17 +45,18 @@ public:
 
 	void SetEndId(t_symbol_id id) { m_end = id; }
 	void SetStartingState(t_index state) { m_starting_state = state; }
+	void SetAcceptingRule(t_index rule) { m_accepting_rule = rule; }
 
 	void SetDebug(bool b) { m_debug = b; }
 
-	t_lalrastbaseptr Parse(const t_toknodes& input) const;
+	t_astbaseptr Parse(const t_toknodes& input) const;
 
 
 protected:
 	// get the rule index and the matching length of a partial match
 	std::tuple<std::optional<t_index>, std::optional<std::size_t>>
 		GetPartialRule(t_state_id topstate, const t_toknode& curtok,
-			const ParseStack<t_lalrastbaseptr>& symbols, bool term) const;
+			const ParseStack<t_astbaseptr>& symbols, bool term) const;
 
 	// get a semantic rule id from a rule index
 	t_semantic_id GetRuleId(t_index idx) const;
@@ -90,9 +93,13 @@ private:
 	// state index to begin parsing with
 	t_index m_starting_state{0};
 
+	// index of the accepting rule
+	t_index m_accepting_rule{0};
+
 	// debug output
 	bool m_debug{false};
 };
 
+} // namespace lalr1
 
 #endif

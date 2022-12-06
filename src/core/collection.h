@@ -27,6 +27,8 @@
 #include <iostream>
 
 
+namespace lalr1 {
+
 class Collection;
 using CollectionPtr = std::shared_ptr<Collection>;
 
@@ -133,5 +135,6 @@ private:
 	friend std::ostream& operator<<(std::ostream& ostr, const Collection& colls);
 };
 
+} // namespace lalr1
 
 #endif

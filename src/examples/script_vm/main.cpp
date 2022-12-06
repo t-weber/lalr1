@@ -24,6 +24,8 @@
 #include <boost/program_options.hpp>
 namespace args = boost::program_options;
 
+using namespace lalr1;
+
 
 struct VMOptions
 {

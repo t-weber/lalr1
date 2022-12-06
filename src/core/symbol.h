@@ -22,6 +22,8 @@
 #include "types.h"
 
 
+namespace lalr1 {
+
 class Symbol;
 class Terminal;
 class NonTerminal;
@@ -296,5 +298,6 @@ extern const TerminalPtr g_eps, g_end;
 
 // ----------------------------------------------------------------------------
 
+} // namespace lalr1
 
 #endif

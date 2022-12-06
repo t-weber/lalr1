@@ -21,6 +21,7 @@
 #include "collection.h"
 #include "genoptions.h"
 
+namespace lalr1 {
 
 class ParserGen;
 using ParserGenPtr = std::shared_ptr<ParserGen>;
@@ -41,5 +42,6 @@ private:
 	const CollectionPtr m_collection{};
 };
 
+} // namespace lalr1
 
 #endif

@@ -22,6 +22,9 @@
 #include <boost/functional/hash.hpp>
 
 
+namespace lalr1 {
+
+
 Element::Element(const NonTerminalPtr& lhs, t_index rhsidx, t_index cursor,
 	const Terminal::t_terminalset& la)
 	: Element{lhs, rhsidx, cursor}
@@ -390,3 +393,5 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 
 	return ostr;
 }
+
+} // namespace lalr1

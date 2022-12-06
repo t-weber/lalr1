@@ -13,6 +13,8 @@
 #include <stack>
 
 
+namespace lalr1 {
+
 /**
  * stack class for parse states and symbols
  */
@@ -51,10 +53,11 @@ public:
 	{
 		t_cont_ret<t_elem> cont;
 
+		std::size_t cnt = 0;
 		for(auto iter = c.rbegin(); iter != c.rend(); std::advance(iter, 1))
 		{
 			cont.push_back(*iter);
-			if(cont.size() == N)
+			if(++cnt >= N)
 				break;
 		}
 
@@ -62,5 +65,6 @@ public:
 	}
 };
 
+} // namespace lalr1
 
 #endif

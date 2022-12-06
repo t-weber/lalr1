@@ -11,6 +11,8 @@
 #include "types.h"
 
 
+namespace lalr1 {
+
 class GenOptions
 {
 public:
@@ -47,5 +49,6 @@ private:
 	t_index m_starting_state{0};                // parser starting state
 };
 
+} // namespace lalr1
 
 #endif

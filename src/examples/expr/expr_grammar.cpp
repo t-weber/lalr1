@@ -8,6 +8,11 @@
 #include "expr_grammar.h"
 #include "script/lexer.h"
 
+using t_lalrastbaseptr = lalr1::t_astbaseptr;
+using lalr1::Terminal;
+using lalr1::NonTerminal;
+using lalr1::t_semanticargs;
+using lalr1::g_eps;
 
 void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 {

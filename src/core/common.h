@@ -19,6 +19,8 @@
 #include <locale>
 
 
+namespace lalr1 {
+
 const constinit t_index ERROR_VAL = std::numeric_limits<t_index>::max();     // 'error' table entry
 const constinit t_index ACCEPT_VAL = std::numeric_limits<t_index>::max()-1;  // 'accept' table entry
 
@@ -27,8 +29,8 @@ const constinit t_symbol_id END_IDENT = std::numeric_limits<t_symbol_id>::max()-
 
 
 // (input) token types
-using t_toknode = t_lalrastbaseptr;
-using t_toknodes = std::vector<t_lalrastbaseptr>;
+using t_toknode = t_astbaseptr;
+using t_toknodes = std::vector<t_astbaseptr>;
 
 // LALR(1) table types
 using t_table = Table<t_index, std::vector>;
@@ -51,7 +53,7 @@ struct ActiveRule
 {
 	t_index seen_tokens = 0;     // number of tokens already seen in partial match
 	t_index handle = 0;          // the same for corresponding partial rules
-	t_lalrastbaseptr retval{};   // partial semantic rule return value
+	t_astbaseptr retval{};       // partial semantic rule return value
 };
 
 using t_active_rule_stack = std::stack<ActiveRule>;
@@ -67,5 +69,6 @@ template<class T> bool isprintable(T ch)
 	return std::isprint<t_char>(static_cast<t_char>(ch), std::locale("C"));
 }
 
+} // namespace lalr1
 
 #endif

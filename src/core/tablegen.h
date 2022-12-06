@@ -21,6 +21,8 @@
 #include "genoptions.h"
 
 
+namespace lalr1 {
+
 class TableGen;
 using TableGenPtr = std::shared_ptr<TableGen>;
 
@@ -100,5 +102,6 @@ private:
 	std::vector<t_index> m_ruleLhsIdx{};            // nonterminal index of the rule's result type
 };
 
+} // namespace lalr1
 
 #endif

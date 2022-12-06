@@ -9,6 +9,9 @@
 #include "symbol.h"  // for string id hacks
 
 
+namespace lalr1 {
+
+
 /**
  * print using colours
  */
@@ -74,3 +77,5 @@ const std::string& Options::GetEndChar() const
 
 
 Options g_options{};
+
+} // namespace lalr1

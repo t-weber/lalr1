@@ -8,6 +8,13 @@
 #include "script_grammar.h"
 #include "lexer.h"
 
+using t_lalrastbaseptr = lalr1::t_astbaseptr;
+using lalr1::Terminal;
+using lalr1::NonTerminal;
+using lalr1::t_semanticargs;
+using lalr1::t_semantic_id;
+using lalr1::g_eps;
+
 
 void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 {

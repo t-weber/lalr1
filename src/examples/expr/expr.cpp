@@ -20,6 +20,8 @@
 #include <iomanip>
 #include <cstdint>
 
+using namespace lalr1;
+
 
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
@@ -73,7 +75,7 @@ static void lalr1_run_parser()
 		auto [partials_rules_term, partials_matchlen_term,
 			partials_rules_nonterm, partials_matchlen_nonterm]
 				= get_lalr1_partials_tables();
-		auto [err_idx, acc_idx, eps_id, end_id, start_idx] = get_lalr1_constants();
+		auto [err_idx, acc_idx, eps_id, end_id, start_idx, acc_rule_idx] = get_lalr1_constants();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);
@@ -88,6 +90,7 @@ static void lalr1_run_parser()
 		parser.SetPartialsMatchLenNonTerm(partials_matchlen_nonterm);
 		parser.SetEndId(end_id);
 		parser.SetStartingState(start_idx);
+		parser.SetAcceptingRule(acc_rule_idx);
 #endif
 		parser.SetSemanticRules(&rules);
 		parser.SetDebug(true);
@@ -119,7 +122,7 @@ static void lalr1_run_parser()
 			std::cout << "\n";
 #endif
 
-			t_astbaseptr ast = std::dynamic_pointer_cast<ASTBase>(parser.Parse(tokens));
+			::t_astbaseptr ast = std::dynamic_pointer_cast<::ASTBase>(parser.Parse(tokens));
 			ast->AssignLineNumbers();
 			ast->DeriveDataType();
 

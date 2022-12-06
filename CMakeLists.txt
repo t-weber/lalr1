@@ -57,6 +57,7 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/core/tablegen.h
 		${PROJECT_SOURCE_DIR}/src/core/parsergen.h
 		${PROJECT_SOURCE_DIR}/src/core/options.h
+		${PROJECT_SOURCE_DIR}/src/core/genoptions.h
 		${PROJECT_SOURCE_DIR}/src/core/ast.h
 		${PROJECT_SOURCE_DIR}/src/core/types.h
 		${PROJECT_SOURCE_DIR}/src/core/element.h
@@ -84,6 +85,7 @@ ${PROJECT_SOURCE_DIR}/src/core/element.h;\
 ${PROJECT_SOURCE_DIR}/src/core/closure.h;\
 ${PROJECT_SOURCE_DIR}/src/core/collection.h;\
 ${PROJECT_SOURCE_DIR}/src/core/options.h;\
+${PROJECT_SOURCE_DIR}/src/core/genoptions.h;\
 ${PROJECT_SOURCE_DIR}/src/core/tablegen.h;\
 ${PROJECT_SOURCE_DIR}/src/core/parsergen.h;\
 ${PROJECT_SOURCE_DIR}/src/core/table.h;\
@@ -143,6 +145,9 @@ find_package(Python COMPONENTS Development Interpreter)
 find_package(Java COMPONENTS Development Runtime)
 find_package(JNI)
 
+set(USE_SWIG_PY TRUE)
+set(USE_SWIG_JAVA FALSE)
+
 if(SWIG_FOUND)
 	cmake_policy(SET CMP0078 NEW)
 	cmake_policy(SET CMP0086 NEW)
@@ -150,7 +155,7 @@ if(SWIG_FOUND)
 
 	set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/modules/lalr1.i PROPERTY CPLUSPLUS TRUE)
 
-	if(SWIG_python_FOUND AND Python_FOUND)
+	if(SWIG_python_FOUND AND Python_FOUND AND USE_SWIG_PY)
 		swig_add_library(lalr1_py TYPE MODULE LANGUAGE python SOURCES ${PROJECT_SOURCE_DIR}/src/modules/lalr1.i)
 		target_link_libraries(lalr1_py lalr1 Python::Python)
 
@@ -169,7 +174,7 @@ if(SWIG_FOUND)
 		install(FILES ${LALR1_PY_WRAPPER} DESTINATION ${Python_SITEARCH})
 	endif()
 
-	if(SWIG_java_FOUND AND Java_FOUND AND JNI_FOUND)
+	if(SWIG_java_FOUND AND Java_FOUND AND JNI_FOUND AND USE_SWIG_JAVA)
 		swig_add_library(lalr1_java TYPE MODULE LANGUAGE java SOURCES ${PROJECT_SOURCE_DIR}/src/modules/lalr1.i)
 		target_include_directories(lalr1_java PUBLIC ${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2} ${JNI_INCLUDE_DIRS})
 		target_link_libraries(lalr1_java lalr1 ${JNI_LIBRARIES})

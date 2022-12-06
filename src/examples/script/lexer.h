@@ -18,6 +18,11 @@
 #include "lval.h"
 #include "core/common.h"
 
+using lalr1::t_symbol_id;
+using lalr1::t_toknode;
+using lalr1::t_mapIdIdx;
+using lalr1::END_IDENT;
+
 
 // [ token, lvalue, line number ]
 using t_lexer_match = std::tuple<t_symbol_id, t_lval, std::size_t>;

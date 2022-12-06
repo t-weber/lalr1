@@ -17,6 +17,9 @@
 #include <boost/functional/hash.hpp>
 
 
+namespace lalr1 {
+
+
 // special terminal symbols
 const TerminalPtr g_eps = std::make_shared<Terminal>(EPS_IDENT, "\xce\xb5", true, false);
 const TerminalPtr g_end = std::make_shared<Terminal>(END_IDENT, "\xcf\x89", false, true);
@@ -822,3 +825,5 @@ std::ostream& operator<<(std::ostream& ostr, const Word& word)
 	return ostr;
 }
 // ----------------------------------------------------------------------------
+
+} // namespace lalr1

@@ -110,7 +110,7 @@ t_opt_range get_minmax_lines(const std::vector<t_opt_range>& lines)
 /**
  * syntax tree base
  */
-class ASTBase : public ASTLALR1Base
+class ASTBase : public lalr1::ASTBase
 {
 public:
 	using t_line_range = std::pair<std::size_t, std::size_t>;
@@ -118,7 +118,7 @@ public:
 
 public:
 	ASTBase(std::size_t id, std::optional<std::size_t> tableidx=std::nullopt)
-		: ASTLALR1Base{id, tableidx}
+		: lalr1::ASTBase{id, tableidx}
 	{}
 
 	virtual ~ASTBase() = default;
@@ -245,7 +245,7 @@ public:
 
 	virtual bool IsTerminal() const override
 	{
-		std::optional<bool> term_override = ASTLALR1Base::GetTerminalOverride();
+		std::optional<bool> term_override = lalr1::ASTBase::GetTerminalOverride();
 		if(term_override)
 			return *term_override;
 		return true;

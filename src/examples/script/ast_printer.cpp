@@ -12,7 +12,7 @@
 /**
  * gets a printable type name of an ast node
  */
-std::string ASTPrinter::get_ast_typename(const ASTBase* ast)
+std::string ASTPrinter::get_ast_typename(const ::ASTBase* ast)
 {
 	switch(ast->GetType())
 	{
@@ -61,7 +61,7 @@ ASTPrinter::ASTPrinter(std::ostream& ostr) : m_ostr{ostr}
 
 
 void ASTPrinter::print_base(
-	const ASTBase* ast, std::size_t level, const char* extrainfo)
+	const ::ASTBase* ast, std::size_t level, const char* extrainfo)
 {
 	for(std::size_t i=0; i<level; ++i)
 		m_ostr << "  ";

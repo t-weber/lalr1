@@ -19,22 +19,24 @@
 #include "types.h"
 
 
+namespace lalr1 {
+
 /**
  * syntax tree base
  */
-class ASTLALR1Base
+class ASTBase
 {
 public:
 	using t_line_range = std::pair<std::size_t, std::size_t>;
 
 
 public:
-	ASTLALR1Base(t_symbol_id id=t_symbol_id{},
+	ASTBase(t_symbol_id id=t_symbol_id{},
 		std::optional<t_index> tableidx=std::nullopt)
 		: m_id{id}, m_tableidx{tableidx}
 	{}
 
-	virtual ~ASTLALR1Base() = default;
+	virtual ~ASTBase() = default;
 
 	t_symbol_id GetId() const { return m_id; }
 	void SetId(t_symbol_id id) { m_id = id; }
@@ -85,19 +87,20 @@ private:
 
 
 // symbol type for semantic rules
-using t_lalrastbaseptr = std::shared_ptr<ASTLALR1Base>;
+using t_astbaseptr = std::shared_ptr<ASTBase>;
 
 // argument vector type to pass to semantic rules
-using t_semanticargs = std::deque<t_lalrastbaseptr>;
+using t_semanticargs = std::deque<t_astbaseptr>;
 
 // semantic rule: returns an ast pointer and gets an argument vector
 using t_semanticrule = std::function<
-	t_lalrastbaseptr(bool /*full_match*/,
+	t_astbaseptr(bool /*full_match*/,
 	const t_semanticargs& /*args*/,
-	t_lalrastbaseptr /*retval*/ )>;
+	t_astbaseptr /*retval*/ )>;
 
 // map of semantic rules to their ids
 using t_semanticrules = std::unordered_map<t_semantic_id, t_semanticrule>;
 
+} // namespace lalr1
 
 #endif

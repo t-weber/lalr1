@@ -14,6 +14,8 @@
 #include <type_traits>
 #include <boost/algorithm/string.hpp>
 
+using namespace lalr1;
+
 
 template<template<std::size_t, class...> class t_func, class t_params, std::size_t ...seq>
 constexpr void constexpr_loop(const std::index_sequence<seq...>&, const t_params& params)

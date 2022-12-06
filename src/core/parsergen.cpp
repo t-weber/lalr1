@@ -29,6 +29,9 @@
 #include <boost/algorithm/string.hpp>
 
 
+namespace lalr1 {
+
+
 ParserGen::ParserGen(const CollectionPtr& coll) : m_collection{coll}
 { }
 
@@ -52,9 +55,15 @@ bool ParserGen::SaveParser(const std::string& filename_cpp, const std::string& c
 #ifndef __LALR1_PARSER_REC_ASC_H__
 #define __LALR1_PARSER_REC_ASC_H__
 
-#include "core/ast.h"
-#include "core/common.h"
-#include "core/stack.h"
+#if __has_include("core/ast.h")
+	#include "core/ast.h"
+	#include "core/common.h"
+	#include "core/stack.h"
+#else
+	#include <lalr1/ast.h>
+	#include <lalr1/common.h>
+	#include <lalr1/stack.h>
+#endif
 
 #include <unordered_set>
 #include <optional>
@@ -62,10 +71,10 @@ bool ParserGen::SaveParser(const std::string& filename_cpp, const std::string& c
 class %%PARSER_CLASS%%
 {
 public:
-	using t_token = t_toknode;                    // token data type
-	using t_tokens = std::vector<t_toknode>;      // token vector data type
-	using t_symbol = t_lalrastbaseptr;            // symbol data type
-	using t_stack = ParseStack<t_symbol>;         // symbol stack
+	using t_token = lalr1::t_toknode;            // token data type
+	using t_tokens = std::vector<t_token>;       // token vector data type
+	using t_symbol = lalr1::t_astbaseptr;        // symbol data type
+	using t_stack = lalr1::ParseStack<t_symbol>; // symbol stack
 
 	%%PARSER_CLASS%%() = default;
 	~%%PARSER_CLASS%%() = default;
@@ -74,7 +83,7 @@ public:
 
 	void SetDebug(bool b);
 
-	void SetSemanticRules(const t_semanticrules* rules);
+	void SetSemanticRules(const lalr1::t_semanticrules* rules);
 	t_symbol Parse(const t_tokens& input);
 
 protected:
@@ -82,36 +91,36 @@ protected:
 	void GetNextLookahead();
 	void PushLookahead();
 
-	static t_semanticargs GetArguments(t_stack& symbols, std::size_t num_rhs);
-	t_semanticargs GetCopyArguments(std::size_t num_rhs) const;
+	static lalr1::t_semanticargs GetArguments(t_stack& symbols, std::size_t num_rhs);
+	lalr1::t_semanticargs GetCopyArguments(std::size_t num_rhs) const;
 
-	const ActiveRule* GetActiveRule(t_semantic_id rule_id) const;
-	ActiveRule* GetActiveRule(t_semantic_id rule_id);
-	std::optional<t_index> GetActiveRuleHandle(t_semantic_id rule_id) const;
+	const lalr1::ActiveRule* GetActiveRule(lalr1::t_semantic_id rule_id) const;
+	lalr1::ActiveRule* GetActiveRule(lalr1::t_semantic_id rule_id);
+	std::optional<lalr1::t_index> GetActiveRuleHandle(lalr1::t_semantic_id rule_id) const;
 
-	bool CheckReturnSymbol(t_symbol& retsym, t_symbol_id expected_retid, t_semantic_id ruleid);
-	bool ApplyPartialRule(bool before_shift, t_semantic_id rule_id, std::size_t rule_len, t_symbol_id expected_retid);
-	bool ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_symbol_id expected_retid);
+	bool CheckReturnSymbol(t_symbol& retsym, lalr1::t_symbol_id expected_retid, lalr1::t_semantic_id ruleid);
+	bool ApplyPartialRule(bool before_shift, lalr1::t_semantic_id rule_id, std::size_t rule_len, lalr1::t_symbol_id expected_retid);
+	bool ApplyRule(lalr1::t_semantic_id rule_id, std::size_t rule_len, lalr1::t_symbol_id expected_retid, bool accepted);
 
-	void DebugMessageState(t_state_id state_id, const char* state_func) const;
-	void DebugMessageReturn(t_state_id state_id) const;
-	void DebugMessageReduce(std::size_t num_rhs, t_semantic_id rule_id, const char* rule_descr) const;
-	void DebugMessageJump(t_state_id state_id);
-	void DebugMessagePartialRule(std::size_t rulelen, t_semantic_id rule_id) const;
-	void TransitionError(t_state_id state_id) const;
+	void DebugMessageState(lalr1::t_state_id state_id, const char* state_func) const;
+	void DebugMessageReturn(lalr1::t_state_id state_id) const;
+	void DebugMessageReduce(std::size_t num_rhs, lalr1::t_semantic_id rule_id, const char* rule_descr) const;
+	void DebugMessageJump(lalr1::t_state_id state_id);
+	void DebugMessagePartialRule(std::size_t rulelen, lalr1::t_semantic_id rule_id) const;
+	void TransitionError(lalr1::t_state_id state_id) const;
 
 %%DECLARE_CLOSURES%%
 private:
 	// semantic rules
-	const t_semanticrules* m_semantics{};         // semantic rules
+	const lalr1::t_semanticrules* m_semantics{};  // semantic rules
 	const t_tokens* m_input{};                    // input tokens
 	t_stack m_symbols{};                          // currently active symbols
 
-	t_active_rules m_active_rules{};              // active partial rules
+	lalr1::t_active_rules m_active_rules{};       // active partial rules
 	std::size_t m_cur_rule_handle{0};             // the same for corresponding partial rules
 
 	t_token m_lookahead{nullptr};                 // lookahead token
-	t_symbol_id m_lookahead_id{0};                // lookahead identifier
+	lalr1::t_symbol_id m_lookahead_id{0};         // lookahead identifier
 	int m_lookahead_idx{-1};                      // index into input token array
 
 	bool m_debug{false};                          // output debug infos
@@ -119,7 +128,7 @@ private:
 
 	std::size_t m_dist_to_jump{0};                // return count between reduction and jump / non-terminal transition
 
-	static constexpr const t_symbol_id s_end_id{%%END_ID%%}; // end symbol id
+	static constexpr const lalr1::t_symbol_id s_end_id{%%END_ID%%}; // end symbol id
 };
 
 #endif)raw";
@@ -139,6 +148,8 @@ private:
 #include <string>
 #include <iostream>
 #include <sstream>
+
+using namespace lalr1;
 
 /**
  * print the symbol stack
@@ -514,7 +525,7 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 /**
  * apply a fully recognised semantic rule
  */
-bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_symbol_id expected_retid)
+bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_symbol_id expected_retid, bool accepted)
 {
 	if(t_active_rules::iterator iter_active_rule = m_active_rules.find(rule_id);
 		iter_active_rule != m_active_rules.end())
@@ -540,7 +551,9 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 		return false;
 	}
 
-	t_semanticargs args = GetArguments(m_symbols, rule_len);
+	// if this is the accepting rule, keep the arguments on the stack
+	// to also return them in the Parse() function
+	t_semanticargs args = accepted ? GetCopyArguments(rule_len) : GetArguments(m_symbols, rule_len);
 	t_symbol retval = nullptr;
 	if(ActiveRule *active_rule = GetActiveRule(rule_id); active_rule)
 		retval = active_rule->retval;
@@ -794,40 +807,40 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 				ostr_reduce << "\t\t{\n";
 
 				// in extended grammar, first production (rule 0) is of the form start -> ...
-				if(*rule_id == GetAcceptingRule())
-				{
+				bool accepted = (*rule_id == GetAcceptingRule());
+				if(accepted)
 					ostr_reduce << "\t\t\tm_accepted = true;\n";
-					ostr_reduce << "\t\t\tbreak;\n";
-				}
-				else
-				{
-					std::ostringstream rule_descr;
-					rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
 
+				std::ostringstream rule_descr;
+				rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
+
+				// in the table-based parser, num_rhs states are popped,
+				// here we have to count function returns to get to the new top state function
+				std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
+
+				// no more jump needed if the grammar has already been accepted
+				if(!accepted)
+				{
 					if(GetGenDebugCode())
 						ostr_reduce << "\t\t\tDebugMessageJump(" << closure_id << ");\n";
-
-					// in the table-based parser, num_rhs states are popped,
-					// here we have to count function returns to get to the new top state function
-					std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
 					ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
-
-					if(GetGenDebugCode())
-					{
-						ostr_reduce << "\t\t\tif(m_debug)\n";
-						ostr_reduce << "\t\t\t\tDebugMessageReduce("
-							<< num_rhs << ", "
-							<< *rule_id << ", "
-							<< "\"" << rule_descr.str() << "\");\n";
-					}
-
-					// execute semantic rule
-					const t_symbol_id lhs_id = elem->GetLhs()->GetId();
-					ostr_reduce << "\t\t\t// semantic rule " << *rule_id << ": " << rule_descr.str() << "\n";
-					ostr_reduce << "\t\t\tApplyRule(" << *rule_id << ", "
-						<< num_rhs << ", " << lhs_id << ");\n";
-					ostr_reduce << "\t\t\tbreak;\n";
 				}
+
+				if(GetGenDebugCode())
+				{
+					ostr_reduce << "\t\t\tif(m_debug)\n";
+					ostr_reduce << "\t\t\t\tDebugMessageReduce("
+						<< num_rhs << ", "
+						<< *rule_id << ", "
+						<< "\"" << rule_descr.str() << "\");\n";
+				}
+
+				// execute semantic rule
+				const t_symbol_id lhs_id = elem->GetLhs()->GetId();
+				ostr_reduce << "\t\t\t// semantic rule " << *rule_id << ": " << rule_descr.str() << "\n";
+				ostr_reduce << "\t\t\tApplyRule(" << *rule_id << ", "
+					<< num_rhs << ", " << lhs_id << ", " << accepted << ");\n";
+				ostr_reduce << "\t\t\tbreak;\n";
 
 				ostr_reduce << "\t\t}\n";  // end case
 
@@ -887,13 +900,18 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 							std::size_t i = 0;
 							for(const TerminalPtr& lookback : *lookbacks)
 							{
-								ostrErr << lookback->GetStrId();
+								ostrErr << lookback->GetStrId()
+									<< " (id="
+									<< lookback->GetId()
+									<< ")";
 								if(i < lookbacks->size()-1)
 									ostrErr << ", ";
 								++i;
 							}
 						}
-						ostrErr << " and lookahead terminal " << la->GetId();
+						ostrErr << " and lookahead terminal "
+							<< la->GetStrId()
+							<< " (id=" << la->GetId() << ")";
 						ostrErr << ".";
 
 						if(GetStopOnConflicts())
@@ -1093,3 +1111,5 @@ bool ParserGen::GetStopOnConflicts() const
 {
 	return m_collection->GetStopOnConflicts();
 }
+
+} // namespace lalr1

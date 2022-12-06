@@ -10,6 +10,7 @@
 
 #include <string>
 
+namespace lalr1 {
 
 class Options
 {
@@ -71,5 +72,6 @@ private:
 
 extern Options g_options;
 
+} // namespace lalr1
 
 #endif

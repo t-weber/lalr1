@@ -23,6 +23,9 @@
 #include <type_traits>
 
 
+namespace lalr1 {
+
+
 TableGen::TableGen(const CollectionPtr& coll) : m_collection{coll}
 { }
 
@@ -166,6 +169,7 @@ bool TableGen::CreateParseTables()
 		IndexTableKind tablekind = symIsTerm ?
 			IndexTableKind::TERMINAL : IndexTableKind::NONTERMINAL;
 
+		//std::cerr << "Getting table index for " << symTrans->GetStrId() << std::endl;
 		t_index symIdx = GetTableIndex(symTrans->GetId(), tablekind);
 		if(symIsTerm)
 		{
@@ -226,12 +230,16 @@ bool TableGen::CreateParseTables()
 				continue;
 			}
 
-			t_index rule_idx = GetTableIndex(*rule_id, IndexTableKind::SEMANTIC);
+			t_index rule_idx = GetTableIndex(
+				*rule_id, IndexTableKind::SEMANTIC);
 			set_tab_elem(m_numRhsSymsPerRule, rule_idx,
 				elem->GetRhs()->NumSymbols(false), 0);
-			set_tab_elem(m_ruleLhsIdx, rule_idx,
-				GetTableIndex(elem->GetLhs()->GetId(),
-					IndexTableKind::NONTERMINAL), 0);
+
+			//std::cerr << "Getting table index for lhs symbol " << elem->GetLhs()->GetStrId() << std::endl;
+			const t_index lhs_idx = GetTableIndex(
+				elem->GetLhs()->GetId(),
+				IndexTableKind::NONTERMINAL);
+			set_tab_elem(m_ruleLhsIdx, rule_idx, lhs_idx, 0);
 
 			auto& _reduce_row = action_reduce[closure->GetId()];
 			for(const TerminalPtr& la : elem->GetLookaheads())
@@ -409,3 +417,5 @@ bool TableGen::GetStopOnConflicts() const
 {
 	return m_collection->GetStopOnConflicts();
 }
+
+} // namespace lalr1

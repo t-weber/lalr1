@@ -28,6 +28,8 @@
 #endif
 
 
+namespace lalr1 {
+
 using t_clock = std::chrono::steady_clock;
 using t_timepoint = std::chrono::time_point<t_clock>;
 
@@ -92,5 +94,6 @@ std::string get_timestamp()
 	return ostr.str();
 }
 
+} // namespace lalr1
 
 #endif

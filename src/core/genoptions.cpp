@@ -8,6 +8,9 @@
 #include "genoptions.h"
 
 
+namespace lalr1 {
+
+
 /**
  * use printable operator character if possible
  */
@@ -77,3 +80,5 @@ bool GenOptions::GetUseNegativeTableValues() const
 
 void GenOptions::SetUseNegativeTableValues(bool b)
 { m_useNegativeTableValues = b; }
+
+} // namespace lalr1

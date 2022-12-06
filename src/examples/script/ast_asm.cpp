@@ -14,7 +14,7 @@
 /**
  * exit with an error
  */
-static void throw_err(const ASTBase* ast, const std::string& err)
+static void throw_err(const ::ASTBase* ast, const std::string& err)
 {
 	if(ast)
 	{

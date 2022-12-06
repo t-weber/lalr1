@@ -26,6 +26,8 @@
 #include <iostream>
 
 
+namespace lalr1 {
+
 class Element;
 using ElementPtr = std::shared_ptr<Element>;
 
@@ -99,6 +101,6 @@ private:
 	mutable std::unordered_map<t_hash, SymbolPtr> m_transition_symbol{};
 };
 
-
+} // namespace lalr1
 
 #endif

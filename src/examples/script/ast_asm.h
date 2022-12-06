@@ -68,7 +68,7 @@ private:
 	std::vector<std::string> m_cur_loop{}; // currently active loops in function
 
 	// stream positions where addresses need to be patched in
-	std::vector<std::tuple<std::string, std::streampos, t_vm_addr, const ASTBase*>>
+	std::vector<std::tuple<std::string, std::streampos, t_vm_addr, const ::ASTBase*>>
 		m_func_comefroms{};
 	std::vector<std::streampos> m_endfunc_comefroms{};
 	std::unordered_multimap<std::string, std::streampos> m_loop_begin_comefroms{};

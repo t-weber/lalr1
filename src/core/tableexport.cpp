@@ -28,6 +28,9 @@
 #include <boost/algorithm/string.hpp>
 
 
+namespace lalr1 {
+
+
 /**
  * save the parsing tables to C++ code
  */
@@ -49,29 +52,33 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "namespace _lalr1_tables {\n\n";
 
 	// save constants
-	ofstr << "const constexpr t_index err = 0x" << std::hex << ERROR_VAL << std::dec;
+	ofstr << "const constexpr lalr1::t_index err = 0x" << std::hex << ERROR_VAL << std::dec;
 	if constexpr(std::is_unsigned_v<t_index>)
 		ofstr << "u";
 	ofstr << ";\n";
 
-	ofstr << "const constexpr t_index acc = 0x" << std::hex << ACCEPT_VAL << std::dec;
+	ofstr << "const constexpr lalr1::t_index acc = 0x" << std::hex << ACCEPT_VAL << std::dec;
 	if constexpr(std::is_unsigned_v<t_index>)
 		ofstr << "u";
 	ofstr << ";\n";
 
-	ofstr << "const constexpr t_symbol_id eps = 0x" << std::hex << EPS_IDENT << std::dec;
+	ofstr << "const constexpr lalr1::t_symbol_id eps = 0x" << std::hex << EPS_IDENT << std::dec;
 	if constexpr(std::is_unsigned_v<t_symbol_id>)
 		ofstr << "u";
 	ofstr << ";\n";
 
-	ofstr << "const constexpr t_symbol_id end = 0x" << std::hex << END_IDENT << std::dec;
+	ofstr << "const constexpr lalr1::t_symbol_id end = 0x" << std::hex << END_IDENT << std::dec;
 	if constexpr(std::is_unsigned_v<t_symbol_id>)
 		ofstr << "u";
 	ofstr << ";\n";
 
-	ofstr << "const constexpr t_index start_idx = " << GetStartingState();
+	ofstr << "const constexpr lalr1::t_index start_idx = " << GetStartingState();
 	if constexpr(std::is_unsigned_v<t_index>)
 		ofstr << "u";
+	ofstr << ";\n";
+
+	t_index acc_rule_idx = GetTableIndex(GetAcceptingRule(), IndexTableKind::SEMANTIC);
+	ofstr << "const constexpr lalr1::t_index acc_idx = " << acc_rule_idx;
 	ofstr << ";\n";
 
 	ofstr << "\n";
@@ -102,7 +109,7 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 	// terminal symbol indices
 	const t_mapIdIdx& mapTermIdx = GetTermIndexMap();
 	const t_mapIdStrId& mapTermStrIds = GetTermStringIdMap();
-	ofstr << "const t_mapIdIdx map_term_idx\n{{\n";
+	ofstr << "const lalr1::t_mapIdIdx map_term_idx\n{{\n";
 	for(const auto& [id, idx] : mapTermIdx)
 	{
 		ofstr << "\t{ ";
@@ -130,7 +137,7 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 	// non-terminal symbol indices
 	const t_mapIdIdx& mapNonTermIdx = GetNontermIndexMap();
 	const t_mapIdStrId& mapNonTermStrIds = GetNontermStringIdMap();
-	ofstr << "const t_mapIdIdx map_nonterm_idx\n{{\n";
+	ofstr << "const lalr1::t_mapIdIdx map_nonterm_idx\n{{\n";
 	for(const auto& [id, idx] : mapNonTermIdx)
 	{
 		ofstr << "\t{ " << id << ", " << idx << " },";
@@ -148,21 +155,21 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 
 	// semantic rule indices
 	const t_mapIdIdx& mapSemanticIdx = GetSemanticIndexMap();
-	ofstr << "const t_mapSemanticIdIdx map_semantic_idx\n{{\n";
+	ofstr << "const lalr1::t_mapSemanticIdIdx map_semantic_idx\n{{\n";
 	for(const auto& [id, idx] : mapSemanticIdx)
 		ofstr << "\t{ " << id << ", " << idx << " },\n";
 	ofstr << "}};\n\n";
 
 	// number of symbols on right-hand side of rule
 	const auto& numRhsSymsPerRule = GetNumRhsSymbolsPerRule();
-	ofstr << "const t_vecIdx vec_num_rhs_syms{{ ";
+	ofstr << "const lalr1::t_vecIdx vec_num_rhs_syms{{ ";
 	for(const auto& val : numRhsSymsPerRule)
 		ofstr << val << ", ";
 	ofstr << "}};\n\n";
 
 	// index of lhs nonterminal in rule
 	const auto& ruleLhsIdx = GetRuleLhsIndices();
-	ofstr << "const t_vecIdx vec_lhs_idx{{ ";
+	ofstr << "const lalr1::t_vecIdx vec_lhs_idx{{ ";
 	for(const auto& val : ruleLhsIdx)
 		ofstr << val << ", ";
 	ofstr << "}};\n\n";
@@ -171,8 +178,8 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 
 
 	// lalr(1) tables getter
-	ofstr << "static\nstd::tuple<const t_table*, const t_table*, const t_table*,\n";
-	ofstr << "\tconst t_vecIdx*, const t_vecIdx*>\n";
+	ofstr << "static\nstd::tuple<const lalr1::t_table*, const lalr1::t_table*, const lalr1::t_table*,\n";
+	ofstr << "\tconst lalr1::t_vecIdx*, const lalr1::t_vecIdx*>\n";
 	ofstr << "get_lalr1_tables()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n";
 	ofstr << "\t\t&_lalr1_tables::tab_action_shift, &_lalr1_tables::tab_action_reduce, &_lalr1_tables::tab_jump,\n";
@@ -180,8 +187,8 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "}\n\n";
 
 	// partial match tables getter
-	ofstr << "[[maybe_unused]] static\nstd::tuple<const t_table*, const t_table*,\n";
-	ofstr << "\tconst t_table*, const t_table*>\n";
+	ofstr << "[[maybe_unused]] static\nstd::tuple<const lalr1::t_table*, const lalr1::t_table*,\n";
+	ofstr << "\tconst lalr1::t_table*, const lalr1::t_table*>\n";
 	ofstr << "get_lalr1_partials_tables()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n";
 	if(GetGenPartialMatches())
@@ -197,17 +204,17 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "}\n\n";
 
 	// index maps getter
-	ofstr << "static\nstd::tuple<const t_mapIdIdx*, const t_mapIdIdx*, const t_mapSemanticIdIdx*>\n";
+	ofstr << "static\nstd::tuple<const lalr1::t_mapIdIdx*, const lalr1::t_mapIdIdx*, const lalr1::t_mapSemanticIdIdx*>\n";
 	ofstr << "get_lalr1_table_indices()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n";
 	ofstr << "\t\t&_lalr1_tables::map_term_idx, &_lalr1_tables::map_nonterm_idx, &_lalr1_tables::map_semantic_idx);\n";
 	ofstr << "}\n\n";
 
 	// constants getter
-	ofstr << "static constexpr\nstd::tuple<t_index, t_index, t_symbol_id, t_symbol_id, t_index>\n";
+	ofstr << "static constexpr\nstd::tuple<lalr1::t_index, lalr1::t_index, lalr1::t_symbol_id, lalr1::t_symbol_id, lalr1::t_index, lalr1::t_index>\n";
 	ofstr << "get_lalr1_constants()\n{\n";
 	ofstr << "\treturn std::make_tuple(\n";
-	ofstr << "\t\t_lalr1_tables::err, _lalr1_tables::acc, _lalr1_tables::eps, _lalr1_tables::end, _lalr1_tables::start_idx);\n";
+	ofstr << "\t\t_lalr1_tables::err, _lalr1_tables::acc, _lalr1_tables::eps, _lalr1_tables::end, _lalr1_tables::start_idx, _lalr1_tables::acc_idx);\n";
 	ofstr << "}\n\n";
 
 	ofstr << "\n#endif" << std::endl;
@@ -242,7 +249,6 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 		ofstr << "\tprivate final int acc = -2;\n";
 		ofstr << "\tprivate final int end = -1;\n";
 		ofstr << "\tprivate final int eps = -2;\n";
-		ofstr << "\tprivate final int start = " << GetStartingState() << ";\n";
 	}
 	else
 	{
@@ -266,6 +272,10 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 			ofstr << "u";
 		ofstr << ";\n";
 	}
+
+	t_index acc_rule_idx = GetTableIndex(GetAcceptingRule(), IndexTableKind::SEMANTIC);
+	ofstr << "\tprivate final int accept = " << acc_rule_idx << ";\n";
+	ofstr << "\tprivate final int start = " << GetStartingState() << ";\n";
 
 	ofstr << "\n";
 
@@ -428,7 +438,6 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 		ofstr << "\t\"acc\" : " << special_values[ACCEPT_VAL] << ",\n";
 		ofstr << "\t\"eps\" : " << special_idents[EPS_IDENT] << ",\n";
 		ofstr << "\t\"end\" : " << special_idents[END_IDENT] << ",\n";
-		ofstr << "\t\"start\" : " << GetStartingState() << "\n";
 	}
 	else
 	{
@@ -439,8 +448,12 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 		ofstr << "\t\"err\" : " << ERROR_VAL << ",\n";
 		ofstr << "\t\"acc\" : " << ACCEPT_VAL << ",\n";
 		ofstr << "\t\"eps\" : " << EPS_IDENT << ",\n";
-		ofstr << "\t\"end\" : " << END_IDENT << "\n";
+		ofstr << "\t\"end\" : " << END_IDENT << ",\n";
 	}
+
+	t_index acc_rule_idx = GetTableIndex(GetAcceptingRule(), IndexTableKind::SEMANTIC);
+	ofstr << "\t\"accept\" : " << acc_rule_idx << ",\n";
+	ofstr << "\t\"start\" : " << GetStartingState() << "\n";
 
 	ofstr << "},\n\n";
 
@@ -607,11 +620,13 @@ bool TableGen::SaveParseTablesRS(const std::string& file) const
 	ofstr << "\n";
 
 	// constants
+	t_index acc_rule_idx = GetTableIndex(GetAcceptingRule(), IndexTableKind::SEMANTIC);
 	ofstr << "pub const ERR : " << ty_idx << " = 0x" << std::hex << ERROR_VAL << std::dec << ";\n";
 	ofstr << "pub const ACC : " << ty_idx << " = 0x" << std::hex << ACCEPT_VAL << std::dec << ";\n";
 	ofstr << "pub const EPS : " << ty_sym << " = 0x" << std::hex << EPS_IDENT << std::dec << ";\n";
 	ofstr << "pub const END : " << ty_sym << " = 0x" << std::hex << END_IDENT << std::dec << ";\n";
 	ofstr << "pub const START : " << ty_idx << " = 0x" << std::hex << GetStartingState() << std::dec << ";\n";
+	ofstr << "pub const ACCEPT : " << ty_idx << " = 0x" << std::hex << acc_rule_idx << std::dec << ";\n";
 
 	ofstr << "\n";
 
@@ -730,3 +745,5 @@ bool TableGen::SaveParseTablesRS(const std::string& file) const
 	ofstr << "}\n";  // end of module
 	return true;
 }
+
+} // namespace lalr1

@@ -27,6 +27,8 @@
 #include <boost/program_options.hpp>
 namespace args = boost::program_options;
 
+using namespace lalr1;
+
 
 static bool lr1_create_parser(
 	bool create_ascent_parser = true, bool create_tables = false,

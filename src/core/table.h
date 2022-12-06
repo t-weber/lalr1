@@ -19,6 +19,8 @@
 #include "types.h"
 
 
+namespace lalr1 {
+
 template<
 	class T = std::size_t, template<class...>
 		class t_cont = std::vector>
@@ -125,7 +127,7 @@ public:
 	void SaveCXX(std::ostream& ostr, const std::string& var,
 		const std::string& row_label = "", const std::string& col_label = "") const
 	{
-		ostr << "const t_table " << var << "{";
+		ostr << "const lalr1::t_table " << var << "{";
 		ostr << size1();
 		if(row_label.size())
 			ostr << " /*" << row_label << "*/";
@@ -354,5 +356,6 @@ private:
 	T m_fillval{};
 };
 
+} // namespace lalr1
 
 #endif

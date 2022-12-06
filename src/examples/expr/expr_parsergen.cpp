@@ -24,6 +24,9 @@
 #include <cstdint>
 
 
+using namespace lalr1;
+
+
 #define DEBUG_PARSERGEN   1
 #define USE_RECASC        0
 

@@ -17,6 +17,9 @@
 #include <functional>
 
 
+namespace lalr1 {
+
+
 Parser::Parser(const Parser& parser)
 {
 	this->operator=(parser);
@@ -35,6 +38,8 @@ Parser& Parser::operator=(const Parser& parser)
 	m_numRhsSymsPerRule = parser.m_numRhsSymsPerRule;
 	m_vecLhsIndices = parser.m_vecLhsIndices;
 	m_semantics = parser.m_semantics;
+	m_starting_state = parser.m_starting_state;
+	m_accepting_rule = parser.m_accepting_rule;
 	m_debug = parser.m_debug;
 
 	return *this;
@@ -65,7 +70,7 @@ std::string get_line_numbers(const t_toknode& node)
  * debug output of the stacks
  */
 static void print_stacks(const ParseStack<t_state_id>& states,
-	const ParseStack<t_lalrastbaseptr>& symbols,
+	const ParseStack<t_astbaseptr>& symbols,
 	std::ostream& ostr)
 {
 	ostr << "\tState stack [" << states.size() << "]: ";
@@ -83,7 +88,7 @@ static void print_stacks(const ParseStack<t_state_id>& states,
 	i = 0;
 	for(auto iter = symbols.rbegin(); iter != symbols.rend(); std::advance(iter, 1))
 	{
-		const t_lalrastbaseptr& sym = (*iter);
+		const t_astbaseptr& sym = (*iter);
 
 		ostr << sym->GetTableIndex();
 		if(sym->IsTerminal() && isprintable(sym->GetId()))
@@ -126,7 +131,7 @@ static void print_input_token(t_index inputidx, const t_toknode& curtok,
  */
 std::tuple<std::optional<t_index>, std::optional<std::size_t>>
 Parser::GetPartialRule(t_state_id topstate, const t_toknode& curtok,
-	const ParseStack<t_lalrastbaseptr>& symbols, bool term) const
+	const ParseStack<t_astbaseptr>& symbols, bool term) const
 {
 	const bool has_partial_tables =
 		m_tabPartialsRulesTerm && m_tabPartialsMatchLenTerm &&
@@ -188,6 +193,9 @@ void Parser::SetSemanticIdxMap(const t_mapSemanticIdIdx* map)
  */
 t_semantic_id Parser::GetRuleId(t_index idx) const
 {
+	if(idx == ACCEPT_VAL)
+		idx = m_accepting_rule;
+
 	if(auto iter = m_mapSemanticIdx_inv.find(idx); iter != m_mapSemanticIdx_inv.end())
 		return iter->second;
 
@@ -199,11 +207,11 @@ t_semantic_id Parser::GetRuleId(t_index idx) const
 /**
  * parse the input tokens using the lalr(1) tables
  */
-t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
+t_astbaseptr Parser::Parse(const t_toknodes& input) const
 {
 	// parser stacks
 	ParseStack<t_state_id> states;
-	ParseStack<t_lalrastbaseptr> symbols;
+	ParseStack<t_astbaseptr> symbols;
 
 	// starting state
 	states.push(m_starting_state);
@@ -339,6 +347,9 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 		if(m_debug)
 			print_active_state(std::cout);
 
+		bool accepted = false;
+		t_toknode accepted_topnode;
+
 		// neither a shift nor a reduce defined
 		if(newstate == ERROR_VAL && rule_idx == ERROR_VAL)
 		{
@@ -374,7 +385,9 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 			if(m_debug)
 				std::cout << "\tAccepting." << std::endl;
 
-			return symbols.top();
+			accepted = true;
+			accepted_topnode = symbols.top();
+			rule_idx = m_accepting_rule;
 		}
 
 		// shift
@@ -465,34 +478,41 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 					std::to_string(rule_id) + ".");
 			}
 
-			t_lalrastbaseptr retval = nullptr;
+			t_astbaseptr retval = nullptr;
 			if(active_rule)
 				retval = active_rule->retval;
-			t_lalrastbaseptr reducedSym = rule(true, args, retval);
+			t_astbaseptr reducedSym = rule(true, args, retval);
 
 			// set return symbol type
 			reducedSym->SetTableIndex((*m_vecLhsIndices)[rule_idx]);
 
-			topstate = states.top();
-			if(m_debug)
-				print_active_state(std::cout);
-
-			t_state_id jumpstate = (*m_tabJump)(topstate, reducedSym->GetTableIndex());
-			symbols.emplace(std::move(reducedSym));
-
-			// partial rules
-			apply_partial_rule(false);
-
-			states.push(jumpstate);
-
-			if(m_debug)
+			// no more needed if the grammar has already been accepted
+			if(!accepted)
 			{
-				std::cout << "\tJumping from state " << topstate
-					<< " to state " << jumpstate
-					<< " (pushing jump state " << jumpstate << ")"
-					<< "." << std::endl;
+				topstate = states.top();
+				if(m_debug)
+					print_active_state(std::cout);
+
+				t_state_id jumpstate = (*m_tabJump)(topstate, reducedSym->GetTableIndex());
+				symbols.emplace(std::move(reducedSym));
+
+				// partial rules
+				apply_partial_rule(false);
+
+				states.push(jumpstate);
+
+				if(m_debug)
+				{
+					std::cout << "\tJumping from state " << topstate
+						<< " to state " << jumpstate
+						<< " (pushing jump state " << jumpstate << ")"
+						<< "." << std::endl;
+				}
 			}
 		}
+
+		if(accepted)
+			return accepted_topnode;
 	}
 
 	// parsing failed
@@ -500,3 +520,5 @@ t_lalrastbaseptr Parser::Parse(const t_toknodes& input) const
 		std::cout << "\tNot accepting." << std::endl;
 	return nullptr;
 }
+
+} // namespace lalr1
