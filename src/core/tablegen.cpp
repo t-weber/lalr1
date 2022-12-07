@@ -196,7 +196,7 @@ bool TableGen::CreateParseTables()
 				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
 				set_tab_elem(partials_rule_term[stateFrom->GetId()], symIdx, rule_idx);
 				set_tab_elem(partials_matchlen_term[stateFrom->GetId()], symIdx, rule_len, 0);
-				// TODO: also save lhs_id in table to check agains semantic rule's return type
+				// TODO: also save lhs_id to table to check against semantic rule's return type
 			}
 
 			// unique partial match for non-terminal transition?
@@ -207,7 +207,7 @@ bool TableGen::CreateParseTables()
 				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
 				set_tab_elem(partials_rule_nonterm[stateFrom->GetId()], symIdx, rule_idx);
 				set_tab_elem(partials_matchlen_nonterm[stateFrom->GetId()], symIdx, rule_len, 0);
-				// TODO: also save lhs_id in table to check agains semantic rule's return type
+				// TODO: also save lhs_id to table to check against semantic rule's return type
 			}
 		}
 	}
@@ -230,8 +230,7 @@ bool TableGen::CreateParseTables()
 				continue;
 			}
 
-			t_index rule_idx = GetTableIndex(
-				*rule_id, IndexTableKind::SEMANTIC);
+			t_index rule_idx = GetTableIndex(*rule_id, IndexTableKind::SEMANTIC);
 			set_tab_elem(m_numRhsSymsPerRule, rule_idx,
 				elem->GetRhs()->NumSymbols(false), 0);
 
@@ -240,12 +239,12 @@ bool TableGen::CreateParseTables()
 				elem->GetLhs()->GetId(),
 				IndexTableKind::NONTERMINAL);
 			set_tab_elem(m_ruleLhsIdx, rule_idx, lhs_idx, 0);
+			// TODO: also save lhs id to table to check against semantic rule's return type
 
 			auto& _reduce_row = action_reduce[closure->GetId()];
 			for(const TerminalPtr& la : elem->GetLookaheads())
 			{
-				const t_index laIdx = GetTableIndex(
-					la->GetId(), IndexTableKind::TERMINAL);
+				const t_index laIdx = GetTableIndex(la->GetId(), IndexTableKind::TERMINAL);
 
 				// in extended grammar, first production (rule 0) is of the form start -> ...
 				if(*rule_id == GetAcceptingRule())

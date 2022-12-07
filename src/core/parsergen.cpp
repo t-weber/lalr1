@@ -106,7 +106,7 @@ protected:
 	void DebugMessageReturn(lalr1::t_state_id state_id) const;
 	void DebugMessageReduce(std::size_t num_rhs, lalr1::t_semantic_id rule_id, const char* rule_descr) const;
 	void DebugMessageJump(lalr1::t_state_id state_id);
-	void DebugMessagePartialRule(std::size_t rulelen, lalr1::t_semantic_id rule_id) const;
+	void DebugMessagePartialRule(bool before_shift, std::size_t rulelen, lalr1::t_semantic_id rule_id) const;
 	void TransitionError(lalr1::t_state_id state_id) const;
 
 %%DECLARE_CLOSURES%%
@@ -306,15 +306,20 @@ void %%PARSER_CLASS%%::DebugMessageJump(t_state_id state_id)
 /**
  * debug message when a partial semantic rule is applied
  */
-void %%PARSER_CLASS%%::DebugMessagePartialRule(std::size_t rulelen,
-	t_semantic_id rule_id) const
+void %%PARSER_CLASS%%::DebugMessagePartialRule(bool before_shift,
+	std::size_t rulelen, t_semantic_id rule_id) const
 {
 	std::optional<t_index> rule_handle = GetActiveRuleHandle(rule_id);
 
 	std::cout << "Partially matched rule #" << rule_id;
 	if(rule_handle)
 		std::cout << " (handle id " << *rule_handle << ")";
-	std::cout << " of length " << rulelen << "." << std::endl;
+	std::cout << " of length " << rulelen;
+	if(before_shift)
+		std::cout << " (before terminal)";
+	else
+		std::cout << " (before non-terminal)";
+	std::cout << "." << std::endl;
 }
 
 /**
@@ -453,6 +458,7 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 
 	bool already_seen_active_rule = false;
 	bool insert_new_active_rule = false;
+	int seen_tokens_old = -1;
 
 	t_active_rules::iterator iter_active_rule = m_active_rules.find(rule_id);
 	if(iter_active_rule != m_active_rules.end())
@@ -461,6 +467,8 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 		if(!rulestack.empty())
 		{
 			ActiveRule& active_rule = rulestack.top();
+			seen_tokens_old = int(active_rule.seen_tokens);
+
 			if(before_shift)
 			{
 				if(active_rule.seen_tokens < rule_len)
@@ -485,11 +493,13 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 	{
 		iter_active_rule = m_active_rules.emplace(
 			std::make_pair(rule_id, t_active_rule_stack{})).first;
-		insert_new_active_rule = true;          // no active rule yet
+		insert_new_active_rule = true;  // no active rule yet
 	}
 
 	if(insert_new_active_rule)
 	{
+		seen_tokens_old = -1;
+
 		ActiveRule active_rule{
 			.seen_tokens = rule_len,
 			.handle = m_cur_rule_handle++,
@@ -514,12 +524,20 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 		if(active_rule)
 			retval = active_rule->retval;
 
+		if(!before_shift || seen_tokens_old < int(rule_len) - 1)
+		{
+			retval = rule(false, args, retval);
+			CheckReturnSymbol(retval, expected_retid, rule_id);
+		}
+
 		// since we already know the next terminal in a shift, include it directly
 		if(before_shift)
+		{
 			args.push_back(m_lookahead);
 
-		retval = rule(false, args, retval);
-		CheckReturnSymbol(retval, expected_retid, rule_id);
+			retval = rule(false, args, retval);
+			CheckReturnSymbol(retval, expected_retid, rule_id);
+		}
 
 		if(active_rule)
 			active_rule->retval = retval;
@@ -744,14 +762,15 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 					ostr_partial << "\t\t\t// partial semantic rule "
 						<< rule_id << " with " << rulelen << " recognised argument(s)\n";
 					ostr_partial << "\t\t\tbool applied = ApplyPartialRule(true, "
-						<< rule_id << ", " << rulelen << ", " << lhs_id << ");\n";
+						<< rule_id << ", " << (rulelen + 1 /* + lookahead*/)
+						<< ", " << lhs_id << ");\n";
 					has_partial = true;
 
 					if(GetGenDebugCode())
 					{
 						ostr_partial << "\t\t\tif(m_debug && applied)\n";
-						ostr_partial << "\t\t\t\tDebugMessagePartialRule("
-							<< (rulelen + 1) /*with lookahead*/
+						ostr_partial << "\t\t\t\tDebugMessagePartialRule(true, "
+							<< (rulelen + 1 /* + lookahead */)
 							<< ", " << rule_id << ");\n";
 					}
 				}
@@ -1037,7 +1056,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 					if(GetGenDebugCode())
 					{
 						ostr_partial << "\t\t\t\tif(m_debug && applied)\n";
-						ostr_partial << "\t\t\t\t\tDebugMessagePartialRule("
+						ostr_partial << "\t\t\t\t\tDebugMessagePartialRule(false, "
 							<< rulelen << ", " << rule_id << ");\n";
 					}
 				}

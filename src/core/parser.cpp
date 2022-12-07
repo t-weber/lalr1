@@ -253,12 +253,17 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 			auto [partialrule_idx, partialmatchlen] = this->GetPartialRule(
 				topstate, curtok, symbols, is_term);
 
+			// directly count the following lookahead terminal
+			if(before_shift && partialmatchlen)
+				++*partialmatchlen;
+
 			if(!partialrule_idx || *partialrule_idx == ERROR_VAL)
 				return;
 
 			t_semantic_id partialrule_id = GetRuleId(*partialrule_idx);
 			bool already_seen_active_rule = false;
 			bool insert_new_active_rule = false;
+			int seen_tokens_old = -1;
 
 			t_active_rules::iterator iter_active_rule = active_rules.find(partialrule_id);
 			if(iter_active_rule != active_rules.end())
@@ -267,6 +272,8 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				if(!rulestack.empty())
 				{
 					ActiveRule& active_rule = rulestack.top();
+					seen_tokens_old = int(active_rule.seen_tokens);
+
 					if(before_shift)
 					{
 						if(active_rule.seen_tokens < *partialmatchlen)
@@ -301,6 +308,8 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 
 			if(insert_new_active_rule)
 			{
+				seen_tokens_old = -1;
+
 				ActiveRule active_rule{
 					.seen_tokens = *partialmatchlen,
 					.handle = cur_rule_handle++,
@@ -332,22 +341,37 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				// get the arguments for the semantic rule
 				std::deque<t_astbaseptr> args = symbols.topN<std::deque>(*partialmatchlen);
 
+				if(!before_shift || seen_tokens_old < int(*partialmatchlen) - 1)
+				{
+					// run the semantic rule
+					active_rule.retval = rule(false, args, active_rule.retval);
+				}
+
 				// since we already know the next terminal in a shift, include it directly
 				if(before_shift)
 				{
 					args.push_back(curtok);
-					++*partialmatchlen;
-				}
 
-				// run the semantic rule
-				active_rule.retval = rule(false, args, active_rule.retval);
+					// run the semantic rule again
+					active_rule.retval = rule(false, args, active_rule.retval);
+				}
 
 				if(m_debug)
 				{
 					std::cout << "\tPartially matched rule #" << partialrule_id
 						<< " (handle id " << active_rule.handle << ")"
-						<< " of length " << *partialmatchlen
-						<< "." << std::endl;
+						<< " of length " << *partialmatchlen;
+					if(before_shift)
+					{
+							if(seen_tokens_old < int(*partialmatchlen) - 1)
+								std::cout << " and length " << (*partialmatchlen - 1);
+							std::cout << " (before terminal)";
+					}
+					else
+					{
+						std::cout << " (before non-terminal)";
+					}
+					std::cout << "." << std::endl;
 				}
 			}
 		};  // apply_partial_rule()
