@@ -424,10 +424,14 @@ bool %%PARSER_CLASS%%::CheckReturnSymbol(t_symbol& retsym, t_symbol_id expected_
 	t_symbol_id retid = retsym->GetId();
 	if(retid != expected_retid)
 	{
-		std::cerr << "Warning: Expected return symbol id " << expected_retid
-			<< " in rule #" << rule_id
-			<< ", but received id " << retid << "."
-			<< std::endl;
+		if(m_debug)
+		{
+			std::cerr << "Warning: Expected return symbol id " << expected_retid
+				<< " in rule #" << rule_id
+				<< ", but received id " << retid << "."
+				<< std::endl;
+		}
+
 		retsym->SetId(expected_retid);
 		return false;
 	}
@@ -509,6 +513,10 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 		ActiveRule *active_rule = GetActiveRule(rule_id);
 		if(active_rule)
 			retval = active_rule->retval;
+
+		// since we already know the next terminal in a shift, include it directly
+		if(before_shift)
+			args.push_back(m_lookahead);
 
 		retval = rule(false, args, retval);
 		CheckReturnSymbol(retval, expected_retid, rule_id);
@@ -743,7 +751,8 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 					{
 						ostr_partial << "\t\t\tif(m_debug && applied)\n";
 						ostr_partial << "\t\t\t\tDebugMessagePartialRule("
-							<< rulelen << ", " << rule_id << ");\n";
+							<< (rulelen + 1) /*with lookahead*/
+							<< ", " << rule_id << ");\n";
 					}
 				}
 			}

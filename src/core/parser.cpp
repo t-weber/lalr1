@@ -329,10 +329,18 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				t_active_rule_stack& rulestack = iter_active_rule->second;
 				ActiveRule& active_rule = rulestack.top();
 
-				active_rule.retval = rule(
-					false,
-					symbols.topN<std::deque>(*partialmatchlen),
-					active_rule.retval);
+				// get the arguments for the semantic rule
+				std::deque<t_astbaseptr> args = symbols.topN<std::deque>(*partialmatchlen);
+
+				// since we already know the next terminal in a shift, include it directly
+				if(before_shift)
+				{
+					args.push_back(curtok);
+					++*partialmatchlen;
+				}
+
+				// run the semantic rule
+				active_rule.retval = rule(false, args, active_rule.retval);
 
 				if(m_debug)
 				{
@@ -342,7 +350,7 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 						<< "." << std::endl;
 				}
 			}
-		};
+		};  // apply_partial_rule()
 
 		if(m_debug)
 			print_active_state(std::cout);
