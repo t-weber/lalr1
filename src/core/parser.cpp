@@ -69,8 +69,10 @@ std::string get_line_numbers(const t_toknode& node)
 /**
  * debug output of the stacks
  */
-static void print_stacks(const ParseStack<t_state_id>& states,
+static void print_stacks(
+	const ParseStack<t_state_id>& states,
 	const ParseStack<t_astbaseptr>& symbols,
+	const ParseStack<t_index>& symbols_exp,
 	std::ostream& ostr)
 {
 	ostr << "\tState stack [" << states.size() << "]: ";
@@ -86,9 +88,17 @@ static void print_stacks(const ParseStack<t_state_id>& states,
 
 	ostr << "\tSymbol stack [" << symbols.size() << "]: ";
 	i = 0;
-	for(auto iter = symbols.rbegin(); iter != symbols.rend(); std::advance(iter, 1))
+	auto iter_exp = symbols_exp.rbegin();
+	for(auto iter = symbols.rbegin(); iter != symbols.rend();
+		std::advance(iter, 1), std::advance(iter_exp, 1))
 	{
 		const t_astbaseptr& sym = (*iter);
+		if(!sym)
+		{
+			const t_index exp_sym_id = *iter_exp;
+			ostr << exp_sym_id << " [exp nt], ";
+			continue;
+		}
 
 		ostr << sym->GetTableIndex();
 		if(sym->IsTerminal() && isprintable(sym->GetId()))
@@ -130,8 +140,12 @@ static void print_input_token(t_index inputidx, const t_toknode& curtok,
  * get the semantic rule index and the matching length of a partial match
  */
 std::tuple<std::optional<t_index>, std::optional<std::size_t>>
-Parser::GetPartialRule(t_state_id topstate, const t_toknode& curtok,
-	const ParseStack<t_astbaseptr>& symbols, bool term) const
+Parser::GetPartialRule(
+	t_state_id topstate,
+	const t_toknode& curtok,
+	const ParseStack<t_astbaseptr>& symbols,
+	const ParseStack<t_index>& symbols_exp,
+	bool term) const
 {
 	const bool has_partial_tables =
 		m_tabPartialsRulesTerm && m_tabPartialsMatchLenTerm &&
@@ -151,11 +165,23 @@ Parser::GetPartialRule(t_state_id topstate, const t_toknode& curtok,
 	else
 	{
 		// otherwise look for nonterminal transitions
-		if(symbols.size() && !symbols.top()->IsTerminal())
+		if(symbols.size())
 		{
-			const t_index idx = symbols.top()->GetTableIndex();
-			partialrule_idx = (*m_tabPartialsRulesNonTerm)(topstate, idx);
-			partialmatchlen = (*m_tabPartialsMatchLenNonTerm)(topstate, idx);
+			bool topsym_isterm = false;
+			t_index topsym_idx = symbols_exp.top();
+
+			const t_astbaseptr& topsym = symbols.top();
+			if(topsym)
+			{
+				topsym_isterm = topsym->IsTerminal();
+				topsym_idx = topsym->GetTableIndex();
+			}
+
+			if(!topsym_isterm)
+			{
+				partialrule_idx = (*m_tabPartialsRulesNonTerm)(topstate, topsym_idx);
+				partialmatchlen = (*m_tabPartialsMatchLenNonTerm)(topstate, topsym_idx);
+			}
 		}
 	}
 
@@ -210,8 +236,13 @@ t_semantic_id Parser::GetRuleId(t_index idx) const
 t_astbaseptr Parser::Parse(const t_toknodes& input) const
 {
 	// parser stacks
-	ParseStack<t_state_id> states;
-	ParseStack<t_astbaseptr> symbols;
+	// Note that m_symbols_exp is only needed in the case a semantic rule
+	// returns a nullptr and thus doesn't provide a symbol id.
+	// One could alternatively fully separate the symbol id tracking and the
+	// user-provided symbol lvalue (like in the external scripting modules).
+	ParseStack<t_state_id> states;     // state number stack
+	ParseStack<t_astbaseptr> symbols;  // symbol stack
+	ParseStack<t_index> symbols_exp;   // expected symbol table index stack
 
 	// starting state
 	states.push(m_starting_state);
@@ -237,22 +268,23 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 
 		// debug-print the current parser state
 		auto print_active_state = [&topstate, &inputidx, &curtok,
-			&states, &symbols, this](std::ostream& ostr)
+			&states, &symbols, &symbols_exp, this](std::ostream& ostr)
 		{
 			ostr << "\nState " << topstate << " active." << std::endl;
 			print_input_token(inputidx, curtok, ostr, m_end);
-			print_stacks(states, symbols, ostr);
+			print_stacks(states, symbols, symbols_exp, ostr);
 		};
 
 		// run a partial rule related to either a terminal or a nonterminal transition
-		auto apply_partial_rule = [this, &topstate, &curtok, &symbols,
+		auto apply_partial_rule = [this, &topstate, &curtok, &symbols, &symbols_exp,
 			&active_rules, &cur_rule_handle](bool is_term)
 		{
 			bool before_shift = is_term;  // before jump otherwise
 
 			auto [partialrule_idx, partialmatchlen] = this->GetPartialRule(
-				topstate, curtok, symbols, is_term);
+				topstate, curtok, symbols, symbols_exp, is_term);
 
+			std::size_t arglen = partialmatchlen ? *partialmatchlen : 0;
 			// directly count the following lookahead terminal
 			if(before_shift && partialmatchlen)
 				++*partialmatchlen;
@@ -339,7 +371,7 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				ActiveRule& active_rule = rulestack.top();
 
 				// get the arguments for the semantic rule
-				std::deque<t_astbaseptr> args = symbols.topN<std::deque>(*partialmatchlen);
+				std::deque<t_astbaseptr> args = symbols.topN<std::deque>(arglen);
 
 				if(!before_shift || seen_tokens_old < int(*partialmatchlen) - 1)
 				{
@@ -446,6 +478,8 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 
 			states.push(newstate);
 			symbols.emplace(std::move(curtok));
+			symbols_exp.emplace(t_index{}); // placeholder, as we only track nonterminals with symbols_exp
+
 
 			// next token
 			curtok = input[inputidx++];
@@ -491,6 +525,7 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				args.emplace_front(std::move(symbols.top()));
 
 				symbols.pop();
+				symbols_exp.pop();
 				states.pop();
 			}
 			//if(args.size() > 1)
@@ -516,7 +551,26 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 			t_astbaseptr reducedSym = rule(true, args, retval);
 
 			// set return symbol type
-			reducedSym->SetTableIndex((*m_vecLhsIndices)[rule_idx]);
+			const t_index lhs_expected_index = (*m_vecLhsIndices)[rule_idx];
+			t_index lhs_index = lhs_expected_index;
+			if(reducedSym)
+			{
+				lhs_index = reducedSym->GetTableIndex();
+				if(lhs_index != lhs_expected_index)
+				{
+					/*if(m_debug)
+					{
+						std::cerr
+							<< "Warning: Expected return symbol index " << lhs_expected_index
+							<< " in semantic rule #" << rule_idx
+							<< ", but received index " << lhs_index << "."
+							<< std::endl;
+					}*/
+
+					lhs_index = lhs_expected_index;
+					reducedSym->SetTableIndex(lhs_index);
+				}
+			}
 
 			// no more needed if the grammar has already been accepted
 			if(!accepted)
@@ -525,8 +579,9 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				if(m_debug)
 					print_active_state(std::cout);
 
-				t_state_id jumpstate = (*m_tabJump)(topstate, reducedSym->GetTableIndex());
+				t_state_id jumpstate = (*m_tabJump)(topstate, lhs_index);
 				symbols.emplace(std::move(reducedSym));
+				symbols_exp.emplace(lhs_expected_index);
 
 				// partial rules
 				apply_partial_rule(false);

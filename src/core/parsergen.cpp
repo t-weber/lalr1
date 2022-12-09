@@ -71,10 +71,11 @@ bool ParserGen::SaveParser(const std::string& filename_cpp, const std::string& c
 class %%PARSER_CLASS%%
 {
 public:
-	using t_token = lalr1::t_toknode;            // token data type
-	using t_tokens = std::vector<t_token>;       // token vector data type
-	using t_symbol = lalr1::t_astbaseptr;        // symbol data type
-	using t_stack = lalr1::ParseStack<t_symbol>; // symbol stack
+	using t_token = lalr1::t_toknode;                   // token data type
+	using t_tokens = std::vector<t_token>;              // token vector data type
+	using t_symbol = lalr1::t_astbaseptr;               // symbol data type
+	using t_stack = lalr1::ParseStack<t_symbol>;        // symbol stack
+	using t_stack_exp = lalr1::ParseStack<t_symbol_id>; // expected symbol id stack
 
 	%%PARSER_CLASS%%() = default;
 	~%%PARSER_CLASS%%() = default;
@@ -115,6 +116,7 @@ private:
 	const lalr1::t_semanticrules* m_semantics{};  // semantic rules
 	const t_tokens* m_input{};                    // input tokens
 	t_stack m_symbols{};                          // currently active symbols
+	t_stack_exp m_symbols_exp{};                  // expected nonterminal ids
 
 	lalr1::t_active_rules m_active_rules{};       // active partial rules
 	std::size_t m_cur_rule_handle{0};             // the same for corresponding partial rules
@@ -158,9 +160,18 @@ void %%PARSER_CLASS%%::PrintSymbols() const
 {
 	std::cout << "Symbol stack [" << m_symbols.size() << "]: ";
 	std::size_t i = 0;
-	for(auto iter = m_symbols.rbegin(); iter != m_symbols.rend(); std::advance(iter, 1))
+
+	auto iter_exp = m_symbols_exp.rbegin();
+	for(auto iter = m_symbols.rbegin(); iter != m_symbols.rend();
+		std::advance(iter, 1), std::advance(iter_exp, 1))
 	{
 		const t_symbol& sym = *iter;
+		if(!sym)
+		{
+			const t_symbol_id exp_sym_id = *iter_exp;
+			std::cout << exp_sym_id << " [exp nt], ";
+			continue;
+		}
 
 		std::cout << sym->GetId();
 		if(sym->IsTerminal() && isprintable(sym->GetId()))
@@ -205,6 +216,7 @@ void %%PARSER_CLASS%%::GetNextLookahead()
 void %%PARSER_CLASS%%::PushLookahead()
 {
 	m_symbols.push(m_lookahead);
+	m_symbols_exp.push(t_symbol_id{}); // placeholder, as we only track nonterminals with m_symbols_exp
 	GetNextLookahead();
 }
 
@@ -307,14 +319,16 @@ void %%PARSER_CLASS%%::DebugMessageJump(t_state_id state_id)
  * debug message when a partial semantic rule is applied
  */
 void %%PARSER_CLASS%%::DebugMessagePartialRule(bool before_shift,
-	std::size_t rulelen, t_semantic_id rule_id) const
+	std::size_t rule_len, t_semantic_id rule_id) const
 {
 	std::optional<t_index> rule_handle = GetActiveRuleHandle(rule_id);
+	if(before_shift)
+		++rule_len;  // include lookahead terminal
 
 	std::cout << "Partially matched rule #" << rule_id;
 	if(rule_handle)
 		std::cout << " (handle id " << *rule_handle << ")";
-	std::cout << " of length " << rulelen;
+	std::cout << " of length " << rule_len;
 	if(before_shift)
 		std::cout << " (before terminal)";
 	else
@@ -333,8 +347,21 @@ void %%PARSER_CLASS%%::TransitionError(t_state_id state_id) const
 	if(m_symbols.size())
 	{
 		const t_symbol& topsym = m_symbols.top();
-		bool is_term = topsym->IsTerminal();
-		t_symbol_id sym_id = topsym->GetId();
+		const t_symbol_id topsym_exp = m_symbols_exp.top();
+
+		bool is_term;
+		t_symbol_id sym_id;
+
+		if(topsym)
+		{
+			is_term = topsym->IsTerminal();
+			sym_id = topsym->GetId();
+		}
+		else
+		{
+			is_term = false;
+			sym_id = topsym_exp;
+		}
 
 		ostr << "top-level " << (is_term ? "terminal" : "non-terminal")
 			<< " " << sym_id << ", ";
@@ -408,6 +435,8 @@ void %%PARSER_CLASS%%::SetSemanticRules(const t_semanticrules* rules)
 	m_active_rules.clear();
 	while(!m_symbols.empty())
 		m_symbols.pop();
+	while(!m_symbols_exp.empty())
+		m_symbols_exp.pop();
 
 	GetNextLookahead();
 	%%START_STATE%%();
@@ -431,8 +460,9 @@ bool %%PARSER_CLASS%%::CheckReturnSymbol(t_symbol& retsym, t_symbol_id expected_
 	{
 		if(m_debug)
 		{
-			std::cerr << "Warning: Expected return symbol id " << expected_retid
-				<< " in rule #" << rule_id
+			std::cerr
+				<< "Warning: Expected return symbol id " << expected_retid
+				<< " in semantic rule #" << rule_id
 				<< ", but received id " << retid << "."
 				<< std::endl;
 		}
@@ -455,6 +485,10 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 		std::cerr << "Error: No semantic rule #" << rule_id << " defined." << std::endl;
 		return false;
 	}
+
+	std::size_t arg_len = rule_len;
+	if(before_shift)
+		++rule_len;  // include lookahead terminal
 
 	bool already_seen_active_rule = false;
 	bool insert_new_active_rule = false;
@@ -518,7 +552,7 @@ bool %%PARSER_CLASS%%::ApplyPartialRule(bool before_shift, t_semantic_id rule_id
 			return false;
 		}
 
-		t_semanticargs args = GetCopyArguments(rule_len);
+		t_semanticargs args = GetCopyArguments(arg_len);
 		t_symbol retval = nullptr;
 		ActiveRule *active_rule = GetActiveRule(rule_id);
 		if(active_rule)
@@ -579,7 +613,9 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 
 	// if this is the accepting rule, keep the arguments on the stack
 	// to also return them in the Parse() function
-	t_semanticargs args = accepted ? GetCopyArguments(rule_len) : GetArguments(m_symbols, rule_len);
+	t_semanticargs args = accepted
+		? GetCopyArguments(rule_len)
+		: GetArguments(m_symbols, rule_len);
 	t_symbol retval = nullptr;
 	if(ActiveRule *active_rule = GetActiveRule(rule_id); active_rule)
 		retval = active_rule->retval;
@@ -588,6 +624,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 	CheckReturnSymbol(retsym, expected_retid, rule_id);
 
 	m_symbols.emplace(std::move(retsym));
+	m_symbols_exp.emplace(expected_retid);
 	return true;
 }
 
@@ -762,16 +799,14 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 					ostr_partial << "\t\t\t// partial semantic rule "
 						<< rule_id << " with " << rulelen << " recognised argument(s)\n";
 					ostr_partial << "\t\t\tbool applied = ApplyPartialRule(true, "
-						<< rule_id << ", " << (rulelen + 1 /* + lookahead*/)
-						<< ", " << lhs_id << ");\n";
+						<< rule_id << ", " << rulelen << ", " << lhs_id << ");\n";
 					has_partial = true;
 
 					if(GetGenDebugCode())
 					{
 						ostr_partial << "\t\t\tif(m_debug && applied)\n";
 						ostr_partial << "\t\t\t\tDebugMessagePartialRule(true, "
-							<< (rulelen + 1 /* + lookahead */)
-							<< ", " << rule_id << ");\n";
+							<< rulelen << ", " << rule_id << ");\n";
 					}
 				}
 			}
@@ -1021,10 +1056,21 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 		ostr_cpp_while << "\twhile(!m_dist_to_jump && m_symbols.size() && !m_accepted)\n";
 		ostr_cpp_while << "\t{\n";
 
+		// Note that m_symbols_exp is only needed in the case a semantic rule
+		// returns a nullptr and thus doesn't provide a symbol id.
+		// One could alternatively fully separate the symbol id tracking and the
+		// user-provided symbol lvalue (like in the external scripting modules).
 		ostr_cpp_while << "\t\tconst t_symbol& topsym = m_symbols.top();\n";
-		ostr_cpp_while << "\t\tif(topsym->IsTerminal())\n\t\t\tbreak;\n";
+		ostr_cpp_while << "\t\tt_symbol_id topsym_id = m_symbols_exp.top();\n";
+		ostr_cpp_while << "\t\tbool topsym_isterm = false;\n";
+		ostr_cpp_while << "\t\tif(topsym)\n";
+		ostr_cpp_while << "\t\t{\n";
+		ostr_cpp_while << "\t\t\ttopsym_isterm = topsym->IsTerminal();\n";
+		ostr_cpp_while << "\t\t\ttopsym_id = topsym->GetId();\n";
+		ostr_cpp_while << "\t\t}\n";
+		ostr_cpp_while << "\t\tif(topsym_isterm)\n\t\t\tbreak;\n";
 
-		ostr_cpp_while << "\t\tswitch(topsym->GetId())\n";
+		ostr_cpp_while << "\t\tswitch(topsym_id)\n";
 		ostr_cpp_while << "\t\t{\n";
 
 		bool while_has_entries = false;
