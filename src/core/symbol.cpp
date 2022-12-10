@@ -407,8 +407,9 @@ t_map_first NonTerminal::CalcFirst(t_map_first_perrule* first_perrule) const
  * calculates the first set of a nonterminal
  * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
-void NonTerminal::CalcFirst(t_map_first& _first,
-	t_map_first_perrule* _first_perrule) const
+void NonTerminal::CalcFirst(t_map_first& map_first,
+	t_map_first_perrule* map_first_perrule,
+	std::size_t recurse_depth) const
 {
 	const NonTerminalPtr& nonterm =
 		std::dynamic_pointer_cast<NonTerminal>(
@@ -418,12 +419,14 @@ void NonTerminal::CalcFirst(t_map_first& _first,
 		return;
 
 	// set already calculated?
-	if(_first.contains(nonterm))
+	// always recalculate if recursive depth is zero, because the FIRST
+	// set might be incomplete in case of loops in the production rules
+	if(recurse_depth && map_first.contains(nonterm))
 		return;
 
-	Terminal::t_terminalset first;
-	std::deque<Terminal::t_terminalset> first_perrule;
-	first_perrule.resize(nonterm->NumRules());
+	Terminal::t_terminalset set_first;
+	std::deque<Terminal::t_terminalset> set_first_perrule;
+	set_first_perrule.resize(nonterm->NumRules());
 
 	// iterate rules
 	for(t_index rule_idx=0; rule_idx<nonterm->NumRules(); ++rule_idx)
@@ -439,8 +442,8 @@ void NonTerminal::CalcFirst(t_map_first& _first,
 			// reached terminal symbol -> end
 			if(sym->IsTerminal())
 			{
-				first.insert(std::dynamic_pointer_cast<Terminal>(sym));
-				first_perrule[rule_idx].insert(
+				set_first.insert(std::dynamic_pointer_cast<Terminal>(sym));
+				set_first_perrule[rule_idx].insert(
 					std::dynamic_pointer_cast<Terminal>(sym));
 				break;
 			}
@@ -453,11 +456,11 @@ void NonTerminal::CalcFirst(t_map_first& _first,
 
 				// if the rule is left-recursive, ignore calculating the same symbol again
 				if(*symnonterm != *nonterm)
-					symnonterm->CalcFirst(_first, _first_perrule);
+					symnonterm->CalcFirst(map_first, map_first_perrule);
 
 				// add first set except eps
 				bool has_eps = false;
-				for(const TerminalPtr& symprod : _first[symnonterm])
+				for(const TerminalPtr& symprod : map_first[symnonterm])
 				{
 					bool insert = true;
 					if(symprod->IsEps())
@@ -470,8 +473,8 @@ void NonTerminal::CalcFirst(t_map_first& _first,
 
 					if(insert)
 					{
-						first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
-						first_perrule[rule_idx].insert(std::dynamic_pointer_cast<Terminal>(symprod));
+						set_first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
+						set_first_perrule[rule_idx].insert(std::dynamic_pointer_cast<Terminal>(symprod));
 					}
 				}
 
@@ -482,10 +485,10 @@ void NonTerminal::CalcFirst(t_map_first& _first,
 		}
 	}
 
-	_first[nonterm] = first;
+	map_first[nonterm] = set_first;
 
-	if(_first_perrule)
-		(*_first_perrule)[nonterm] = first_perrule;
+	if(map_first_perrule)
+		(*map_first_perrule)[nonterm] = set_first_perrule;
 }
 
 
@@ -495,109 +498,101 @@ void NonTerminal::CalcFirst(t_map_first& _first,
  */
 void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 	const NonTerminalPtr& start,
-	const t_map_first& _first, t_map_follow& _follow) const
+	const t_map_first& map_first, t_map_follow& map_follow,
+	std::size_t recurse_depth) const
 {
-	const NonTerminalPtr& nonterm =
+	const NonTerminalPtr& cur_nonterm =
 		std::dynamic_pointer_cast<NonTerminal>(
-			std::const_pointer_cast<Symbol>(
-				shared_from_this()));
-	if(!nonterm)
+			std::const_pointer_cast<Symbol>(shared_from_this()));
+	if(!cur_nonterm)
 		return;
 
 	// set already calculated?
-	if(_follow.contains(nonterm))
+	// always recalculate if recursive depth is zero, because the FOLLOW
+	// set might be incomplete in case of loops in the production rules
+	if(recurse_depth && map_follow.contains(cur_nonterm))
 		return;
 
-	Terminal::t_terminalset follow;
+	Terminal::t_terminalset set_follow;
 
 	// add end symbol as follower to start rule
-	if(nonterm == start)
-		follow.insert(g_end);
+	if(cur_nonterm == start)
+		set_follow.insert(g_end);
 
-	// find current nonterminal in RHS of all rules (to get following symbols)
-	for(const NonTerminalPtr& _nonterm : allnonterms)
+	// find current nonterminal in RHS of all production rules (to get following symbols)
+	for(const NonTerminalPtr& lhs : allnonterms)
 	{
 		// iterate rules
-		for(t_index rule_idx=0; rule_idx<_nonterm->NumRules(); ++rule_idx)
+		for(t_index rule_idx=0; rule_idx<lhs->NumRules(); ++rule_idx)
 		{
-			const WordPtr& rule = _nonterm->GetRule(rule_idx);
+			const WordPtr& rule = lhs->GetRule(rule_idx);
 
 			// iterate RHS of rule
 			for(t_index sym_idx=0; sym_idx<rule->NumSymbols(); ++sym_idx)
 			{
-				// nonterm is in RHS of _nonterm rules
-				if(*(*rule)[sym_idx] == *nonterm)
+				// cur_nonterm is in RHS of lhs rules
+				if(*(*rule)[sym_idx] == *cur_nonterm)
 				{
 					// add first set of following symbols except eps
-					for(t_index _sym_idx=sym_idx+1; _sym_idx < rule->NumSymbols(); ++_sym_idx)
+					for(t_index next_sym_idx = sym_idx + 1; next_sym_idx < rule->NumSymbols(); ++next_sym_idx)
 					{
+						const SymbolPtr& sym = (*rule)[next_sym_idx];
+
 						// add terminal to follow set
-						if((*rule)[_sym_idx]->IsTerminal() && !(*rule)[_sym_idx]->IsEps())
+						if(sym->IsTerminal() && !sym->IsEps())
 						{
-							follow.insert(std::dynamic_pointer_cast<Terminal>(
-								(*rule)[_sym_idx]));
+							set_follow.insert(std::dynamic_pointer_cast<Terminal>(sym));
 							break;
 						}
 
 						// non-terminal
 						else
 						{
-							const auto& iterFirst = _first.find((*rule)[_sym_idx]);
+							const auto& iterFirst = map_first.find(sym);
 
 							for(const TerminalPtr& symfirst : iterFirst->second)
 							{
 								if(!symfirst->IsEps())
-									follow.insert(symfirst);
+									set_follow.insert(symfirst);
 							}
 
-							if(!std::dynamic_pointer_cast<NonTerminal>(
-								(*rule)[_sym_idx])->HasEpsRule())
-							{
+							if(!std::dynamic_pointer_cast<NonTerminal>(sym)->HasEpsRule())
 								break;
-							}
 						}
 					}
-
 
 					// last symbol in rule?
-					bool bLastSym = (sym_idx+1 == rule->NumSymbols());
+					t_index next_sym_idx = sym_idx + 1;
+					bool is_last_sym = (next_sym_idx >= rule->NumSymbols());
 
 					// ... or only epsilon productions afterwards?
-					t_index iNextSym = sym_idx+1;
-					for(; iNextSym<rule->NumSymbols(); ++iNextSym)
+					for(; next_sym_idx<rule->NumSymbols(); ++next_sym_idx)
 					{
+						const SymbolPtr& sym = (*rule)[next_sym_idx];
+
 						// terminal
-						if((*rule)[iNextSym]->IsTerminal()
-							&& !(*rule)[iNextSym]->IsEps())
-						{
+						if(sym->IsTerminal() && !sym->IsEps())
 							break;
-						}
 
 						// non-terminal
-						if(!std::dynamic_pointer_cast<NonTerminal>(
-							(*rule)[iNextSym])->HasEpsRule())
-						{
+						if(!std::dynamic_pointer_cast<NonTerminal>(sym)->HasEpsRule())
 							break;
-						}
 					}
 
-					if(bLastSym || iNextSym==rule->NumSymbols())
+					if(is_last_sym || next_sym_idx >= rule->NumSymbols())
 					{
-						if(_nonterm != nonterm)
-						{
-							_nonterm->CalcFollow(
-								allnonterms, start,
-								_first, _follow);
-						}
-						const auto& __follow = _follow[_nonterm];
-						follow.insert(__follow.begin(), __follow.end());
+						if(lhs != cur_nonterm)
+							lhs->CalcFollow(allnonterms, start, map_first, map_follow, recurse_depth+1);
+
+						const auto& follow_lhs = map_follow[lhs];
+						set_follow.insert(follow_lhs.begin(), follow_lhs.end());
 					}
 				}
 			}
 		}
 	}
 
-	_follow[nonterm] = follow;
+	map_follow[cur_nonterm] = set_follow;
 }
 
 // ----------------------------------------------------------------------------

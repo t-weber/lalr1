@@ -210,12 +210,15 @@ public:
 
 	// calculates the first set of a nonterminal
 	t_map_first CalcFirst(t_map_first_perrule* first_perrule = nullptr) const;
-	void CalcFirst(t_map_first& map_first, t_map_first_perrule* first_perrule = nullptr) const;
+	void CalcFirst(t_map_first& map_first,
+		t_map_first_perrule* first_perrule = nullptr,
+		std::size_t recurse_depth = 0) const;
 
 	// calculates the follow set of a nonterminal
 	void CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 		const NonTerminalPtr& start,
-		const t_map_first& _first, t_map_follow& _follow) const;
+		const t_map_first& _first, t_map_follow& _follow,
+		std::size_t recurse_depth = 0) const;
 
 
 private:

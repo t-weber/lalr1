@@ -54,13 +54,14 @@ public:
 		t_cont_ret<t_elem> cont;
 
 		std::size_t cnt = 0;
-		for(auto iter = c.rbegin(); iter != c.rend(); std::advance(iter, 1))
+		for(auto iter = c.rbegin(); iter != c.rend() && cnt < N; std::advance(iter, 1))
 		{
-			cont.push_back(*iter);
-			if(++cnt >= N)
-				break;
+			//cont.push_back(*iter);
+			cont.push_front(*iter);
+			++cnt;
 		}
 
+		//std::reverse(cont.begin(), cont.end());
 		return cont;
 	}
 };
