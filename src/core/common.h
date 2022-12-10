@@ -75,7 +75,7 @@ t_str get_escaped_char(t_ch ch)
 {
 	t_str str;
 
-	if(ch == '\'' || ch == '\\')
+	if(ch == '\'' || ch == '\"' || ch == '\\')
 		str.push_back('\\');
 	str.push_back(ch);
 

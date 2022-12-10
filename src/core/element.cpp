@@ -204,10 +204,12 @@ void Element::AddLookaheadDependency(const ElementPtr& elem, bool calc_first)
 }
 
 
-void Element::ResolveLookaheads()
+void Element::ResolveLookaheads(std::size_t recurse_depth)
 {
-	// already resolved
-	if(m_lookaheads)
+	// already resolved?
+	// always recalculate if recursive depth is zero, because the FIRST
+	// set might be incomplete in case of loops in the production rules
+	if(recurse_depth && m_lookaheads)
 		return;
 
 	// copy lookaheads from other closure element
@@ -221,7 +223,7 @@ void Element::ResolveLookaheads()
 			continue;
 		already_seen.insert(elem);
 
-		elem->ResolveLookaheads();
+		elem->ResolveLookaheads(recurse_depth + 1);
 		if(!m_lookaheads)
 			m_lookaheads = Terminal::t_terminalset{};
 
@@ -240,7 +242,7 @@ void Element::ResolveLookaheads()
 			continue;
 		already_seen.insert(elem);
 
-		elem->ResolveLookaheads();
+		elem->ResolveLookaheads(recurse_depth + 1);
 		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
 		const WordPtr& rhs = elem->GetRhs();
 		const t_index cursor = elem->GetCursor();

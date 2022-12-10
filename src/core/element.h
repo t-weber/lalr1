@@ -63,7 +63,7 @@ public:
 	void AddLookaheadDependencies(const t_dependencies& deps);
 	void AddLookaheadDependency(const t_dependency& dep);
 	void AddLookaheadDependency(const ElementPtr& elem, bool calc_first);
-	void ResolveLookaheads();
+	void ResolveLookaheads(std::size_t recurse_depth = 0);
 
 	const SymbolPtr& GetPossibleTransitionSymbol() const;
 
