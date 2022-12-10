@@ -69,6 +69,20 @@ template<class T> bool isprintable(T ch)
 	return std::isprint<t_char>(static_cast<t_char>(ch), std::locale("C"));
 }
 
+
+template<class t_str = std::string, class t_ch = typename t_str::value_type>
+t_str get_escaped_char(t_ch ch)
+{
+	t_str str;
+
+	if(ch == '\'' || ch == '\\')
+		str.push_back('\\');
+	str.push_back(ch);
+
+	return str;
+}
+
+
 } // namespace lalr1
 
 #endif

@@ -71,11 +71,11 @@ bool ParserGen::SaveParser(const std::string& filename_cpp, const std::string& c
 class %%PARSER_CLASS%%
 {
 public:
-	using t_token = lalr1::t_toknode;                   // token data type
-	using t_tokens = std::vector<t_token>;              // token vector data type
-	using t_symbol = lalr1::t_astbaseptr;               // symbol data type
-	using t_stack = lalr1::ParseStack<t_symbol>;        // symbol stack
-	using t_stack_exp = lalr1::ParseStack<t_symbol_id>; // expected symbol id stack
+	using t_token = lalr1::t_toknode;             // token data type
+	using t_tokens = std::vector<t_token>;        // token vector data type
+	using t_symbol = lalr1::t_astbaseptr;         // symbol data type
+	using t_stack = lalr1::ParseStack<t_symbol>;  // symbol stack
+	using t_stack_exp = lalr1::ParseStack<lalr1::t_symbol_id>;  // expected symbol id stack
 
 	%%PARSER_CLASS%%() = default;
 	~%%PARSER_CLASS%%() = default;
@@ -175,7 +175,7 @@ void %%PARSER_CLASS%%::PrintSymbols() const
 
 		std::cout << sym->GetId();
 		if(sym->IsTerminal() && isprintable(sym->GetId()))
-			std::cout << " ('" << char(sym->GetId()) << "')";
+			std::cout << " ('" << get_escaped_char(char(sym->GetId())) << "')";
 
 		if(sym->IsTerminal())
 			std::cout << " [t]";
@@ -270,7 +270,7 @@ void %%PARSER_CLASS%%::DebugMessageState(t_state_id state_id, const char* state_
 		else
 			std::cout << m_lookahead_id;
 		if(isprintable(m_lookahead_id))
-			std::cout << " = '" << char(m_lookahead_id) << "'";
+			std::cout << " = '" << get_escaped_char(char(m_lookahead_id)) << "'";
 		std::cout << "." << std::endl;
 	}
 
@@ -818,8 +818,10 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 			}
 			else if(GetUseOpChar() && isprintable(symTrans->GetId()))
 			{
-				ostr_shift << "\t\tcase \'"
-					<< char(symTrans->GetId()) << "\':\n";
+				ostr_shift
+					<< "\t\tcase \'"
+					<< get_escaped_char(char(symTrans->GetId()))
+					<< "\':\n";
 			}
 			else
 			{
@@ -1016,8 +1018,9 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 				}
 				else if(GetUseOpChar() && isprintable(la->GetId()))
 				{
-					ostr_cpp << "\t\tcase \'"
-						<< char(la->GetId())
+					ostr_cpp
+						<< "\t\tcase \'"
+						<< get_escaped_char(char(la->GetId()))
 						<< "\':\n";
 				}
 				else

@@ -118,7 +118,7 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 		else if(id == END_IDENT)
 			ofstr << "end";
 		else if(GetUseOpChar() && isprintable(id))
-			ofstr << "'" << char(id) << "'";
+			ofstr << "'" << get_escaped_char(char(id)) << "'";
 		else
 			ofstr << id;
 		ofstr << ", " << idx << " },";
@@ -314,7 +314,7 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 		else if(id == END_IDENT)
 			ofstr << "end";
 		else if(GetUseOpChar() && isprintable(id))
-			ofstr << "'" << char(id) << "'";
+			ofstr << "'" << get_escaped_char(char(id)) << "'";
 		else
 			ofstr << id;
 		ofstr << ", " << idx << " },";
@@ -507,7 +507,7 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 		else
 		{
 			if(GetUseOpChar() && isprintable(id))
-				ofstr << "\"" << char(id) << "\"";
+				ofstr << "\"" << get_escaped_char(char(id)) << "\"";
 			else
 				ofstr << id;
 		}
@@ -665,7 +665,7 @@ bool TableGen::SaveParseTablesRS(const std::string& file) const
 		else if(id == EPS_IDENT)
 			ofstr << "EPS";
 		else if(GetUseOpChar() && isprintable(id))
-			ofstr << "'" << char(id) << "' as " << ty_sym;
+			ofstr << "'" << get_escaped_char(char(id)) << "' as " << ty_sym;
 		else
 			ofstr << id;
 		ofstr << ", " << idx;
