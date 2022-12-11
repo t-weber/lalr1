@@ -134,6 +134,12 @@ install(TARGETS lalr1-parser
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lalr1
 )
+
+
+# cmake file
+install(FILES ${PROJECT_SOURCE_DIR}/FindLibLalr1.cmake
+	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+)
 # -----------------------------------------------------------------------------
 
 
