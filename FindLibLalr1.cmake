@@ -12,6 +12,13 @@ find_library(LibLalr1_LIBRARY
 )
 
 
+find_library(LibLalr1Parser_LIBRARY
+	NAMES lalr1-parser
+	HINTS /usr/local/lib
+	DOC "lalr1 library"
+)
+
+
 find_path(LibLalr1_INCLUDE_DIR
 	NAMES lalr1/symbol.h lalr1/element.h lalr1/closure.h lalr1/collection.h
 	HINTS /usr/local/include
@@ -27,6 +34,7 @@ find_package_handle_standard_args(LibLalr1
 
 if(LibLalr1_FOUND)
 	set(LibLalr1_LIBRARIES ${LibLalr1_LIBRARY})
+	set(LibLalr1Parser_LIBRARIES ${LibLalr1Parser_LIBRARY})
 	set(LibLalr1_INCLUDE_DIRS ${LibLalr1_INCLUDE_DIR})
 
 	message("liblalr1 library: ${LibLalr1_LIBRARIES}.")
