@@ -72,7 +72,9 @@ std::string get_line_numbers(const t_toknode& node)
 static void print_stacks(
 	const ParseStack<t_state_id>& states,
 	const ParseStack<t_astbaseptr>& symbols,
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	const ParseStack<t_index>& symbols_exp,
+#endif
 	std::ostream& ostr)
 {
 	ostr << "\tState stack [" << states.size() << "]: ";
@@ -88,15 +90,25 @@ static void print_stacks(
 
 	ostr << "\tSymbol stack [" << symbols.size() << "]: ";
 	i = 0;
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	auto iter_exp = symbols_exp.rbegin();
+#endif
 	for(auto iter = symbols.rbegin(); iter != symbols.rend();
-		std::advance(iter, 1), std::advance(iter_exp, 1))
+		std::advance(iter, 1)
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
+		, std::advance(iter_exp, 1)
+#endif
+	)
 	{
 		const t_astbaseptr& sym = (*iter);
 		if(!sym)
 		{
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 			const t_index exp_sym_id = *iter_exp;
 			ostr << exp_sym_id << " [exp nt], ";
+#else
+			std::cout << "nullptr [exp nt], ";
+#endif
 			continue;
 		}
 
@@ -144,7 +156,9 @@ Parser::GetPartialRule(
 	t_state_id topstate,
 	const t_toknode& curtok,
 	const ParseStack<t_astbaseptr>& symbols,
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	const ParseStack<t_index>& symbols_exp,
+#endif
 	bool term) const
 {
 	const bool has_partial_tables =
@@ -167,14 +181,24 @@ Parser::GetPartialRule(
 		// otherwise look for nonterminal transitions
 		if(symbols.size())
 		{
-			bool topsym_isterm = false;
-			t_index topsym_idx = symbols_exp.top();
+			bool topsym_isterm;
+			t_index topsym_idx;
 
 			const t_astbaseptr& topsym = symbols.top();
 			if(topsym)
 			{
 				topsym_isterm = topsym->IsTerminal();
 				topsym_idx = topsym->GetTableIndex();
+			}
+			else
+			{
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
+				topsym_isterm = false;
+				topsym_idx = symbols_exp.top();
+#else
+				throw std::runtime_error("No lhs symbol id available in state "
+					+ std::to_string(topstate) + ".");
+#endif
 			}
 
 			if(!topsym_isterm)
@@ -242,7 +266,9 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 	// user-provided symbol lvalue (like in the external scripting modules).
 	ParseStack<t_state_id> states;     // state number stack
 	ParseStack<t_astbaseptr> symbols;  // symbol stack
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	ParseStack<t_index> symbols_exp;   // expected symbol table index stack
+#endif
 
 	// starting state
 	states.push(m_starting_state);
@@ -267,22 +293,37 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 		t_semantic_id rule_id = GetRuleId(rule_idx);
 
 		// debug-print the current parser state
-		auto print_active_state = [&topstate, &inputidx, &curtok,
-			&states, &symbols, &symbols_exp, this](std::ostream& ostr)
+		auto print_active_state = [this,
+			&states, &symbols,
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
+			&symbols_exp,
+#endif
+			&topstate, &inputidx, &curtok](std::ostream& ostr)
 		{
 			ostr << "\nState " << topstate << " active." << std::endl;
 			print_input_token(inputidx, curtok, ostr, m_end);
-			print_stacks(states, symbols, symbols_exp, ostr);
+			print_stacks(states, symbols,
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
+			symbols_exp,
+#endif
+			ostr);
 		};
 
 		// run a partial rule related to either a terminal or a nonterminal transition
-		auto apply_partial_rule = [this, &topstate, &curtok, &symbols, &symbols_exp,
+		auto apply_partial_rule = [this, &topstate, &curtok, &symbols,
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
+			&symbols_exp,
+#endif
 			&active_rules, &cur_rule_handle](bool is_term)
 		{
 			bool before_shift = is_term;  // before jump otherwise
 
 			auto [partialrule_idx, partialmatchlen] = this->GetPartialRule(
-				topstate, curtok, symbols, symbols_exp, is_term);
+				topstate, curtok, symbols,
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
+				symbols_exp,
+#endif
+				is_term);
 
 			std::size_t arglen = partialmatchlen ? *partialmatchlen : 0;
 			// directly count the following lookahead terminal
@@ -478,7 +519,9 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 
 			states.push(newstate);
 			symbols.emplace(std::move(curtok));
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 			symbols_exp.emplace(t_index{}); // placeholder, as we only track nonterminals with symbols_exp
+#endif
 
 
 			// next token
@@ -525,7 +568,9 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				args.emplace_front(std::move(symbols.top()));
 
 				symbols.pop();
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 				symbols_exp.pop();
+#endif
 				states.pop();
 			}
 			//if(args.size() > 1)
@@ -581,7 +626,9 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 
 				t_state_id jumpstate = (*m_tabJump)(topstate, lhs_index);
 				symbols.emplace(std::move(reducedSym));
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 				symbols_exp.emplace(lhs_expected_index);
+#endif
 
 				// partial rules
 				apply_partial_rule(false);

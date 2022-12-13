@@ -8,6 +8,9 @@
 #ifndef __LALR1_PARSER_H__
 #define __LALR1_PARSER_H__
 
+// don't use expected symbols: only enable if no semantic rule returns a nullptr
+//#define LALR1_DONT_USE_SYMBOL_EXP
+
 #include "common.h"
 #include "stack.h"
 
@@ -57,7 +60,10 @@ protected:
 	std::tuple<std::optional<t_index>, std::optional<std::size_t>>
 		GetPartialRule(t_state_id topstate, const t_toknode& curtok,
 			const ParseStack<t_astbaseptr>& symbols,
-			const ParseStack<t_index>& symbols_exp, bool term) const;
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
+			const ParseStack<t_index>& symbols_exp,
+#endif
+			bool term) const;
 
 	// get a semantic rule id from a rule index
 	t_semantic_id GetRuleId(t_index idx) const;

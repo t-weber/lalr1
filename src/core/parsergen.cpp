@@ -55,6 +55,9 @@ bool ParserGen::SaveParser(const std::string& filename_cpp, const std::string& c
 #ifndef __LALR1_PARSER_REC_ASC_H__
 #define __LALR1_PARSER_REC_ASC_H__
 
+// don't use expected symbols: only enable if no semantic rule returns a nullptr
+//#define LALR1_DONT_USE_SYMBOL_EXP
+
 #if __has_include("core/ast.h")
 	#include "core/ast.h"
 	#include "core/common.h"
@@ -75,7 +78,9 @@ public:
 	using t_tokens = std::vector<t_token>;        // token vector data type
 	using t_symbol = lalr1::t_astbaseptr;         // symbol data type
 	using t_stack = lalr1::ParseStack<t_symbol>;  // symbol stack
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	using t_stack_exp = lalr1::ParseStack<lalr1::t_symbol_id>;  // expected symbol id stack
+#endif
 
 	%%PARSER_CLASS%%() = default;
 	~%%PARSER_CLASS%%() = default;
@@ -109,6 +114,7 @@ protected:
 	void DebugMessageJump(lalr1::t_state_id state_id);
 	void DebugMessagePartialRule(bool before_shift, std::size_t rulelen, lalr1::t_semantic_id rule_id) const;
 	void TransitionError(lalr1::t_state_id state_id) const;
+	void SymbolError(lalr1::t_state_id state_id) const;
 
 %%DECLARE_CLOSURES%%
 private:
@@ -116,7 +122,9 @@ private:
 	const lalr1::t_semanticrules* m_semantics{};  // semantic rules
 	const t_tokens* m_input{};                    // input tokens
 	t_stack m_symbols{};                          // currently active symbols
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	t_stack_exp m_symbols_exp{};                  // expected nonterminal ids
+#endif
 
 	lalr1::t_active_rules m_active_rules{};       // active partial rules
 	std::size_t m_cur_rule_handle{0};             // the same for corresponding partial rules
@@ -161,15 +169,25 @@ void %%PARSER_CLASS%%::PrintSymbols() const
 	std::cout << "Symbol stack [" << m_symbols.size() << "]: ";
 	std::size_t i = 0;
 
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	auto iter_exp = m_symbols_exp.rbegin();
+#endif
 	for(auto iter = m_symbols.rbegin(); iter != m_symbols.rend();
-		std::advance(iter, 1), std::advance(iter_exp, 1))
+		std::advance(iter, 1)
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
+		, std::advance(iter_exp, 1)
+#endif
+	)
 	{
 		const t_symbol& sym = *iter;
 		if(!sym)
 		{
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 			const t_symbol_id exp_sym_id = *iter_exp;
 			std::cout << exp_sym_id << " [exp nt], ";
+#else
+			std::cout << "nullptr [exp nt], ";
+#endif
 			continue;
 		}
 
@@ -216,7 +234,9 @@ void %%PARSER_CLASS%%::GetNextLookahead()
 void %%PARSER_CLASS%%::PushLookahead()
 {
 	m_symbols.push(m_lookahead);
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	m_symbols_exp.push(t_symbol_id{}); // placeholder, as we only track nonterminals with m_symbols_exp
+#endif
 	GetNextLookahead();
 }
 
@@ -347,27 +367,51 @@ void %%PARSER_CLASS%%::TransitionError(t_state_id state_id) const
 	if(m_symbols.size())
 	{
 		const t_symbol& topsym = m_symbols.top();
-		const t_symbol_id topsym_exp = m_symbols_exp.top();
 
 		bool is_term;
 		t_symbol_id sym_id;
+		bool has_sym = false;
 
 		if(topsym)
 		{
 			is_term = topsym->IsTerminal();
 			sym_id = topsym->GetId();
+			has_sym = true;
 		}
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 		else
 		{
 			is_term = false;
-			sym_id = topsym_exp;
+			sym_id = m_symbols_exp.top();
+			has_sym = true;
 		}
+#endif
 
-		ostr << "top-level " << (is_term ? "terminal" : "non-terminal")
-			<< " " << sym_id << ", ";
+		if(has_sym)
+		{
+			ostr << "top-level "
+				<< (is_term ? "terminal" : "non-terminal")
+				<< " " << sym_id << ", ";
+		}
+		else
+		{
+			ostr << "unknown symbol, ";
+		}
 	}
 
 	ostr << "and lookahead terminal " << m_lookahead_id << ".";
+
+	throw std::runtime_error(ostr.str());
+}
+
+/**
+ * semantic rule error: got nullptr, no lhs symbol id available
+ */
+void %%PARSER_CLASS%%::SymbolError(t_state_id state_id) const
+{
+	std::ostringstream ostr;
+	ostr << "No lhs symbol id available in state " << state_id;
+	ostr << ", lookahead terminal " << m_lookahead_id << ".";
 
 	throw std::runtime_error(ostr.str());
 }
@@ -435,8 +479,10 @@ void %%PARSER_CLASS%%::SetSemanticRules(const t_semanticrules* rules)
 	m_active_rules.clear();
 	while(!m_symbols.empty())
 		m_symbols.pop();
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	while(!m_symbols_exp.empty())
 		m_symbols_exp.pop();
+#endif
 
 	GetNextLookahead();
 	%%START_STATE%%();
@@ -624,7 +670,9 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 	CheckReturnSymbol(retsym, expected_retid, rule_id);
 
 	m_symbols.emplace(std::move(retsym));
+#ifndef LALR1_DONT_USE_SYMBOL_EXP
 	m_symbols_exp.emplace(expected_retid);
+#endif
 	return true;
 }
 
@@ -1064,12 +1112,21 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 		// One could alternatively fully separate the symbol id tracking and the
 		// user-provided symbol lvalue (like in the external scripting modules).
 		ostr_cpp_while << "\t\tconst t_symbol& topsym = m_symbols.top();\n";
-		ostr_cpp_while << "\t\tt_symbol_id topsym_id = m_symbols_exp.top();\n";
-		ostr_cpp_while << "\t\tbool topsym_isterm = false;\n";
+		ostr_cpp_while << "\t\tt_symbol_id topsym_id;\n";
+		ostr_cpp_while << "\t\tbool topsym_isterm;\n";
 		ostr_cpp_while << "\t\tif(topsym)\n";
 		ostr_cpp_while << "\t\t{\n";
 		ostr_cpp_while << "\t\t\ttopsym_isterm = topsym->IsTerminal();\n";
 		ostr_cpp_while << "\t\t\ttopsym_id = topsym->GetId();\n";
+		ostr_cpp_while << "\t\t}\n";
+		ostr_cpp_while << "\t\telse\n";
+		ostr_cpp_while << "\t\t{\n";
+		ostr_cpp_while << "#ifndef LALR1_DONT_USE_SYMBOL_EXP\n";
+		ostr_cpp_while << "\t\t\ttopsym_isterm = false;\n";
+		ostr_cpp_while << "\t\t\ttopsym_id = m_symbols_exp.top();\n";
+		ostr_cpp_while << "#else\n";
+		ostr_cpp_while << "\t\t\tSymbolError(" << closure_id << ");\n";
+		ostr_cpp_while << "#endif\n";
 		ostr_cpp_while << "\t\t}\n";
 		ostr_cpp_while << "\t\tif(topsym_isterm)\n\t\t\tbreak;\n";
 

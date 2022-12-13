@@ -9,8 +9,15 @@
 #define __LALR1_STACK_H__
 
 
-#include <deque>
 #include <stack>
+
+#ifndef LALR1_STACK_CONTAINER
+	#include <deque>
+	#define LALR1_STACK_CONTAINER std::deque
+
+	//#include <vector>
+	//#define LALR1_STACK_CONTAINER std::vector
+#endif
 
 
 namespace lalr1 {
@@ -18,7 +25,7 @@ namespace lalr1 {
 /**
  * stack class for parse states and symbols
  */
-template<class t_elem, class t_cont = std::deque<t_elem>>
+template<class t_elem, class t_cont = LALR1_STACK_CONTAINER<t_elem>>
 class ParseStack : public std::stack<t_elem, t_cont>
 {
 protected:

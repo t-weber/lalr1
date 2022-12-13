@@ -58,6 +58,9 @@ namespace std
 %module lalr1
 %{
 	#include "src/core/types.h"
+	#include "src/core/options.h"
+	#include "src/core/genoptions.h"
+	#include "src/core/types.h"
 	#include "src/core/symbol.h"
 	#include "src/core/element.h"
 	#include "src/core/closure.h"
@@ -68,36 +71,14 @@ namespace std
 	using namespace lalr1;
 %}
 
-%include "src/core/types.h"
-%include "src/core/symbol.h"
-%include "src/core/element.h"
-%include "src/core/closure.h"
-%include "src/core/collection.h"
-%include "src/core/tablegen.h"
-%include "src/core/parsergen.h"
-
-using namespace lalr1;
-
-%shared_ptr(std::enable_shared_from_this<Symbol>);
-%shared_ptr(std::enable_shared_from_this<Word>);
-%shared_ptr(std::enable_shared_from_this<Element>);
-%shared_ptr(std::enable_shared_from_this<Closure>);
-%shared_ptr(std::enable_shared_from_this<Collection>);
-%shared_ptr(Symbol);
-%shared_ptr(Terminal);
-%shared_ptr(NonTerminal);
-%shared_ptr(Word);
-%shared_ptr(Element);
-%shared_ptr(Closure);
-%shared_ptr(Collection);
-%shared_ptr(TableGen);
-%shared_ptr(ParserGen);
-
-%template(SymbolESFT) std::enable_shared_from_this<Symbol>;
-%template(WordESFT) std::enable_shared_from_this<Word>;
-%template(ElementESFT) std::enable_shared_from_this<Element>;
-%template(ClosureESFT) std::enable_shared_from_this<Closure>;
-%template(CollectionESFT) std::enable_shared_from_this<Collection>;
+typedef lalr1::Symbol Symbol;
+typedef lalr1::Word Word;
+typedef lalr1::Element Element;
+typedef lalr1::Closure Closure;
+typedef lalr1::Collection Collection;
+typedef lalr1::TableGen TableGen;
+typedef lalr1::ParserGen ParserGen;
+typedef lalr1::GenOptions GenOptions;
 
 typedef std::shared_ptr<Symbol> SymbolPtr;
 typedef std::shared_ptr<Word> WordPtr;
@@ -106,10 +87,46 @@ typedef std::shared_ptr<Closure> ClosurePtr;
 typedef std::shared_ptr<Collection> CollectionPtr;
 typedef std::shared_ptr<TableGen> TableGenPtr;
 typedef std::shared_ptr<ParserGen> ParserGenPtr;
+typedef std::shared_ptr<GenOptions> GenOptionsPtr;
+
+%shared_ptr(std::enable_shared_from_this<Symbol>);
+%shared_ptr(std::enable_shared_from_this<Word>);
+%shared_ptr(std::enable_shared_from_this<Element>);
+%shared_ptr(std::enable_shared_from_this<Closure>);
+%shared_ptr(std::enable_shared_from_this<Collection>);
+
+%shared_ptr(lalr1::Symbol);
+%shared_ptr(lalr1::Terminal);
+%shared_ptr(lalr1::NonTerminal);
+%shared_ptr(lalr1::Word);
+%shared_ptr(lalr1::Element);
+%shared_ptr(lalr1::Closure);
+%shared_ptr(lalr1::Collection);
+%shared_ptr(lalr1::TableGen);
+%shared_ptr(lalr1::ParserGen);
+%shared_ptr(lalr1::GenOptions);
+
+%template(SymbolESFT) std::enable_shared_from_this<Symbol>;
+%template(WordESFT) std::enable_shared_from_this<Word>;
+%template(ElementESFT) std::enable_shared_from_this<Element>;
+%template(ClosureESFT) std::enable_shared_from_this<Closure>;
+%template(CollectionESFT) std::enable_shared_from_this<Collection>;
 
 %template(SymbolVec) std::vector<SymbolPtr>;
 //%template(ElementLst) std::list<ElementPtr>;
 //%template(ClosureLst) std::list<ClosurePtr>;
+
+%include "src/core/types.h"
+%include "src/core/options.h"
+%include "src/core/genoptions.h"
+%include "src/core/symbol.h"
+%include "src/core/element.h"
+%include "src/core/closure.h"
+%include "src/core/collection.h"
+%include "src/core/tablegen.h"
+%include "src/core/parsergen.h"
+
+using namespace lalr1;
 // --------------------------------------------------------------------------------
 
 
