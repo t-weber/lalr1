@@ -701,7 +701,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 	std::ostringstream ostr_h, ostr_cpp;
 
 	// create the names of the closure functions
-	std::regex regex_ident("[_A-Za-z][_A-Za-z0-9]*");
+	static const std::regex regex_ident("[_A-Za-z][_A-Za-z0-9]*");
 	std::unordered_map<t_state_id, std::string> closure_names;
 	std::unordered_map<std::string, std::size_t> name_counts;
 

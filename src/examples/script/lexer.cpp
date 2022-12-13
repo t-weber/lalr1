@@ -41,9 +41,9 @@ Lexer::GetMatchingTokens(const std::string& str, std::size_t line)
 
 	if(!m_ignore_int)
 	{	// int
-		std::regex regex{"(0[xb])?([0-9]+)"};
+		static const std::regex regex_int{"(0[xb])?([0-9]+)"};
 		std::smatch smatch;
-		if(std::regex_match(str, smatch, regex))
+		if(std::regex_match(str, smatch, regex_int))
 		{
 			t_int val{};
 
@@ -82,9 +82,9 @@ Lexer::GetMatchingTokens(const std::string& str, std::size_t line)
 	}
 
 	{	// real
-		std::regex regex{"[0-9]+(\\.[0-9]*)?"};
+		static std::regex regex_real{"[0-9]+(\\.[0-9]*)?"};
 		std::smatch smatch;
-		if(std::regex_match(str, smatch, regex))
+		if(std::regex_match(str, smatch, regex_real))
 		{
 			t_real val{};
 			std::istringstream{str} >> val;
@@ -137,9 +137,9 @@ Lexer::GetMatchingTokens(const std::string& str, std::size_t line)
 		else
 		{
 			// identifier
-			std::regex regex{"[_A-Za-z]+[_A-Za-z0-9]*"};
+			static const std::regex regex_ident{"[_A-Za-z]+[_A-Za-z0-9]*"};
 			std::smatch smatch;
-			if(std::regex_match(str, smatch, regex))
+			if(std::regex_match(str, smatch, regex_ident))
 				matches.emplace_back(std::make_tuple(
 					static_cast<t_symbol_id>(Token::IDENT), str, line));
 		}
