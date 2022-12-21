@@ -1,0 +1,5 @@
+Compiling:
+  - javac -verbose -d . lalr1_java/*.java
+
+TODO:
+  - handle partial rule matches in parsers and parser generators
