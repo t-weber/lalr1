@@ -420,9 +420,9 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 					active_rule.retval = rule(false, args, active_rule.retval);
 				}
 
-				// since we already know the next terminal in a shift, include it directly
 				if(before_shift)
 				{
+					// since we already know the next terminal in a shift, include it directly
 					args.push_back(curtok);
 
 					// run the semantic rule again
@@ -436,9 +436,9 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 						<< " of length " << *partialmatchlen;
 					if(before_shift)
 					{
-							if(seen_tokens_old < int(*partialmatchlen) - 1)
-								std::cout << " and length " << (*partialmatchlen - 1);
-							std::cout << " (before terminal)";
+						if(seen_tokens_old < int(*partialmatchlen) - 1)
+							std::cout << " and length " << (*partialmatchlen - 1);
+						std::cout << " (before terminal)";
 					}
 					else
 					{
@@ -522,7 +522,6 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 #ifndef LALR1_DONT_USE_SYMBOL_EXP
 			symbols_exp.emplace(t_index{}); // placeholder, as we only track nonterminals with symbols_exp
 #endif
-
 
 			// next token
 			curtok = input[inputidx++];
@@ -624,7 +623,6 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				if(m_debug)
 					print_active_state(std::cout);
 
-				t_state_id jumpstate = (*m_tabJump)(topstate, lhs_index);
 				symbols.emplace(std::move(reducedSym));
 #ifndef LALR1_DONT_USE_SYMBOL_EXP
 				symbols_exp.emplace(lhs_expected_index);
@@ -633,6 +631,7 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				// partial rules
 				apply_partial_rule(false);
 
+				t_state_id jumpstate = (*m_tabJump)(topstate, lhs_index);
 				states.push(jumpstate);
 
 				if(m_debug)

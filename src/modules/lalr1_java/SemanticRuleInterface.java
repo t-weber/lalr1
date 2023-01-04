@@ -14,5 +14,5 @@ import java.util.Vector;
 
 public interface SemanticRuleInterface<t_lval>
 {
-	t_lval call(Vector<Symbol<t_lval>> args);
+	t_lval call(Vector<Symbol<t_lval>> args, boolean done, t_lval retval);
 }

@@ -117,7 +117,7 @@ def write_parser_class(tables, outfile):
 	pr("\t\tself.symbols = self.symbols[0 : len(self.symbols) - num_rhs]")
 	pr("\t\trule_ret = None")
 	pr("\t\tif self.semantics != None and rule_id in self.semantics:")
-	pr("\t\t\trule_ret = self.semantics[rule_id](*args)")
+	pr("\t\t\trule_ret = self.semantics[rule_id](args, True, None)")
 	pr("\t\tself.symbols.append({ \"is_term\" : False, \"id\" : lhs_id, \"val\" : rule_ret })\n")
 
 	# parse function

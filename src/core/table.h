@@ -125,7 +125,9 @@ public:
 	 * export table to C++ code
 	 */
 	void SaveCXX(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "", const std::string& col_label = "") const
+		const std::string& row_label = "",
+		const std::string& col_label = "",
+		const std::string& elem_label = "") const
 	{
 		ostr << "const lalr1::t_table " << var << "{";
 		ostr << size1();
@@ -143,7 +145,7 @@ public:
 			ostr << m_fillval << ", ";
 		ostr << "\n";
 
-		ostr << "{\n";
+		ostr << "{ /*" << elem_label << "*/\n";
 		for(std::size_t row=0; row<size1(); ++row)
 		{
 			ostr << "\t";
@@ -169,8 +171,11 @@ public:
 	 * export table to Java code
 	 */
 	void SaveJava(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "", const std::string& col_label = "",
-		const std::string& acc_level = "public", std::size_t indent = 0) const
+		const std::string& row_label = "",
+		const std::string& col_label = "",
+		const std::string& elem_label = "",
+		const std::string& acc_level = "public",
+		std::size_t indent = 0) const
 	{
 		auto do_indent = [&ostr, indent]()
 		{
@@ -190,7 +195,7 @@ public:
 		ostr << "] " << var << " =\n";
 
 		do_indent();
-		ostr << "{\n";
+		ostr << "{ /*" << elem_label << "*/\n";
 		for(std::size_t row=0; row<size1(); ++row)
 		{
 			do_indent();
@@ -218,7 +223,9 @@ public:
 	 * export table to json
 	 */
 	void SaveJSON(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "", const std::string& col_label = "",
+		const std::string& row_label = "",
+		const std::string& col_label = "",
+		const std::string& elem_label = "",
 		const std::unordered_map<T, int>* value_map = nullptr) const
 	{
 		ostr << "\"" << var << "\" : {\n";
@@ -226,6 +233,7 @@ public:
 		ostr << "\t\"cols\" : " << size2() << ",\n";
 		ostr << "\t\"row_label\" : \"" << row_label << "\",\n";
 		ostr << "\t\"col_label\" : \"" << col_label << "\",\n";
+		ostr << "\t\"elem_label\" : \"" << elem_label << "\",\n";
 
 		ostr << "\t\"elems\" : [\n";
 		for(std::size_t row=0; row<size1(); ++row)
@@ -273,7 +281,9 @@ public:
 	 * export table to rust
 	 */
 	void SaveRS(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "", const std::string& col_label = "",
+		const std::string& row_label = "",
+		const std::string& col_label = "",
+		const std::string& elem_label = "",
 		std::optional<std::string> ty_override = std::nullopt) const
 	{
 		// get the data type name
@@ -291,7 +301,7 @@ public:
 		if(row_label != "")
 			ostr << " /* " << row_label << " */";
 		ostr << "]";
-		ostr << " =\n[\n";
+		ostr << " =\n[ /* " << elem_label << " */\n";
 
 		for(std::size_t row=0; row<size1(); ++row)
 		{

@@ -9,7 +9,6 @@
 package lalr1_java;
 
 import java.util.Vector;
-import java.util.Stack;
 import java.util.HashMap;
 
 
@@ -19,6 +18,16 @@ public interface ParserInterface<t_lval>
 	 * reset the parser
 	 */
 	public void Reset();
+
+	/**
+	 * enable debug output
+	 */
+	public void SetDebug(boolean debug);
+
+	/**
+	 * enable partial application of semantic rules
+	 */
+	public void SetPartials(boolean use_partials);
 
 	/**
 	 * set the input tokens

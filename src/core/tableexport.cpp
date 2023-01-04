@@ -88,9 +88,9 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 	const t_table& tabActionReduce = GetReduceTable();
 	const t_table& tabJump = GetJumpTable();
 
-	tabActionShift.SaveCXX(ofstr, "tab_action_shift", "state", "terminal");
-	tabActionReduce.SaveCXX(ofstr, "tab_action_reduce", "state", "lookahead");
-	tabJump.SaveCXX(ofstr, "tab_jump", "state", "nonterminal");
+	tabActionShift.SaveCXX(ofstr, "tab_action_shift", "state", "terminal", "state");
+	tabActionReduce.SaveCXX(ofstr, "tab_action_reduce", "state", "lookahead", "rule index");
+	tabJump.SaveCXX(ofstr, "tab_jump", "state", "nonterminal", "state");
 
 	// save partial match tables
 	if(GetGenPartialMatches())
@@ -100,10 +100,10 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 		const t_table& tabPartialMatchLenTerm = GetPartialsMatchLengthTerm();
 		const t_table& tabPartialMatchLenNonterm = GetPartialsMatchLengthNonterm();
 
-		tabPartialRuleTerm.SaveCXX(ofstr, "tab_partials_rule_term", "state", "terminal");
-		tabPartialMatchLenTerm.SaveCXX(ofstr, "tab_partials_matchlen_term", "state", "terminal");
-		tabPartialRuleNonterm.SaveCXX(ofstr, "tab_partials_rule_nonterm", "state", "nonterminal");
-		tabPartialMatchLenNonterm.SaveCXX(ofstr, "tab_partials_matchlen_nonterm", "state", "nonterminal");
+		tabPartialRuleTerm.SaveCXX(ofstr, "tab_partials_rule_term", "state", "terminal", "rule index");
+		tabPartialMatchLenTerm.SaveCXX(ofstr, "tab_partials_matchlen_term", "state", "terminal", "length");
+		tabPartialRuleNonterm.SaveCXX(ofstr, "tab_partials_rule_nonterm", "state", "nonterminal", "rule index");
+		tabPartialMatchLenNonterm.SaveCXX(ofstr, "tab_partials_matchlen_nonterm", "state", "nonterminal", "length");
 	}
 
 	// terminal symbol indices
@@ -284,9 +284,9 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 	const t_table& tabActionReduce = GetReduceTable();
 	const t_table& tabJump = GetJumpTable();
 
-	tabActionShift.SaveJava(ofstr, "tab_action_shift", "state", "terminal", "private", 1);
-	tabActionReduce.SaveJava(ofstr, "tab_action_reduce", "state", "lookahead", "private", 1);
-	tabJump.SaveJava(ofstr, "tab_jump", "state", "nonterminal", "private", 1);
+	tabActionShift.SaveJava(ofstr, "tab_action_shift", "state", "terminal", "state", "private", 1);
+	tabActionReduce.SaveJava(ofstr, "tab_action_reduce", "state", "lookahead", "rule index", "private", 1);
+	tabJump.SaveJava(ofstr, "tab_jump", "state", "nonterminal", "state", "private", 1);
 
 	// save partial match tables
 	if(GetGenPartialMatches())
@@ -296,10 +296,10 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 		const t_table& tabPartialMatchLenTerm = GetPartialsMatchLengthTerm();
 		const t_table& tabPartialMatchLenNonterm = GetPartialsMatchLengthNonterm();
 
-		tabPartialRuleTerm.SaveJava(ofstr, "tab_partials_rule_term", "state", "terminal", "private", 1);
-		tabPartialMatchLenTerm.SaveJava(ofstr, "tab_partials_matchlen_term", "state", "terminal", "private", 1);
-		tabPartialRuleNonterm.SaveJava(ofstr, "tab_partials_rule_nonterm", "state", "nonterminal", "private", 1);
-		tabPartialMatchLenNonterm.SaveJava(ofstr, "tab_partials_matchlen_nonterm", "state", "nonterminal", "private", 1);
+		tabPartialRuleTerm.SaveJava(ofstr, "tab_partials_rule_term", "state", "terminal", "rule index", "private", 1);
+		tabPartialMatchLenTerm.SaveJava(ofstr, "tab_partials_matchlen_term", "state", "terminal", "length", "private", 1);
+		tabPartialRuleNonterm.SaveJava(ofstr, "tab_partials_rule_nonterm", "state", "nonterminal", "rule index", "private", 1);
+		tabPartialMatchLenNonterm.SaveJava(ofstr, "tab_partials_matchlen_nonterm", "state", "nonterminal", "length", "private", 1);
 	}
 
 	// terminal symbol indices
@@ -462,11 +462,11 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 	const t_table& tabActionReduce = GetReduceTable();
 	const t_table& tabJump = GetJumpTable();
 
-	tabActionShift.SaveJSON(ofstr, "shift", "state", "terminal", &special_values);
+	tabActionShift.SaveJSON(ofstr, "shift", "state", "terminal", "state", &special_values);
 	ofstr << ",\n\n";
-	tabActionReduce.SaveJSON(ofstr, "reduce", "state", "lookahead", &special_values);
+	tabActionReduce.SaveJSON(ofstr, "reduce", "state", "lookahead", "rule index", &special_values);
 	ofstr << ",\n\n";
-	tabJump.SaveJSON(ofstr, "jump", "state", "nonterminal", &special_values);
+	tabJump.SaveJSON(ofstr, "jump", "state", "nonterminal", "state", &special_values);
 	ofstr << ",\n\n";
 
 	// partial match tables
@@ -478,16 +478,16 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 		const t_table& tabPartialMatchLenNonterm = GetPartialsMatchLengthNonterm();
 
 		tabPartialRuleTerm.SaveJSON(ofstr,
-			"partials_rule_term", "state", "terminal", &special_values);
+			"partials_rule_term", "state", "terminal", "rule index", &special_values);
 		ofstr << ",\n\n";
 		tabPartialMatchLenTerm.SaveJSON(ofstr,
-			"partials_matchlen_term", "state", "terminal");
+			"partials_matchlen_term", "state", "terminal", "length");
 		ofstr << ",\n\n";
 		tabPartialRuleNonterm.SaveJSON(ofstr,
-			"partials_rule_nonterm", "state", "nonterminal", &special_values);
+			"partials_rule_nonterm", "state", "nonterminal", "rule index", &special_values);
 		ofstr << ",\n\n";
 		tabPartialMatchLenNonterm.SaveJSON(ofstr,
-			"partials_matchlen_nonterm", "state", "nonterminal");
+			"partials_matchlen_nonterm", "state", "nonterminal", "length");
 		ofstr << ",\n";
 	}
 
@@ -631,22 +631,22 @@ bool TableGen::SaveParseTablesRS(const std::string& file) const
 	ofstr << "\n";
 
 	// lalr(1) tables
-	GetShiftTable().SaveRS(ofstr, "SHIFT", "state", "terminal", ty_idx);
-	GetReduceTable().SaveRS(ofstr, "REDUCE", "state", "lookahead", ty_idx);
-	GetJumpTable().SaveRS(ofstr, "JUMP", "state", "nonterminal", ty_idx);
+	GetShiftTable().SaveRS(ofstr, "SHIFT", "state", "terminal", "state", ty_idx);
+	GetReduceTable().SaveRS(ofstr, "REDUCE", "state", "lookahead", "rule index", ty_idx);
+	GetJumpTable().SaveRS(ofstr, "JUMP", "state", "nonterminal", "state", ty_idx);
 	ofstr << "\n";
 
 	// partial match tables
 	if(GetGenPartialMatches())
 	{
 		GetPartialsRuleTerm().SaveRS(
-			ofstr, "PARTIALS_RULE_TERM", "state", "terminal", ty_idx);
+			ofstr, "PARTIALS_RULE_TERM", "state", "terminal", "rule index", ty_idx);
 		GetPartialsMatchLengthTerm().SaveRS(
-			ofstr, "PARTIALS_MATCHLEN_TERM", "state", "terminal", ty_idx);
+			ofstr, "PARTIALS_MATCHLEN_TERM", "state", "terminal", "length", ty_idx);
 		GetPartialsRuleNonterm().SaveRS(
-			ofstr, "PARTIALS_RULE_NONTERM", "state", "nonterminal", ty_idx);
+			ofstr, "PARTIALS_RULE_NONTERM", "state", "nonterminal", "rule index", ty_idx);
 		GetPartialsMatchLengthNonterm().SaveRS(
-			ofstr, "PARTIALS_MATCHLEN_NONTERM", "state", "nonterminal", ty_idx);
+			ofstr, "PARTIALS_MATCHLEN_NONTERM", "state", "nonterminal", "length", ty_idx);
 		ofstr << "\n";
 	}
 

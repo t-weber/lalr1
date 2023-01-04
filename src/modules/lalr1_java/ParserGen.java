@@ -247,6 +247,8 @@ public class ParserGen
 			pw.print("public class " + parser_name + "<t_lval> implements ParserInterface<t_lval>\n{\n");
 
 			// member variables
+			pw.print("\tprotected boolean m_debug;\n");
+			pw.print("\tprotected boolean m_use_partials;\n");
 			pw.print("\tprotected Vector<Symbol<t_lval>> m_input;\n");
 			pw.print("\tprotected Stack<Symbol<t_lval>> m_symbols;\n");
 			pw.print("\tprotected HashMap<Integer, SemanticRuleInterface<t_lval>> m_semantics;\n");
@@ -277,7 +279,7 @@ public class ParserGen
 			pw.print("\t\t\tm_symbols.pop();\n");
 			pw.print("\t\tt_lval retval = null;\n");
 			pw.print("\t\tif(m_semantics != null && m_semantics.containsKey(rule_id))\n");
-			pw.print("\t\t\tretval = m_semantics.get(rule_id).call(args);\n");
+			pw.print("\t\t\tretval = m_semantics.get(rule_id).call(args, true, null);\n");
 			pw.print("\t\telse\n");
 			pw.print("\t\t\tSystem.err.println(\"Semantic rule \" + rule_id + \" is not defined.\");\n");
 			pw.print("\t\tm_symbols.push(new Symbol<t_lval>(false, lhs_id, retval));\n");
@@ -285,6 +287,8 @@ public class ParserGen
 
 			// constructor
 			pw.print("\tpublic " + parser_name + "()\n\t{\n");
+			pw.print("\t\tm_debug = false;\n");
+			pw.print("\t\tm_use_partials = true;\n");
 			pw.print("\t\tm_input = null;\n");
 			pw.print("\t\tm_semantics = null;\n");
 			pw.print("\t\tm_symbols = new Stack<Symbol<t_lval>>();\n");
@@ -300,6 +304,18 @@ public class ParserGen
 			pw.print("\t\tm_dist_to_jump = 0;\n");
 			pw.print("\t\tm_accepted = false;\n");
 			pw.print("\t}\n\n");  // end Reset()
+
+			// SetDebug()
+			pw.print("\t@Override\n");
+			pw.print("\tpublic void SetDebug(boolean debug)\n\t{\n");
+			pw.print("\t\tm_debug = debug;\n");
+			pw.print("\t}\n\n");  // end SetInput()
+
+			// SetPartials()
+			pw.print("\t@Override\n");
+			pw.print("\tpublic void SetPartials(boolean use_partials)\n\t{\n");
+			pw.print("\t\tm_use_partials = use_partials;\n");
+			pw.print("\t}\n\n");  // end SetPartials()
 
 			// SetInput()
 			pw.print("\t@Override\n");

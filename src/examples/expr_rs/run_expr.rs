@@ -25,10 +25,16 @@ use parser::Parser;
 //use generated_parser::Parser;
 
 const SET_DEBUG : bool = false;
+const SET_PARTIALS : bool = false;
 
 
-fn get_symbol(args : Vec<Symbol>) -> TLVal
+fn get_symbol(args : Vec<Symbol>, _done : bool, _retval : TLVal) -> TLVal
 {
+	if !_done
+	{
+		return 0 as TLVal;
+	}
+
 	if args[0].strval.is_none()
 	{
 		return 0 as TLVal;
@@ -47,8 +53,13 @@ fn get_symbol(args : Vec<Symbol>) -> TLVal
 }
 
 
-fn call_func1(args : Vec<Symbol>) -> TLVal
+fn call_func1(args : Vec<Symbol>, _done : bool, _retval : TLVal) -> TLVal
 {
+	if !_done
+	{
+		return 0 as TLVal;
+	}
+
 	if args[0].strval.is_none()
 	{
 		return 0 as TLVal;
@@ -72,8 +83,13 @@ fn call_func1(args : Vec<Symbol>) -> TLVal
 }
 
 
-fn call_func2(args : Vec<Symbol>) -> TLVal
+fn call_func2(args : Vec<Symbol>, _done : bool, _retval : TLVal) -> TLVal
 {
+	if !_done
+	{
+		return 0 as TLVal;
+	}
+
 	if args[0].strval.is_none()
 	{
 		return 0 as TLVal;
@@ -100,69 +116,81 @@ fn set_semantics(parser : &mut dyn Parsable)
 	const SEMANTICS : [(TSemanticId, TSemantics); 16] =
 	[
 		// ----------------------------------------------------------------------
-		( SEM_START_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_START_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[0].val
 		} ),
 
-		( SEM_BRACKETS_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_BRACKETS_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[1].val
 		} ),
 		// ----------------------------------------------------------------------
 
 		// ----------------------------------------------------------------------
 		// arithmetics
-		( SEM_ADD_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_ADD_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[0].val + args[2].val
 		} ),
 
-		( SEM_SUB_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_SUB_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[0].val - args[2].val
 		} ),
 
-		( SEM_MUL_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_MUL_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[0].val * args[2].val
 		} ),
 
-		( SEM_DIV_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_DIV_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[0].val / args[2].val
 		} ),
 
-		( SEM_MOD_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_MOD_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[0].val % args[2].val
 		} ),
 
-		( SEM_POW_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_POW_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			TLVal::powf(args[0].val, args[2].val.try_into().unwrap())
 		} ),
 
-		( SEM_UADD_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_UADD_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[1].val
 		} ),
 
-		( SEM_USUB_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_USUB_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			-args[1].val
 		} ),
 		// ----------------------------------------------------------------------
 
 		// ----------------------------------------------------------------------
 		// symbols and constants
-		( SEM_REAL_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_REAL_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[0].val
 		} ),
 
-		( SEM_INT_ID, |args : Vec<Symbol>| -> TLVal
+		( SEM_INT_ID, |args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			args[0].val
 		} ),
 
@@ -171,8 +199,9 @@ fn set_semantics(parser : &mut dyn Parsable)
 
 		// ----------------------------------------------------------------------
 		// functions
-		( SEM_CALL0_ID, |_args : Vec<Symbol>| -> TLVal
+		( SEM_CALL0_ID, |_args : Vec<Symbol>, _done : bool, _retval : TLVal| -> TLVal
 		{
+			if !_done { return 0 as TLVal; }
 			0 as TLVal // TODO
 		} ),
 
@@ -188,6 +217,7 @@ fn set_semantics(parser : &mut dyn Parsable)
 fn run_parser(parser : &mut dyn Parsable)
 {
 	parser.set_debug(SET_DEBUG);
+	parser.set_partials(SET_PARTIALS);
 	let end = parser.get_end_id();
 
 	loop

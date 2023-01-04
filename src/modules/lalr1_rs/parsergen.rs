@@ -50,6 +50,7 @@ pub struct Parser
 	semantics : HashMap<TSemanticId, TSemantics>,
 
 	debug : bool,
+	use_partials : bool,
 	end : TSymbolId,
 }
 
@@ -72,6 +73,7 @@ impl Parser
 			next_input_index : 0,
 
 			debug : false,
+			use_partials : true,
 			end : lalr1_tables::END,
 		};
 
@@ -119,7 +121,7 @@ impl Parser
 		let semantics : Option<&TSemantics> = self.semantics.get(&rule_id);
 		if semantics != None
 		{
-			retval = (*semantics.unwrap())(args);
+			retval = (*semantics.unwrap())(args, true, 0 as TLVal);
 		}
 
 		self.symbol.push(Symbol{
@@ -150,6 +152,11 @@ impl Parsable for Parser
 	fn set_debug(&mut self, debug : bool)
 	{
 		self.debug = debug;
+	}
+
+	fn set_partials(&mut self, use_partials : bool)
+	{
+		self.use_partials = use_partials;
 	}
 
 	fn get_end_id(&self) -> TSymbolId

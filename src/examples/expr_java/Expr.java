@@ -31,51 +31,95 @@ public class Expr
 	public void run()
 	{
 		// semantic rules
-		SemanticRuleInterface<Double> sem_start = (args) -> {
-			return args.elementAt(0).GetVal(); };
-		SemanticRuleInterface<Double> sem_brackets = (args) -> {
-			return args.elementAt(1).GetVal(); };
+		SemanticRuleInterface<Double> sem_start = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return args.elementAt(0).GetVal();
+		};
+		SemanticRuleInterface<Double> sem_brackets = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return args.elementAt(1).GetVal();
+		};
 
 		// arithmetics
-		SemanticRuleInterface<Double> sem_add = (args) -> {
-			return args.elementAt(0).GetVal() + args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Double> sem_sub = (args) -> {
-			return args.elementAt(0).GetVal() - args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Double> sem_mul = (args) -> {
-			return args.elementAt(0).GetVal() * args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Double> sem_div = (args) -> {
-			return args.elementAt(0).GetVal() / args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Double> sem_mod = (args) -> {
-			return args.elementAt(0).GetVal() % args.elementAt(2).GetVal(); };
-		SemanticRuleInterface<Double> sem_pow = (args) -> {
+		SemanticRuleInterface<Double> sem_add = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return args.elementAt(0).GetVal() + args.elementAt(2).GetVal();
+		};
+		SemanticRuleInterface<Double> sem_sub = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return args.elementAt(0).GetVal() - args.elementAt(2).GetVal();
+		};
+		SemanticRuleInterface<Double> sem_mul = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return args.elementAt(0).GetVal() * args.elementAt(2).GetVal();
+		};
+		SemanticRuleInterface<Double> sem_div = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return args.elementAt(0).GetVal() / args.elementAt(2).GetVal();
+		};
+		SemanticRuleInterface<Double> sem_mod = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return args.elementAt(0).GetVal() % args.elementAt(2).GetVal();
+		};
+		SemanticRuleInterface<Double> sem_pow = (args, done, retval) ->
+		{
+			if(!done) return null;
 			return Math.pow(
-				args.elementAt(0).GetVal(), args.elementAt(2).GetVal()); };
-		SemanticRuleInterface<Double> sem_uadd = (args) -> {
-			return +args.elementAt(1).GetVal(); };
-		SemanticRuleInterface<Double> sem_usub = (args) -> {
-			return -args.elementAt(1).GetVal(); };
+				args.elementAt(0).GetVal(),
+				args.elementAt(2).GetVal());
+		};
+		SemanticRuleInterface<Double> sem_uadd = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return +args.elementAt(1).GetVal();
+		};
+		SemanticRuleInterface<Double> sem_usub = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return -args.elementAt(1).GetVal();
+		};
 
 		// numerical constants
-		SemanticRuleInterface<Double> sem_real = (args) -> {
-			return args.elementAt(0).GetVal(); };
-		SemanticRuleInterface<Double> sem_int = (args) -> {
-			return args.elementAt(0).GetVal(); };
+		SemanticRuleInterface<Double> sem_real = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return args.elementAt(0).GetVal();
+		};
+		SemanticRuleInterface<Double> sem_int = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return args.elementAt(0).GetVal();
+		};
 
 		// variables
 		HashMap<String, Double> vars = new HashMap<String, Double>();
 		vars.put("pi", Math.PI);
-		SemanticRuleInterface<Double> sem_ident = (args) -> {
-			return vars.get(args.elementAt(0).GetStrVal()); };
+		SemanticRuleInterface<Double> sem_ident = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return vars.get(args.elementAt(0).GetStrVal());
+		};
 
 		// 0-argument functions
 		HashMap<String, Func0Args<Double>> funcs0
 			= new HashMap<String, Func0Args<Double>>();
 		Random rnd = new Random();
-		funcs0.put("rand", () -> {
+		funcs0.put("rand", () ->
+		{
 			return rnd.nextDouble();
 		});
-		SemanticRuleInterface<Double> sem_func0 = (args) -> {
-			return funcs0.get(args.elementAt(0).GetStrVal()).call(); };
+		SemanticRuleInterface<Double> sem_func0 = (args, done, retval) ->
+		{
+			if(!done) return null;
+			return funcs0.get(args.elementAt(0).GetStrVal()).call();
+		};
 
 		// 1-argument functions
 		HashMap<String, Func1Arg<Double>> funcs1
@@ -84,18 +128,24 @@ public class Expr
 		funcs1.put("cos", (arg) -> Math.cos(arg));
 		funcs1.put("tan", (arg) -> Math.tan(arg));
 		funcs1.put("sqrt", (arg) -> Math.sqrt(arg));
-		SemanticRuleInterface<Double> sem_func1 = (args) -> {
+		SemanticRuleInterface<Double> sem_func1 = (args, done, retval) ->
+		{
+			if(!done) return null;
 			return funcs1.get(args.elementAt(0).GetStrVal()).call(
-				args.elementAt(2).GetVal()); };
+				args.elementAt(2).GetVal());
+		};
 
 		// 2-argument functions
 		HashMap<String, Func2Args<Double>> funcs2
 			= new HashMap<String, Func2Args<Double>>();
 		funcs2.put("pow", (arg1, arg2) -> Math.pow(arg1, arg2));
-		SemanticRuleInterface<Double> sem_func2 = (args) -> {
+		SemanticRuleInterface<Double> sem_func2 = (args, done, retval) ->
+		{
+			if(!done) return null;
 			return funcs2.get(args.elementAt(0).GetStrVal()).call(
 				args.elementAt(2).GetVal(),
-				args.elementAt(4).GetVal()); };
+				args.elementAt(4).GetVal());
+		};
 
 		HashMap<Integer, SemanticRuleInterface<Double>> rules =
 			new HashMap<Integer, SemanticRuleInterface<Double>>();
@@ -120,6 +170,8 @@ public class Expr
 		ParserInterface<Double> parser = new Parser<Double>(new ExprTab());
 		//ParserInterface<Double> parser = new ExprParser<Double>();
 		parser.SetSemantics(rules);
+		parser.SetDebug(false);
+		parser.SetPartials(false);
 
 		// lexer
 		InputStreamReader isr = new InputStreamReader(System.in); // byte -> char

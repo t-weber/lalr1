@@ -17,6 +17,7 @@ import random
 
 sys.path.append(".")
 sys.path.append("../../modules")
+sys.path.append("../src/modules")
 
 import lexer
 
@@ -61,33 +62,33 @@ functab_2args = {
 # semantic rules, same as in expr_grammar.cpp
 #
 semantics = {
-	sem_start_id: lambda expr : expr["val"],
-	sem_brackets_id: lambda bracket_open, expr, bracket_close : expr["val"],
+	sem_start_id: lambda args, done, retval : args[0]["val"] if done else None,
+	sem_brackets_id: lambda args, done, retval : args[1]["val"] if done else None,
 
 	# binary arithmetic operations
-	sem_add_id: lambda expr1, op_plus, expr2 : expr1["val"] + expr2["val"],
-	sem_sub_id: lambda expr1, op_minus, expr2 : expr1["val"] - expr2["val"],
-	sem_mul_id: lambda expr1, op_mult, expr2 : expr1["val"] * expr2["val"],
-	sem_div_id: lambda expr1, op_div, expr2 : expr1["val"] / expr2["val"],
-	sem_mod_id: lambda expr1, op_mod, expr2 : expr1["val"] % expr2["val"],
-	sem_pow_id: lambda expr1, op_pow, expr2 : expr1["val"] ** expr2["val"],
+	sem_add_id: lambda args, done, retval : args[0]["val"] + args[2]["val"] if done else None,
+	sem_sub_id: lambda args, done, retval : args[0]["val"] - args[2]["val"] if done else None,
+	sem_mul_id: lambda args, done, retval : args[0]["val"] * args[2]["val"] if done else None,
+	sem_div_id: lambda args, done, retval : args[0]["val"] / args[2]["val"] if done else None,
+	sem_mod_id: lambda args, done, retval : args[0]["val"] % args[2]["val"] if done else None,
+	sem_pow_id: lambda args, done, retval : args[0]["val"] ** args[2]["val"] if done else None,
 
 	# unary arithmetic operations
-	sem_uadd_id: lambda unary_plus, expr : +expr["val"],
-	sem_usub_id: lambda unary_minus, expr : -expr["val"],
+	sem_uadd_id: lambda args, done, retval : +args[1]["val"] if done else None,
+	sem_usub_id: lambda args, done, retval : -args[2]["val"] if done else None,
 
 	# function calls
-	sem_call0_id: lambda ident, bracket_open, bracket_close :
-		functab_0args[ident["val"]](),
-	sem_call1_id: lambda ident, bracket_open, expr, bracket_close :
-		functab_1arg[ident["val"]](expr["val"]),
-	sem_call2_id: lambda ident, bracket_open, expr1, comma, expr2, bracket_close :
-		functab_2args[ident["val"]](expr1["val"], expr2["val"]),
+	sem_call0_id: lambda args, done, retval :
+		functab_0args[args[0]["val"]]() if done else None,
+	sem_call1_id: lambda args, done, retval :
+		functab_1arg[args[0]["val"]](args[2]["val"]) if done else None,
+	sem_call2_id: lambda args, done, retval :
+		functab_2args[args[0]["val"]](args[2]["val"], args[4]["val"]) if done else None,
 
 	# symbols
-	sem_real_id: lambda sym_real : sym_real["val"],
-	sem_int_id: lambda sym_int : sym_int["val"],
-	sem_ident_id: lambda sym_ident : symtab[sym_ident["val"]],
+	sem_real_id: lambda args, done, retval : args[0]["val"] if done else None,
+	sem_int_id: lambda args, done, retval : args[0]["val"] if done else None,
+	sem_ident_id: lambda args, done, retval : symtab[args[0]["val"]] if done else None,
 }
 
 
@@ -123,7 +124,6 @@ def main(args):
 			else:
 				print("Error while parsing.")
 				return -1
-
 	except IndexError as err:
 		print(f"Index error: {str(err)}")
 		return -1

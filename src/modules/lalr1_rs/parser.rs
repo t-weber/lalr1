@@ -29,6 +29,10 @@ pub struct Parser
 	map_nonterm_id : HashMap<TIndex, TSymbolId>,
 	map_semantic_id : HashMap<TIndex, TSemanticId>,
 
+	// partial rules
+	active_rules : HashMap<TSemanticId, Vec<ActiveRule>>,
+	cur_rule_handle : isize,
+
 	// lookahead
 	lookahead : Option<Symbol>,
 	lookahead_index : TIndex,
@@ -41,6 +45,7 @@ pub struct Parser
 	semantics : HashMap<TSemanticId, TSemantics>,
 
 	debug : bool,
+	use_partials : bool,
 }
 
 
@@ -60,6 +65,9 @@ impl Parser
 			map_nonterm_id : HashMap::<TIndex, TSymbolId>::new(),
 			map_semantic_id : HashMap::<TIndex, TSemanticId>::new(),
 
+			active_rules : HashMap::<TSemanticId, Vec<ActiveRule>>::new(),
+			cur_rule_handle : 0,
+
 			lookahead : None,
 			lookahead_index : 0,
 
@@ -68,6 +76,7 @@ impl Parser
 			next_input_index : 0,
 
 			debug : false,
+			use_partials : true,
 		};
 
 		for term_idx in lalr1_tables::TERM_IDX
@@ -166,9 +175,28 @@ impl Parser
 	 */
 	fn apply_rule(&mut self, rule_id : TSemanticId, num_rhs : TIndex, lhs_id : TSymbolId)
 	{
+		// remove fully reduced rule from active rule stack and get return value
+		let mut retval : TLVal = 0 as TLVal;
+		let mut handle : isize = -1;
+		if self.use_partials
+		{
+			let rulestack : Option<&mut Vec<ActiveRule>> = self.active_rules.get_mut(&rule_id);
+			if rulestack.is_some() && !rulestack.as_ref().unwrap().is_empty()
+			{
+				let active_rule = rulestack.unwrap().pop();
+				retval = active_rule.as_ref().unwrap().retval;
+				handle = active_rule.as_ref().unwrap().handle as isize;
+			}
+		}
+
 		if self.debug
 		{
-			println!("Applying rule {} with {} arguments.", rule_id, num_rhs);
+			print!("Applying rule {} with {} arguments", rule_id, num_rhs);
+			if handle >= 0
+			{
+				print!(" (handle {})", handle);
+			}
+			println!(".");
 		}
 
 		// get arguments
@@ -182,11 +210,10 @@ impl Parser
 		}
 
 		// call semantic function
-		let mut retval : TLVal = 0 as TLVal;
 		let semantics : Option<&TSemantics> = self.semantics.get(&rule_id);
 		if semantics != None
 		{
-			retval = (*semantics.unwrap())(args);
+			retval = (*semantics.unwrap())(args, true, retval as TLVal);
 		}
 
 		// push result
@@ -197,6 +224,135 @@ impl Parser
 			strval : None,
 		});
 	}
+
+
+	/*
+	 * partially apply a semantic rule with given id
+	 */
+	fn apply_partial_rule(&mut self, rule_id : TSemanticId, arg_len : TIndex, before_shift : bool)
+	{
+		let mut rule_len = arg_len;
+		if before_shift
+		{
+			// directly count the following lookahead terminal
+			rule_len += 1;
+		}
+
+		//println!("Active rules: {:?}", self.active_rules);
+		let mut already_seen_active_rule : bool = false;
+		let mut insert_new_active_rule : bool = false;
+		let mut seen_tokens_old : isize = -1;
+
+		let mut rulestack : Option<&mut Vec<ActiveRule>> = self.active_rules.get_mut(&rule_id);
+		if rulestack.is_some()
+		{
+			if !rulestack.as_ref().unwrap().is_empty()
+			{
+				let active_rule = rulestack.as_mut().unwrap().last_mut().unwrap();
+				seen_tokens_old = active_rule.seen_tokens as isize;
+
+				if before_shift
+				{
+					if active_rule.seen_tokens < rule_len
+					{
+						active_rule.seen_tokens = rule_len;
+					}
+					else
+					{
+						insert_new_active_rule = true;
+					}
+
+				}
+				else  // before jump
+				{
+					if active_rule.seen_tokens == rule_len
+					{
+						already_seen_active_rule = true;
+					}
+					else
+					{
+						active_rule.seen_tokens = rule_len;
+					}
+				}
+			}
+			else
+			{
+				// no active rule yet
+				insert_new_active_rule = true;
+			}
+		}
+		else
+		{
+			// no active rule yet
+			self.active_rules.insert(rule_id, Vec::<ActiveRule>::new());
+			rulestack = self.active_rules.get_mut(&rule_id);
+			insert_new_active_rule = true;
+		}
+
+		if insert_new_active_rule
+		{
+			seen_tokens_old = -1;
+
+			let mut active_rule = ActiveRule::new();
+			active_rule.seen_tokens = rule_len;
+			active_rule.handle = self.cur_rule_handle;
+			self.cur_rule_handle += 1;
+
+			rulestack.as_mut().unwrap().push(active_rule);
+		}
+
+		if !already_seen_active_rule
+		{
+			// get semantic function
+			let semantics : Option<&TSemantics> = self.semantics.get(&rule_id);
+			if semantics == None
+			{
+				self.error(&format!("Semantic rule {0} is not defined.", rule_id));
+				return;
+			}
+
+			let active_rule = rulestack.as_mut().unwrap().last_mut().unwrap();
+
+			// get arguments for semantic rule
+			let mut args : Vec<Symbol> = Vec::<Symbol>::new();
+			args.reserve(rule_len);
+
+			for _i in 0..arg_len
+			{
+				args.insert(0, self.symbol[self.symbol.len() - arg_len + _i].clone());
+			}
+
+			if !before_shift || seen_tokens_old < (rule_len as isize - 1)
+			{
+				// run the semantic rule
+				if self.debug
+				{
+					println!("Partially applying rule {} with {} arguments (handle {}). Before shift: {}.",
+						rule_id, arg_len, active_rule.handle, before_shift);
+				}
+
+				active_rule.retval = (*semantics.unwrap())(
+					args.clone(), false, active_rule.retval as TLVal);
+			}
+
+			if before_shift
+			{
+				// since we already know the next terminal in a shift, include it directly
+				args.push(self.lookahead.as_ref().unwrap().clone());
+
+				// run the semantic rule again
+				if self.debug
+				{
+					println!("Partially applying rule {} with {} arguments (handle {}). Before shift: {}.",
+						rule_id, rule_len, active_rule.handle, before_shift);
+				}
+
+				active_rule.retval = (*semantics.unwrap())(
+					args, false, active_rule.retval as TLVal);
+			}
+		}
+	}
+
 
 	fn error(&mut self, str : &str)
 	{
@@ -222,6 +378,15 @@ impl Parsable for Parser
 	fn set_debug(&mut self, debug : bool)
 	{
 		self.debug = debug;
+	}
+
+
+	/**
+	 * enable application of partial semantic rules
+	 */
+	fn set_partials(&mut self, use_partials : bool)
+	{
+		self.use_partials = use_partials;
 	}
 
 
@@ -265,6 +430,9 @@ impl Parsable for Parser
 		self.lookahead = None;
 		self.lookahead_index = 0;
 
+		self.active_rules.clear();
+		self.cur_rule_handle = 0;
+
 		self.symbol.clear();
 		self.state.clear();
 		self.state.push(lalr1_tables::START);
@@ -280,8 +448,19 @@ impl Parsable for Parser
 		{
 			let top_state : TIndex = *self.state.last().unwrap();
 
+			// main parsing tables
 			let shift = &lalr1_tables::SHIFT[top_state];
 			let reduce = &lalr1_tables::REDUCE[top_state];
+
+			// partial rule tables
+			let part_term = &lalr1_tables::PARTIALS_RULE_TERM;
+			let part_nonterm = &lalr1_tables::PARTIALS_RULE_NONTERM;
+			let part_term_len = &lalr1_tables::PARTIALS_MATCHLEN_TERM;
+			let part_nonterm_len = &lalr1_tables::PARTIALS_MATCHLEN_NONTERM;
+
+			// constants
+			let err = lalr1_tables::ERR;
+			let acc = lalr1_tables::ACC;
 
 			let new_state : TIndex = shift[self.lookahead_index];
 			let rule_index : TIndex = reduce[self.lookahead_index];
@@ -292,19 +471,21 @@ impl Parsable for Parser
 					top_state, new_state, rule_index, self.lookahead_index);
 			}
 
-			if new_state == lalr1_tables::ERR && rule_index == lalr1_tables::ERR
+			if new_state == err && rule_index == err
 			{
 				self.error(&format!("No shift or reduce action defined for state {0} and lookahead {1}.",
 					top_state, self.lookahead_index));
 				return false;
 			}
-			else if new_state != lalr1_tables::ERR && rule_index != lalr1_tables::ERR
+			else if new_state != err && rule_index != err
 			{
 				self.error(&format!("Shift/reduce conflict for state {0} and lookahead {1}.",
 					top_state, self.lookahead_index));
 				return false;
 			}
-			else if rule_index == lalr1_tables::ACC
+
+			// accept
+			else if rule_index == acc
 			{
 				if self.debug
 				{
@@ -313,23 +494,50 @@ impl Parsable for Parser
 				return true;
 			}
 
-			if new_state != lalr1_tables::ERR
+			// shift
+			if new_state != err
 			{
-				// shift
+				// partial rules
+				if self.use_partials
+				{
+					let partial_idx = part_term[top_state][self.lookahead_index];
+					if partial_idx != err
+					{
+						let partial_id = self.get_semantic_table_id(partial_idx);
+						let partial_len = part_term_len[top_state][self.lookahead_index];
+
+						self.apply_partial_rule(partial_id, partial_len, true);
+					}
+				}
+
 				self.state.push(new_state);
 				self.push_lookahead();
 			}
-			else if rule_index != lalr1_tables::ERR
+
+			// reduce
+			else if rule_index != err
 			{
-				// reduce
 				let num_syms = lalr1_tables::NUM_RHS_SYMS[rule_index];
 				let lhs_index = lalr1_tables::LHS_IDX[rule_index];
 				let rule_id = self.get_semantic_table_id(rule_index);
 				let lhs_id = self.get_nonterm_table_id(lhs_index);
 
 				self.apply_rule(rule_id, num_syms, lhs_id);
-
 				let new_top_state = *self.state.last().unwrap();
+
+				// partial rules
+				if self.use_partials && self.symbol.len() > 0
+				{
+					let partial_idx = part_nonterm[new_top_state][lhs_index];
+					if partial_idx != err
+					{
+						let partial_id = self.get_semantic_table_id(partial_idx);
+						let partial_len = part_nonterm_len[new_top_state][lhs_index];
+
+						self.apply_partial_rule(partial_id, partial_len, false);
+					}
+				}		
+
 				let jump = &lalr1_tables::JUMP[new_top_state];
 				let jump_state : TIndex = jump[lhs_index];
 				self.state.push(jump_state);

@@ -28,21 +28,69 @@ const tables = require(tables_file);
 
 // create semantics
 let semantics = {};
-semantics[ids.SemanticIds.start] = (expr) => { return expr["val"]; };
-semantics[ids.SemanticIds.brackets] = (bracket_open, expr, bracket_close) => { return expr["val"]; };
+semantics[ids.SemanticIds.start] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[0]["val"];
+};
+semantics[ids.SemanticIds.brackets] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[1]["val"];
+};
 
-semantics[ids.SemanticIds.add] = (expr1, op, expr2) => { return expr1["val"] + expr2["val"]; };
-semantics[ids.SemanticIds.sub] = (expr1, op, expr2) => { return expr1["val"] - expr2["val"]; };
-semantics[ids.SemanticIds.mul] = (expr1, op, expr2) => { return expr1["val"] * expr2["val"]; };
-semantics[ids.SemanticIds.div] = (expr1, op, expr2) => { return expr1["val"] / expr2["val"]; };
-semantics[ids.SemanticIds.mod] = (expr1, op, expr2) => { return expr1["val"] % expr2["val"]; };
-semantics[ids.SemanticIds.pow] = (expr1, op, expr2) => { return Math.pow(expr1["val"], expr2["val"]); };
+semantics[ids.SemanticIds.add] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[0]["val"] + args[2]["val"];
+};
+semantics[ids.SemanticIds.sub] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[0]["val"] - args[2]["val"];
+};
+semantics[ids.SemanticIds.mul] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[0]["val"] * args[2]["val"];
+};
+semantics[ids.SemanticIds.div] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[0]["val"] / args[2]["val"];
+};
+semantics[ids.SemanticIds.mod] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[0]["val"] % args[2]["val"];
+};
+semantics[ids.SemanticIds.pow] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return Math.pow(args[0]["val"], args[2]["val"]);
+};
 
-semantics[ids.SemanticIds.uadd] = (op, expr) => { return expr["val"]; };
-semantics[ids.SemanticIds.usub] = (op, expr) => { return -expr["val"]; };
+semantics[ids.SemanticIds.uadd] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[1]["val"];
+};
+semantics[ids.SemanticIds.usub] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return -args[1]["val"];
+};
 
-semantics[ids.SemanticIds.real] = (sym_real) => { return sym_real["val"]; };
-semantics[ids.SemanticIds.int] = (sym_int) => { return sym_int["val"]; };
+semantics[ids.SemanticIds.real] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[0]["val"];
+};
+semantics[ids.SemanticIds.int] = (args, done, retval) =>
+{
+	if(!done) return null;
+	return args[0]["val"];
+};
 
 
 // read and process expression
