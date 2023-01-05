@@ -16,6 +16,9 @@ import os
 import json
 
 
+g_gen_partials = True  # generate code for partial matches
+
+
 #
 # get the internal table index of a token or nonterminal id
 #
@@ -88,37 +91,61 @@ def write_parser_class(tables, outfile):
 		pr(f"\t\tself.end_token = 0x{end_token:x}")
 	pr("\t\tself.input_tokens = []")
 	pr("\t\tself.semantics = None")
+	pr("\t\tself.debug = False")
+	if g_gen_partials:
+		pr("\t\tself.use_partials = True")
 	pr("\t\tself.reset()\n")
 
 	# reset function
-	pr("\tdef reset(self):")
-	pr("\t\tself.input_index = -1")
-	pr("\t\tself.lookahead = None")
-	pr("\t\tself.dist_to_jump = 0")
-	pr("\t\tself.accepted = False")
-	pr("\t\tself.symbols = []\n")
+	pr("""	def reset(self):
+		self.input_index = -1
+		self.lookahead = None
+		self.dist_to_jump = 0
+		self.accepted = False
+		self.symbols = []""")
+	if g_gen_partials:
+		pr("\t\tself.active_rules = { }")
+		pr("\t\tself.cur_rule_handle = 0\n")
 
 	# get_next_lookahead function
-	pr("\tdef get_next_lookahead(self):")
-	pr("\t\tself.input_index = self.input_index + 1")
-	pr("\t\ttok = self.input_tokens[self.input_index]")
-	pr("\t\ttok_lval = tok[1] if len(tok) > 1 else None")
-	pr("\t\tself.lookahead = { \"is_term\" : True, \"id\" : tok[0], \"val\" : tok_lval }\n")
+	pr("""	def get_next_lookahead(self):
+		self.input_index = self.input_index + 1
+		tok = self.input_tokens[self.input_index]
+		tok_lval = tok[1] if len(tok) > 1 else None
+		self.lookahead = { \"is_term\" : True, \"id\" : tok[0], \"val\" : tok_lval }
+""")
 
 	# push_lookahead function
-	pr("\tdef push_lookahead(self):")
-	pr("\t\tself.symbols.append(self.lookahead)")
-	pr("\t\tself.get_next_lookahead()\n")
+	pr("""	def push_lookahead(self):
+		self.symbols.append(self.lookahead)
+		self.get_next_lookahead()
+""")
 
 	# apply_rule function
-	pr("\tdef apply_rule(self, rule_id, num_rhs, lhs_id):")
-	pr("\t\tself.dist_to_jump = num_rhs")
-	pr("\t\targs = self.symbols[len(self.symbols) - num_rhs : len(self.symbols)]")
-	pr("\t\tself.symbols = self.symbols[0 : len(self.symbols) - num_rhs]")
-	pr("\t\trule_ret = None")
-	pr("\t\tif self.semantics != None and rule_id in self.semantics:")
-	pr("\t\t\trule_ret = self.semantics[rule_id](args, True, None)")
-	pr("\t\tself.symbols.append({ \"is_term\" : False, \"id\" : lhs_id, \"val\" : rule_ret })\n")
+	pr("""	def apply_rule(self, rule_id, num_rhs, lhs_id):
+		rule_ret = None""")
+	if g_gen_partials:
+		pr("""		handle = -1
+		if self.use_partials and rule_id in self.active_rules:
+			rulestack = self.active_rules[rule_id]
+			if rulestack != None and len(rulestack) > 0:
+				active_rule = rulestack[len(rulestack) - 1]
+				rule_ret = active_rule["retval"]
+				handle = active_rule["handle"]
+				rulestack = rulestack[0 : len(rulestack) - 1]
+				self.active_rules[rule_id] = rulestack
+		if self.debug:
+			print(f"Reducing {num_rhs} symbols using rule {rule_id} (handle {handle}).")""")
+	else:
+		pr("""		if self.debug:
+			print(f"Reducing {num_rhs} symbols using rule {rule_id}.")""")
+	pr("""		self.dist_to_jump = num_rhs
+		args = self.symbols[len(self.symbols) - num_rhs : len(self.symbols)]
+		self.symbols = self.symbols[0 : len(self.symbols) - num_rhs]
+		if self.semantics != None and rule_id in self.semantics:
+			rule_ret = self.semantics[rule_id](args, True, None)
+		self.symbols.append({ \"is_term\" : False, \"id\" : lhs_id, \"val\" : rule_ret })
+""")
 
 	# parse function
 	pr("\tdef parse(self):")
@@ -140,6 +167,12 @@ def write_closure(tables, state_idx, outfile):
 	semanticidx_tab = tables["semantic_idx"]
 	numrhs_tab = tables["num_rhs_syms"]
 	lhsidx_tab = tables["lhs_idx"]
+
+	# partial rule tables
+	#part_term = tables["partials_rule_term"]["elems"]
+	#part_nonterm = tables["partials_rule_nonterm"]["elems"]
+	#part_term_len = tables["partials_matchlen_term"]["elems"]
+	#part_nonterm_len = tables["partials_matchlen_nonterm"]["elems"]
 
 	# special values
 	acc_token = tables["consts"]["acc"]
