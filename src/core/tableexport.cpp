@@ -295,11 +295,13 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 		const t_table& tabPartialRuleNonterm = GetPartialsRuleNonterm();
 		const t_table& tabPartialMatchLenTerm = GetPartialsMatchLengthTerm();
 		const t_table& tabPartialMatchLenNonterm = GetPartialsMatchLengthNonterm();
+		const t_table& tabPartialNontermLhs = GetPartialsNontermLhsId();
 
 		tabPartialRuleTerm.SaveJava(ofstr, "tab_partials_rule_term", "state", "terminal", "rule index", "private", 1);
 		tabPartialMatchLenTerm.SaveJava(ofstr, "tab_partials_matchlen_term", "state", "terminal", "length", "private", 1);
 		tabPartialRuleNonterm.SaveJava(ofstr, "tab_partials_rule_nonterm", "state", "nonterminal", "rule index", "private", 1);
 		tabPartialMatchLenNonterm.SaveJava(ofstr, "tab_partials_matchlen_nonterm", "state", "nonterminal", "length", "private", 1);
+		tabPartialNontermLhs.SaveJava(ofstr, "tab_partials_lhs_nonterm", "state", "nonterminal", "lhs nonterminal id", "private", 1);
 	}
 
 	// terminal symbol indices
@@ -392,6 +394,7 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 	ofstr << "\t@Override public int[][] GetPartialsRuleNonterm() { return tab_partials_rule_nonterm; }\n";
 	ofstr << "\t@Override public int[][] GetPartialsMatchLengthTerm() { return tab_partials_matchlen_term; }\n";
 	ofstr << "\t@Override public int[][] GetPartialsMatchLengthNonterm() { return tab_partials_matchlen_nonterm; }\n";
+	ofstr << "\t@Override public int[][] GetPartialsLhsIdNonterm() { return tab_partials_lhs_nonterm; }\n";
 
 	ofstr << "}\n";  // end class
 	return true;
@@ -476,6 +479,7 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 		const t_table& tabPartialRuleNonterm = GetPartialsRuleNonterm();
 		const t_table& tabPartialMatchLenTerm = GetPartialsMatchLengthTerm();
 		const t_table& tabPartialMatchLenNonterm = GetPartialsMatchLengthNonterm();
+		const t_table& tabPartialNontermLhsId = GetPartialsNontermLhsId();
 
 		tabPartialRuleTerm.SaveJSON(ofstr,
 			"partials_rule_term", "state", "terminal", "rule index", &special_values);
@@ -488,6 +492,9 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 		ofstr << ",\n\n";
 		tabPartialMatchLenNonterm.SaveJSON(ofstr,
 			"partials_matchlen_nonterm", "state", "nonterminal", "length");
+		ofstr << ",\n\n";
+		tabPartialNontermLhsId.SaveJSON(ofstr,
+			"partials_lhs_nonterm", "state", "nonterminal", "lhs nonterminal id", &special_values);
 		ofstr << ",\n";
 	}
 
@@ -647,6 +654,8 @@ bool TableGen::SaveParseTablesRS(const std::string& file) const
 			ofstr, "PARTIALS_RULE_NONTERM", "state", "nonterminal", "rule index", ty_idx);
 		GetPartialsMatchLengthNonterm().SaveRS(
 			ofstr, "PARTIALS_MATCHLEN_NONTERM", "state", "nonterminal", "length", ty_idx);
+		GetPartialsNontermLhsId().SaveRS(
+			ofstr, "PARTIALS_LHS_NONTERM", "state", "nonterminal", "lhs nonterminal id", ty_idx);
 		ofstr << "\n";
 	}
 

@@ -111,6 +111,9 @@ def main(args):
 
 			#theparser = expr_parser.Parser()
 
+			theparser.debug = False
+			theparser.use_partials = False
+
 			theparser.semantics = semantics
 			end_token = theparser.end_token
 

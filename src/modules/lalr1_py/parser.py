@@ -125,7 +125,11 @@ class Parser:
 
 		if self.debug:
 			print(f"Reducing {num_rhs} symbols using rule {rule_id} (handle {handle}).")
+
+		# get argument symbols
 		args = self.symbols[len(self.symbols) - num_rhs : len(self.symbols)]
+
+		# pop symbols and states
 		self.symbols = self.symbols[0 : len(self.symbols) - num_rhs]
 		self.states = self.states[0 : len(self.states) - num_rhs]
 

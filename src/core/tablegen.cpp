@@ -124,10 +124,12 @@ bool TableGen::CreateParseTables()
 	// tables for partial matches for terminal and non-terminal transition symbols
 	std::vector<std::vector<t_index>> partials_rule_term, partials_rule_nonterm;
 	std::vector<std::vector<std::size_t>> partials_matchlen_term, partials_matchlen_nonterm;
+	std::vector<std::vector<t_symbol_id>> partials_lhsid_nonterm;
 	partials_rule_term.resize(numStates);
 	partials_rule_nonterm.resize(numStates);
 	partials_matchlen_term.resize(numStates);
 	partials_matchlen_nonterm.resize(numStates);
+	partials_lhsid_nonterm.resize(numStates);
 
 	for(t_state_id state=0; state<numStates; ++state)
 	{
@@ -138,7 +140,8 @@ bool TableGen::CreateParseTables()
 		partials_rule_term[state].resize(numTerminals, ERROR_VAL);
 		partials_rule_nonterm[state].resize(numNonTerminals, ERROR_VAL);
 		partials_matchlen_term[state].resize(numTerminals, 0);
-		partials_matchlen_nonterm[state].resize(numTerminals, 0);
+		partials_matchlen_nonterm[state].resize(numNonTerminals, 0);
+		partials_lhsid_nonterm[state].resize(numNonTerminals, ERROR_VAL);
 	}
 
 
@@ -200,14 +203,14 @@ bool TableGen::CreateParseTables()
 			}
 
 			// unique partial match for non-terminal transition?
-			if(auto [uniquematch, rule_id, rule_len, lhs_is] =
+			if(auto [uniquematch, rule_id, rule_len, lhs_id] =
 				m_collection->GetUniquePartialMatch(elemsFrom, false); uniquematch)
 			{
 				// set partial match table elements
 				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
 				set_tab_elem(partials_rule_nonterm[stateFrom->GetId()], symIdx, rule_idx);
 				set_tab_elem(partials_matchlen_nonterm[stateFrom->GetId()], symIdx, rule_len, 0);
-				// TODO: also save lhs_id to table to check against semantic rule's return type
+				set_tab_elem(partials_lhsid_nonterm[stateFrom->GetId()], symIdx, lhs_id);
 			}
 		}
 	}
@@ -274,6 +277,8 @@ bool TableGen::CreateParseTables()
 		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numNonTerminals};
 	m_tabPartialMatchLenNonterm = t_table{partials_matchlen_nonterm,
 		ERROR_VAL, ACCEPT_VAL, 0, numStates, numNonTerminals};
+	m_tabPartialNontermLhsId = t_table{partials_lhsid_nonterm,
+		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numNonTerminals};
 
 
 	// check for and try to resolve shift/reduce conflicts

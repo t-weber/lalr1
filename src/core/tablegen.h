@@ -50,6 +50,7 @@ public:
 	const t_table& GetPartialsRuleNonterm() const { return m_tabPartialRuleNonterm; }
 	const t_table& GetPartialsMatchLengthTerm() const { return m_tabPartialMatchLenTerm; }
 	const t_table& GetPartialsMatchLengthNonterm() const { return m_tabPartialMatchLenNonterm; }
+	const t_table& GetPartialsNontermLhsId() const { return m_tabPartialNontermLhsId; }
 
 	const t_mapIdIdx& GetTermIndexMap() const { return m_mapTermIdx; }
 	const t_mapIdIdx& GetNontermIndexMap() const { return m_mapNonTermIdx; }
@@ -97,6 +98,7 @@ private:
 	t_table m_tabPartialMatchLenTerm{};
 	t_table m_tabPartialRuleNonterm{};
 	t_table m_tabPartialMatchLenNonterm{};
+	t_table m_tabPartialNontermLhsId{};
 
 	std::vector<std::size_t> m_numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
 	std::vector<t_index> m_ruleLhsIdx{};            // nonterminal index of the rule's result type

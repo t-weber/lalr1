@@ -767,6 +767,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 			lookbacks.size())
 		{
 			ostr_cpp << "Lookback terminals:";
+
 			for(const TerminalPtr& lookback : lookbacks)
 				ostr_cpp << " " << lookback->GetStrId();
 			ostr_cpp << "\n";
@@ -809,6 +810,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 		}
 
 		ostr_cpp << "*/\n";  // end comment
+
 
 		// write closure function
 		ostr_cpp << "void " << class_name << "::" << closure_name << "()\n";
@@ -1209,7 +1211,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 		ostr_cpp << "}\n\n";
 
 		ostr_h << "\tvoid " << closure_name << "();\n";
-	}
+	}  // closure
 
 
 	// write output files
