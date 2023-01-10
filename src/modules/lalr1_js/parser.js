@@ -89,10 +89,10 @@ class Parser
 
 	reset()
 	{
-		this.input_index = -1;
-		this.lookahead = null;
-		this.lookahead_idx = null;
-		this.accepted = false;
+		this.input_index = -1;            // index into the input token array
+		this.lookahead = null;            // current lookahead terminal...
+		this.lookahead_idx = null;        // ... and its index
+		this.accepted = false;            // input has been accepted?
 		this.states = [ this.start_idx ]; // parser states
 		this.symbols = [ ];               // symbol stack
 		this.active_rules = { };          // active partial rules

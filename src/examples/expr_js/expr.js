@@ -96,8 +96,11 @@ semantics[ids.SemanticIds.int] = (args, done, retval) =>
 // read and process expression
 process.stdin.on("data", (data) =>
 {
-	let theparser = new parser.Parser(tables);
-	//let theparser = new expr_parser.Parser();
+	//let theparser = new expr_parser.Parser();  // standalone parser
+	let theparser = new parser.Parser(tables);   // table-based parser
+
+	theparser.debug = false;
+	theparser.use_partials = false;
 	const end_token = theparser.get_end_token();
 
 	const input_str = data.toString();

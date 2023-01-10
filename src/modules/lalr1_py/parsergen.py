@@ -127,11 +127,9 @@ def write_parser_class(tables, outfile):
 		arg_len = rule_len
 		if before_shift:
 			rule_len += 1
-
 		already_seen_active_rule = False
 		insert_new_active_rule = False
 		seen_tokens_old = -1
-
 		rulestack = None
 		try:
 			rulestack = self.active_rules[rule_id]
@@ -161,27 +159,21 @@ def write_parser_class(tables, outfile):
 			rulestack = []
 			self.active_rules[rule_id] = rulestack
 			insert_new_active_rule = True
-
 		if insert_new_active_rule:
 			seen_tokens_old = -1
-
 			active_rule = {}
 			active_rule["seen_tokens"] = rule_len
 			active_rule["retval"] = None
 			active_rule["handle"] = self.cur_rule_handle
 			self.cur_rule_handle += 1
-
 			rulestack.append(active_rule)
 			self.active_rules[rule_id] = rulestack
-
 		if not already_seen_active_rule:
 			if self.semantics == None or rule_id not in self.semantics:
 				return
 			active_rule = rulestack[len(rulestack) - 1]
-
 			args = self.symbols[len(self.symbols) - arg_len : len(self.symbols)]
 			save_back = False
-
 			if not before_shift or seen_tokens_old < rule_len - 1:
 				if self.debug:
 					handle = active_rule["handle"]
@@ -191,19 +183,16 @@ def write_parser_class(tables, outfile):
 				active_rule["retval"] = self.semantics[rule_id](
 					args, False, active_rule["retval"])
 				save_back = True
-
 			if before_shift:
 				if self.debug:
 					handle = active_rule["handle"]
 					print(f"Applying partial rule {rule_id} with "
 						f"length {rule_len} (handle {handle}). "
 						f"Before shift: {before_shift}.")
-
 				args.append(self.lookahead)
 				active_rule["retval"] = self.semantics[rule_id](
 					args, False, active_rule["retval"])
 				save_back = True
-
 			if save_back:
 				rulestack[len(rulestack) - 1] = active_rule
 				self.active_rules[rule_id] = rulestack

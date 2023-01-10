@@ -12,6 +12,8 @@
 
 "use strict";
 
+const g_gen_partials = true;  // generate code for partial matches
+
 
 /**
  * get the token or terminal id of an internal table index
@@ -28,6 +30,25 @@ function get_table_id(idx_tab, idx)
 	}
 
 	throw new Error("No id for table index " + idx + ".");
+	return null;
+}
+
+
+/**
+ * get the internal table index of a token or nonterminal id
+ */
+function get_table_index(idx_tab, id)
+{
+	for(const [arridx, entry] of idx_tab.entries())
+	{
+		const theid = entry[0];
+		const theidx = entry[1];
+
+		if(theid == id)
+			return theidx;
+	}
+
+	throw new Error("No table index for id " + id + ".");
 	return null;
 }
 
@@ -109,6 +130,13 @@ function create_parser(tables, outfile)
 	const numrhs_tab = tables.num_rhs_syms;
 	const lhsidx_tab = tables.lhs_idx;
 
+	// partial rule tables
+	const part_term = tables.partials_rule_term.elems;
+	const part_nonterm = tables.partials_rule_nonterm.elems;
+	const part_term_len = tables.partials_matchlen_term.elems;
+	const part_nonterm_len = tables.partials_matchlen_nonterm.elems;
+	const part_nonterm_lhs = tables.partials_lhs_nonterm.elems;
+
 	// special values
 	const acc_token = tables.consts.acc;
 	const err_token = tables.consts.err;
@@ -124,7 +152,7 @@ function create_parser(tables, outfile)
 	// output file
 	const fs = require("fs");
 
-	fs.writeFileSync(outfile, 
+	fs.writeFileSync(outfile,
 		"/*\n * Parser created using liblalr1 by Tobias Weber, 2020-2022.\n" +
 		" * DOI: https://doi.org/10.5281/zenodo.6987396\n */\n\n",
 		{"flag":"w"});
@@ -137,6 +165,9 @@ function create_parser(tables, outfile)
 	fs.writeFileSync(outfile, "\t\tthis.end_token = " + end_token + ";\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.input_tokens = [ ];\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.semantics = null;\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\tthis.debug = false;\n", {"flag":"a"});
+	if(g_gen_partials)  // partial rules
+		fs.writeFileSync(outfile, "\t\tthis.use_partials = true;\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.reset();\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t}\n\n", {"flag":"a"});  // end of constructor
 
@@ -147,6 +178,11 @@ function create_parser(tables, outfile)
 	fs.writeFileSync(outfile, "\t\tthis.accepted = false;\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.symbols = [ ];\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.dist_to_jump = 0;\n", {"flag":"a"});
+	if(g_gen_partials)  // partial rules
+	{
+		fs.writeFileSync(outfile, "\t\tthis.active_rules = { };\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tthis.cur_rule_handle = 0;\n", {"flag":"a"});
+	}
 	fs.writeFileSync(outfile, "\t}\n\n", {"flag":"a"});  // end of reset()
 
 	// set_input function
@@ -180,14 +216,139 @@ function create_parser(tables, outfile)
 	fs.writeFileSync(outfile, "\t\tthis.get_next_lookahead();\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t}\n\n", {"flag":"a"});  // end of push_lookahead()
 
+	if(g_gen_partials)  // partial rules
+	{
+		// apply_partial_rule function
+		fs.writeFileSync(outfile, "\tapply_partial_rule(rule_id, rule_len, before_shift)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tlet arg_len = rule_len;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tif(before_shift)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t++rule_len;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tlet already_seen_active_rule = false;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tlet insert_new_active_rule = false;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tlet seen_tokens_old = -1;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tlet rulestack = null;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tif(rule_id in this.active_rules)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\trulestack = this.active_rules[rule_id];\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tif(rulestack != null)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tif(rulestack.length > 0)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tlet active_rule = rulestack[rulestack.length - 1];\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tseen_tokens_old = active_rule.seen_tokens;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tif(before_shift)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\tif(active_rule.seen_tokens < rule_len)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\tactive_rule.seen_tokens = rule_len;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\telse\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\tinsert_new_active_rule = true;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\telse\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\tif(active_rule.seen_tokens == rule_len)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\talready_seen_active_rule = true;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\telse\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\tactive_rule.seen_tokens = rule_len;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\trulestack[rulestack.length - 1] = active_rule;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tthis.active_rules[rule_id] = rulestack;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\telse\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tinsert_new_active_rule = true;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\telse\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\trulestack = [];\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tthis.active_rules[rule_id] = rulestack;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tinsert_new_active_rule = true;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tif(insert_new_active_rule)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tseen_tokens_old = -1;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tlet active_rule = {};\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tactive_rule[\"seen_tokens\"] = rule_len;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tactive_rule[\"retval\"] = null;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tactive_rule[\"handle\"] = this.cur_rule_handle;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t++this.cur_rule_handle;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\trulestack.push(active_rule);\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tthis.active_rules[rule_id] = rulestack;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tif(!already_seen_active_rule)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tif(this.semantics == null || !(rule_id in this.semantics))\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\treturn;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tlet active_rule = rulestack[rulestack.length - 1];\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tlet args = this.symbols.slice(this.symbols.length - arg_len, this.symbols.length);\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tlet save_back = false;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tif(!before_shift || seen_tokens_old < rule_len - 1)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tif(this.debug)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\tconsole.log(\"Applying partial rule \" + rule_id +\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\t\" with \" + arg_len + \" symbol(s)\" +\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\t\" (handle \" + active_rule.handle + \").\" +\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\t\" Before shift: \" + before_shift + \".\");\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tactive_rule.retval = this.semantics[rule_id](args, false, active_rule.retval);\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tsave_back = true;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tif(before_shift)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\targs.push(this.lookahead);\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tif(this.debug)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\tconsole.log(\"Applying partial rule \" + rule_id +\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\t\" with \" + rule_len + \" symbol(s)\" +\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\t\" (handle \" + active_rule.handle + \").\" +\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\t\t\" Before shift: \" + before_shift + \".\");\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tactive_rule.retval = this.semantics[rule_id](args, false, active_rule.retval);\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tsave_back = true;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tif(save_back)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\trulestack[rulestack.length - 1] = active_rule;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tthis.active_rules[rule_id] = rulestack;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t}\n\n", {"flag":"a"}); // end of apply_partial_rule()
+	}
+
 	// apply_rule function
 	fs.writeFileSync(outfile, "\tapply_rule(rule_id, num_rhs, lhs_id)\n\t{\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\tlet rule_ret = null;\n", {"flag":"a"});
+	if(g_gen_partials)  // partial rules
+	{
+		fs.writeFileSync(outfile, "\t\tlet handle = -1;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tif(this.use_partials && rule_id in this.active_rules)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tlet rulestack = this.active_rules[rule_id];\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tif(rulestack != null && rulestack.length > 0)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t{\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tlet active_rule = rulestack[rulestack.length - 1];\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\trule_ret = active_rule.retval;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\thandle = active_rule.handle;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\trulestack = rulestack.slice(0, rulestack.length - 1);\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\tthis.active_rules[rule_id] = rulestack;\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\tif(this.debug)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tconsole.log(\"Applying rule \" + rule_id +\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\" having \" + num_rhs + \" symbol(s)\" +\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\t\t\" (handle \" + handle + \").\");\n", {"flag":"a"});
+	}
+	else
+	{
+		fs.writeFileSync(outfile, "\t\tif(this.debug)\n", {"flag":"a"});
+		fs.writeFileSync(outfile, "\t\t\tconsole.log(\"Applying rule \" + rule_id + \" having \" + num_rhs + \" symbol(s).\");\n", {"flag":"a"});
+	}
 	fs.writeFileSync(outfile, "\t\tthis.dist_to_jump = num_rhs;\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tconst args = this.symbols.slice(this.symbols.length - num_rhs, this.symbols.length);\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.symbols = this.symbols.slice(0, this.symbols.length - num_rhs);\n", {"flag":"a"});
-	fs.writeFileSync(outfile, "\t\tlet rule_ret = null;\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tif(this.semantics != null && rule_id in this.semantics)\n", {"flag":"a"});
-	fs.writeFileSync(outfile, "\t\t\trule_ret = this.semantics[rule_id].apply(this, args);\n", {"flag":"a"});
+	fs.writeFileSync(outfile, "\t\t\trule_ret = this.semantics[rule_id](args, true, rule_ret);\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\telse\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\t\tthrow new Error(\"Semantic rule \" + rule_id + \" is not defined.\");\n", {"flag":"a"});
 	fs.writeFileSync(outfile, "\t\tthis.symbols.push({ \"is_term\" : false, \"id\" : lhs_id, \"val\" : rule_ret });\n", {"flag":"a"});
@@ -226,22 +387,37 @@ function create_parser(tables, outfile)
 			const newstate_idx = shift_tab[state_idx][term_idx];
 			const rule_idx = reduce_tab[state_idx][term_idx];
 
+			// shift
 			if(newstate_idx != err_token)
 			{
 				const term_strid = get_table_strid(termidx_tab, term_idx);
 				const term_id_str = id_to_str(term_id, end_token);
 				fs.writeFileSync(outfile, "\t\t\tcase " + term_id_str + ": // " + term_strid + "\n", {"flag":"a"});
 				fs.writeFileSync(outfile, "\t\t\t\tnext_state = this.state_" + newstate_idx + ";\n", {"flag":"a"});
+				if(g_gen_partials)  // partial rules
+				{
+					const partial_idx = part_term[state_idx][term_idx];
+					if(partial_idx != err_token)
+					{
+						const partial_id = get_table_id(semanticidx_tab, partial_idx);
+						const partial_len = part_term_len[state_idx][term_idx];
+						fs.writeFileSync(outfile, "\t\t\t\tif(this.use_partials)\n", {"flag":"a"});
+						fs.writeFileSync(outfile, "\t\t\t\t\tthis.apply_partial_rule(" +
+							partial_id + ", " + partial_len + ", true);\n", {"flag":"a"});
+					}
+				}
 				fs.writeFileSync(outfile, "\t\t\t\tbreak;\n", {"flag":"a"});
 			}
 			else if(rule_idx != err_token)
 			{
 				if(rule_idx == acc_token)
 				{
+					// accept
 					acc_term_id.push(term_id);
 				}
 				else
 				{
+					// reduce
 					if(!rules_term_id.hasOwnProperty(rule_idx))
 						rules_term_id[rule_idx] = [];
 					rules_term_id[rule_idx].push(term_id);
@@ -249,7 +425,7 @@ function create_parser(tables, outfile)
 			}
 		}
 
-		// create cases for rule application
+		// reduce; create cases for rule application
 		for(const rule_idx in rules_term_id)
 		{
 			const term_ids = rules_term_id[rule_idx];
@@ -293,6 +469,7 @@ function create_parser(tables, outfile)
 		fs.writeFileSync(outfile, "\t\t\t\tbreak;\n", {"flag":"a"});
 		fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});  // end of switch
 
+		// shift
 		if(has_shift_entry)
 		{
 			fs.writeFileSync(outfile, "\t\tif(next_state != null)\n\t\t{\n", {"flag":"a"});
@@ -301,6 +478,7 @@ function create_parser(tables, outfile)
 			fs.writeFileSync(outfile, "\t\t}\n", {"flag":"a"});  // endif
 		}
 
+		// jump
 		if(has_jump_entry)
 		{
 			fs.writeFileSync(outfile, "\t\twhile(this.dist_to_jump == 0 && this.symbols.length > 0 && !this.accepted)\n\t\t{\n", {"flag":"a"});
@@ -316,8 +494,24 @@ function create_parser(tables, outfile)
 				{
 					const nonterm_id = get_table_id(nontermidx_tab, nonterm_idx);
 					const nonterm_strid = get_table_strid(nontermidx_tab, nonterm_idx);
-
 					fs.writeFileSync(outfile, "\t\t\t\tcase " + nonterm_id + ": // " + nonterm_strid + "\n", {"flag":"a"});
+					if(g_gen_partials)  // partial rules
+					{
+						const lhs_id = part_nonterm_lhs[state_idx][nonterm_idx];
+						if(lhs_id != err_token)
+						{
+							const lhs_idx = get_table_index(nontermidx_tab, lhs_id);
+							const partial_idx = part_nonterm[state_idx][lhs_idx];
+							if(partial_idx != err_token)
+							{
+								const partial_id = get_table_id(semanticidx_tab, partial_idx);
+								const partial_len = part_nonterm_len[state_idx][lhs_idx];
+								fs.writeFileSync(outfile, "\t\t\t\t\tif(this.use_partials)\n", {"flag":"a"});
+								fs.writeFileSync(outfile, "\t\t\t\t\t\tthis.apply_partial_rule(" +
+									partial_id + ", " + partial_len + ", false);\n", {"flag":"a"});
+							}
+						}
+					}
 					fs.writeFileSync(outfile, "\t\t\t\t\tthis.state_" + jump_state_idx + "();\n", {"flag":"a"});
 					fs.writeFileSync(outfile, "\t\t\t\t\tbreak;\n", {"flag":"a"});
 				}
