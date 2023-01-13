@@ -31,4 +31,5 @@ public interface ParsingTableInterface
 	public int[][] GetPartialsRuleNonterm();
 	public int[][] GetPartialsMatchLengthTerm();
 	public int[][] GetPartialsMatchLengthNonterm();
+	public int[][] GetPartialsLhsIdNonterm();
 }

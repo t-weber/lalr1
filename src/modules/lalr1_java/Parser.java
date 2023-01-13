@@ -252,8 +252,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 
 		if(m_debug)
 		{
-			System.out.print("Applying rule " + rule_id +
-				" with " + num_rhs + " arguments");
+			System.out.print("Applying rule " + rule_id + " with " + num_rhs + " arguments");
 			if(handle >= 0)
 				System.out.print(" (handle " + handle + ")");
 			System.out.println(".");
@@ -366,7 +365,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 				// run the semantic rule
 				if(m_debug)
 				{
-					System.out.println("Applying partial rule " + rule_id + 
+					System.out.println("Applying partial rule " + rule_id +
 						" with " + arg_len + " arguments" +
 						" (handle " + active_rule.handle + ")" +
 						" Before shift: " + before_shift + ".");
@@ -383,7 +382,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 				// run the semantic rule again
 				if(m_debug)
 				{
-					System.out.println("Applying partial rule " + rule_id + 
+					System.out.println("Applying partial rule " + rule_id +
 						" with " + rule_len + " arguments" +
 						" (handle " + active_rule.handle + ")" +
 						" Before shift: " + before_shift + ".");
@@ -462,7 +461,7 @@ public class Parser<t_lval> implements ParserInterface<t_lval>
 				m_states.push(new_state);
 				PushLookahead();
 			}
-	
+
 			// reduce
 			else if(rule_index != err)
 			{

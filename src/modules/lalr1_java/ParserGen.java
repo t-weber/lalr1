@@ -28,13 +28,15 @@ public class ParserGen
 
 	// table index and id maps
 	protected HashMap<Integer, Integer> m_map_term_id;
-	protected HashMap<Integer, Integer> m_map_nonterm_id;
+	protected HashMap<Integer, Integer> m_map_nonterm_id, m_map_nonterm_idx;
 	protected HashMap<Integer, Integer> m_map_semantic_id;
 
 	protected int m_err_token = -1;
 	protected int m_acc_token = -2;
 	protected int m_end_token = -1;
 	protected int m_start_idx = 0;
+
+	protected boolean m_gen_partials = true;
 
 
 	public ParserGen(ParsingTableInterface tables)
@@ -47,11 +49,15 @@ public class ParserGen
 		for(int i=0; i<term_idx.length; ++i)
 			m_map_term_id.put(term_idx[i][1], term_idx[i][0]);
 
-		// create nonterminal map from index to id
+		// create nonterminal map from index to id (and vice-versa)
 		m_map_nonterm_id = new HashMap<Integer, Integer>();
+		m_map_nonterm_idx = new HashMap<Integer, Integer>();
 		int[][] nonterm_idx = m_tables.GetNontermIndexMap();
 		for(int i=0; i<nonterm_idx.length; ++i)
+		{
 			m_map_nonterm_id.put(nonterm_idx[i][1], nonterm_idx[i][0]);
+			m_map_nonterm_idx.put(nonterm_idx[i][0], nonterm_idx[i][1]);
+		}
 
 		// create semantic rule map from index to id
 		m_map_semantic_id = new HashMap<Integer, Integer>();
@@ -67,14 +73,28 @@ public class ParserGen
 	}
 
 
+	public void SetGenPartials(boolean gen_partials)
+	{
+		m_gen_partials = gen_partials;
+	}
+
+
 	/**
 	 * write an individual state function to the file
 	 */
 	protected void CreateState(PrintWriter pw, int state_idx)
 	{
+		// main parsing tables
 		int[] shift = m_tables.GetShiftTab()[state_idx];
 		int[] reduce = m_tables.GetReduceTab()[state_idx];
 		int[] jump = m_tables.GetJumpTab()[state_idx];
+
+		// partial rule tables
+		final int[] part_term = m_tables.GetPartialsRuleTerm()[state_idx];
+		final int[] part_nonterm = m_tables.GetPartialsRuleNonterm()[state_idx];
+		final int[] part_term_len = m_tables.GetPartialsMatchLengthTerm()[state_idx];
+		final int[] part_nonterm_len = m_tables.GetPartialsMatchLengthNonterm()[state_idx];
+		final int[] part_nonterm_lhs = m_tables.GetPartialsLhsIdNonterm()[state_idx];
 
 		int num_terms = shift.length;
 		int num_nonterms = jump.length;
@@ -100,20 +120,35 @@ public class ParserGen
 			int newstate_idx = shift[term_idx];
 			int rule_idx = reduce[term_idx];
 
+			// shift
 			if(newstate_idx != m_err_token)
 			{
 				pw.print("\t\t\tcase " + term_id + ":" + GetCharComment(term_id) + "\n");
 				pw.print("\t\t\t\tnext_state = this::State" + newstate_idx + ";\n");
+				if(m_gen_partials)
+				{
+					int partial_idx = part_term[term_idx];
+					if(partial_idx != m_err_token)
+					{
+						int partial_id = GetSemanticTableId(partial_idx);
+						int partial_len = part_term_len[term_idx];
+
+						pw.print("\t\t\t\tif(m_use_partials)\n");
+						pw.print("\t\t\t\t\tApplyPartialRule(" + partial_id + ", " + partial_len + ", true);\n");
+					}
+				}
 				pw.print("\t\t\t\tbreak;\n");
 			}
 			else if(rule_idx != m_err_token)
 			{
 				if(rule_idx == m_acc_token)
 				{
+					// accept
 					acc_term_id.add(term_id);
 				}
 				else
 				{
+					// reduce
 					if(!rules_term_id.containsKey(rule_idx))
 						rules_term_id.put(rule_idx, new Vector<Integer>());
 					rules_term_id.get(rule_idx).add(term_id);
@@ -121,7 +156,7 @@ public class ParserGen
 			}
 		}
 
-		// create cases for rule application
+		// reduce; create cases for rule application
 		for(Integer rule_idx : rules_term_id.keySet())
 		{
 			Vector<Integer> term_ids = rules_term_id.get(rule_idx);
@@ -160,6 +195,7 @@ public class ParserGen
 
 		pw.print("\t\t}\n");  // end switch
 
+		// shift
 		if(has_shift_entry)
 		{
 			pw.print("\t\tif(next_state != null)\n\t\t{\n");
@@ -168,6 +204,7 @@ public class ParserGen
 			pw.print("\t\t}\n");  // end if
 		}
 
+		// jump
 		if(has_jump_entry)
 		{
 			pw.print("\t\twhile(m_dist_to_jump == 0 && m_symbols.size() > 0 && !m_accepted)\n\t\t{\n");
@@ -182,6 +219,25 @@ public class ParserGen
 				{
 					int nonterm_id = GetNontermTableId(nonterm_idx);
 					pw.print("\t\t\t\tcase " + nonterm_id + ":\n");
+
+					if(m_gen_partials)
+					{
+						int lhs_id = part_nonterm_lhs[nonterm_idx];
+						if(lhs_id != m_err_token)
+						{
+							int lhs_idx = GetNontermTableIdx(lhs_id);
+							int partial_idx = part_nonterm[lhs_idx];
+							if(partial_idx != m_err_token)
+							{
+								int partial_id = GetSemanticTableId(partial_idx);
+								int partial_len = part_nonterm_len[lhs_idx];
+
+								pw.print("\t\t\t\tif(m_use_partials)\n");
+								pw.print("\t\t\t\t\tApplyPartialRule(" + partial_id + ", " + partial_len + ", false);\n");
+							}
+						}
+					}
+
 					pw.print("\t\t\t\t\tState" + jump_state_idx + "();\n");
 					pw.print("\t\t\t\t\tbreak;\n");
 				}
@@ -231,109 +287,237 @@ public class ParserGen
 			BufferedWriter bw = new BufferedWriter(fw);
 			PrintWriter pw = new PrintWriter(bw);
 
-			pw.print("/**\n");
-			pw.print(" * Parser created using liblalr1 by Tobias Weber, 2020-2022.\n");
-			pw.print(" * DOI: https://doi.org/10.5281/zenodo.6987396\n");
-			pw.print(" */\n\n");
+			pw.print("""
+			/**
+			 * Parser created using liblalr1 by Tobias Weber, 2020-2022.
+			 * DOI: https://doi.org/10.5281/zenodo.6987396
+			 */
 
-			pw.print("import lalr1_java.Symbol;\n");
-			pw.print("import lalr1_java.ParserInterface;\n");
-			pw.print("import lalr1_java.SemanticRuleInterface;\n");
+			import lalr1_java.Symbol;
+			import lalr1_java.ParserInterface;
+			import lalr1_java.SemanticRuleInterface;
+			import lalr1_java.ActiveRule;
 
-			pw.print("import java.util.Vector;\n");
-			pw.print("import java.util.Stack;\n");
-			pw.print("import java.util.HashMap;\n\n");
+			import java.util.Vector;
+			import java.util.Stack;
+			import java.util.HashMap;
 
-			pw.print("public class " + parser_name + "<t_lval> implements ParserInterface<t_lval>\n{\n");
+			""");
 
-			// member variables
-			pw.print("\tprotected boolean m_debug;\n");
-			pw.print("\tprotected boolean m_use_partials;\n");
-			pw.print("\tprotected Vector<Symbol<t_lval>> m_input;\n");
-			pw.print("\tprotected Stack<Symbol<t_lval>> m_symbols;\n");
-			pw.print("\tprotected HashMap<Integer, SemanticRuleInterface<t_lval>> m_semantics;\n");
-			pw.print("\tprotected int m_input_index;\n");
-			pw.print("\tprotected Symbol<t_lval> m_lookahead;\n");
-			pw.print("\tprotected int m_dist_to_jump;\n");
-			pw.print("\tprotected boolean m_accepted;\n\n");
+			pw.print("public class " + parser_name + "<t_lval> implements ParserInterface<t_lval>\n");
 
-			// NextLookahead()
-			pw.print("\tprotected void NextLookahead()\n\t{\n");
-			pw.print("\t\t++m_input_index;\n");
-			pw.print("\t\tm_lookahead = m_input.elementAt(m_input_index);\n");
-			pw.print("\t}\n\n");  // end NextLookahead()
+			pw.print("""
+			{
+				protected boolean m_debug;
+				protected boolean m_use_partials;
+				protected Vector<Symbol<t_lval>> m_input;
+				protected Stack<Symbol<t_lval>> m_symbols;
+				protected HashMap<Integer, SemanticRuleInterface<t_lval>> m_semantics;
+				protected int m_input_index;
+				protected Symbol<t_lval> m_lookahead;
+				protected int m_dist_to_jump;
+				protected boolean m_accepted;
+				protected HashMap<Integer, Stack<ActiveRule<t_lval>>> m_active_rules;
+				protected int m_cur_rule_handle;
 
-			// PushLookahead()
-			pw.print("\tprotected void PushLookahead()\n\t{\n");
-			pw.print("\t\tm_symbols.push(m_lookahead);\n");
-			pw.print("\t\tNextLookahead();\n");
-			pw.print("\t}\n\n");  // end PushLookahead()
+				protected void NextLookahead()
+				{
+					++m_input_index;
+					m_lookahead = m_input.elementAt(m_input_index);
+				}
 
-			// ApplyRule()
-			pw.print("\tprotected void ApplyRule(int rule_id, int num_rhs, int lhs_id)\n\t{\n");
-			pw.print("\t\tm_dist_to_jump = num_rhs;\n");
-			pw.print("\t\tVector<Symbol<t_lval>> args = new Vector<Symbol<t_lval>>();\n");
-			pw.print("\t\tfor(int i=0; i<num_rhs; ++i)\n");
-			pw.print("\t\t\targs.add(m_symbols.elementAt(m_symbols.size() - num_rhs + i));\n");
-			pw.print("\t\tfor(int i=0; i<num_rhs; ++i)\n");
-			pw.print("\t\t\tm_symbols.pop();\n");
-			pw.print("\t\tt_lval retval = null;\n");
-			pw.print("\t\tif(m_semantics != null && m_semantics.containsKey(rule_id))\n");
-			pw.print("\t\t\tretval = m_semantics.get(rule_id).call(args, true, null);\n");
-			pw.print("\t\telse\n");
-			pw.print("\t\t\tSystem.err.println(\"Semantic rule \" + rule_id + \" is not defined.\");\n");
-			pw.print("\t\tm_symbols.push(new Symbol<t_lval>(false, lhs_id, retval));\n");
-			pw.print("\t}\n\n");  // end ApplyRule()
+				protected void PushLookahead()
+				{
+					m_symbols.push(m_lookahead);
+					NextLookahead();
+				}
 
-			// constructor
-			pw.print("\tpublic " + parser_name + "()\n\t{\n");
-			pw.print("\t\tm_debug = false;\n");
-			pw.print("\t\tm_use_partials = true;\n");
-			pw.print("\t\tm_input = null;\n");
-			pw.print("\t\tm_semantics = null;\n");
-			pw.print("\t\tm_symbols = new Stack<Symbol<t_lval>>();\n");
-			pw.print("\t\tReset();\n");
-			pw.print("\t}\n\n");  // end constructor
+				@Override
+				public void Reset()
+				{
+					m_symbols.clear();
+					m_input_index = -1;
+					m_lookahead = null;
+					m_dist_to_jump = 0;
+					m_accepted = false;
+					m_active_rules.clear();
+					m_cur_rule_handle = 0;
+				}
 
-			// Reset()
-			pw.print("\t@Override\n");
-			pw.print("\tpublic void Reset()\n\t{\n");
-			pw.print("\t\tm_symbols.clear();\n");
-			pw.print("\t\tm_input_index = -1;\n");
-			pw.print("\t\tm_lookahead = null;\n");
-			pw.print("\t\tm_dist_to_jump = 0;\n");
-			pw.print("\t\tm_accepted = false;\n");
-			pw.print("\t}\n\n");  // end Reset()
+				@Override
+				public void SetDebug(boolean debug)
+				{
+					m_debug = debug;
+				}
 
-			// SetDebug()
-			pw.print("\t@Override\n");
-			pw.print("\tpublic void SetDebug(boolean debug)\n\t{\n");
-			pw.print("\t\tm_debug = debug;\n");
-			pw.print("\t}\n\n");  // end SetInput()
+				@Override
+				public void SetPartials(boolean use_partials)
+				{
+					m_use_partials = use_partials;
+				}
 
-			// SetPartials()
-			pw.print("\t@Override\n");
-			pw.print("\tpublic void SetPartials(boolean use_partials)\n\t{\n");
-			pw.print("\t\tm_use_partials = use_partials;\n");
-			pw.print("\t}\n\n");  // end SetPartials()
+				@Override
+				public void SetInput(Vector<Symbol<t_lval>> input)
+				{
+					m_input = input;
+				}
 
-			// SetInput()
-			pw.print("\t@Override\n");
-			pw.print("\tpublic void SetInput(Vector<Symbol<t_lval>> input)\n\t{\n");
-			pw.print("\t\tm_input = input;\n");
-			pw.print("\t}\n\n");  // end SetInput()
+				@Override
+				public void SetSemantics(HashMap<Integer, SemanticRuleInterface<t_lval>> semantics)
+				{
+					m_semantics = semantics;
+				}
 
-			// SetSemantics()
-			pw.print("\t@Override\n");
-			pw.print("\tpublic void SetSemantics(HashMap<Integer, SemanticRuleInterface<t_lval>> semantics)\n\t{\n");
-			pw.print("\t\tm_semantics = semantics;\n");
-			pw.print("\t}\n\n");  // end SetSemantics()
+				@Override
+				public boolean GetAccepted()
+				{
+					return m_accepted;
+				}
 
-			// GetAccepted()
-			pw.print("\t@Override\n");
-			pw.print("\tpublic boolean GetAccepted()\n\t{\n");
-			pw.print("\t\treturn m_accepted;\n");
-			pw.print("\t}\n\n");  // end GetAccepted()
+				protected void ApplyRule(int rule_id, int num_rhs, int lhs_id)
+				{
+					t_lval retval = null;
+					int handle = -1;
+					if(m_use_partials)
+					{
+						Stack<ActiveRule<t_lval>> rulestack = m_active_rules.get(rule_id);
+						if(rulestack != null && !rulestack.empty())
+						{
+							ActiveRule<t_lval> active_rule = rulestack.peek();
+							retval = active_rule.retval;
+							handle = active_rule.handle;
+							rulestack.pop();
+						}
+					}
+
+					if(m_debug)
+					{
+						System.out.print("Applying rule " + rule_id + " with " + num_rhs + " arguments");
+						if(handle >= 0)
+							System.out.print(" (handle " + handle + ")");
+						System.out.println(".");
+					}
+
+					m_dist_to_jump = num_rhs;
+					Vector<Symbol<t_lval>> args = new Vector<Symbol<t_lval>>();
+					for(int i=0; i<num_rhs; ++i)
+						args.add(m_symbols.elementAt(m_symbols.size() - num_rhs + i));
+					for(int i=0; i<num_rhs; ++i)
+						m_symbols.pop();
+					if(m_semantics != null && m_semantics.containsKey(rule_id))
+						retval = m_semantics.get(rule_id).call(args, true, retval);
+					else
+						System.err.println("Semantic rule " + rule_id + " is not defined.");
+					m_symbols.push(new Symbol<t_lval>(false, lhs_id, retval));
+				}
+
+			""");
+
+			if(m_gen_partials)
+			{
+				pw.print("""
+				protected void ApplyPartialRule(int rule_id, int rule_len, boolean before_shift)
+				{
+					int arg_len = rule_len;
+					if(before_shift)
+						++rule_len;
+
+					boolean already_seen_active_rule = false;
+					boolean insert_new_active_rule = false;
+					int seen_tokens_old = -1;
+
+					Stack<ActiveRule<t_lval>> rulestack = m_active_rules.get(rule_id);
+					if(rulestack != null)
+					{
+						if(!rulestack.empty())
+						{
+							ActiveRule<t_lval> active_rule = rulestack.peek();
+							seen_tokens_old = active_rule.seen_tokens;
+
+							if(before_shift)
+							{
+								if(active_rule.seen_tokens < rule_len)
+									active_rule.seen_tokens = rule_len;
+								else
+									insert_new_active_rule = true;
+							}
+							else // before jump
+							{
+								if(active_rule.seen_tokens == rule_len)
+									already_seen_active_rule = true;
+								else
+									active_rule.seen_tokens = rule_len;
+							}
+						}
+						else
+						{
+							insert_new_active_rule = true;
+						}
+					}
+					else
+					{
+						rulestack = new Stack<ActiveRule<t_lval>>();
+						m_active_rules.put(rule_id, rulestack);
+						insert_new_active_rule = true;
+					}
+
+					if(insert_new_active_rule)
+					{
+						seen_tokens_old = -1;
+
+						ActiveRule<t_lval> active_rule = new ActiveRule<t_lval>();
+						active_rule.seen_tokens = rule_len;
+						active_rule.handle = m_cur_rule_handle++;
+
+						rulestack.push(active_rule);
+					}
+
+					if(!already_seen_active_rule)
+					{
+						if(m_semantics == null || !m_semantics.containsKey(rule_id))
+						{
+							System.err.println("Semantic rule " + rule_id + " is not defined.");
+							return;
+						}
+
+						ActiveRule<t_lval> active_rule = rulestack.peek();
+
+						Vector<Symbol<t_lval>> args = new Vector<Symbol<t_lval>>();
+						for(int i=0; i<arg_len; ++i)
+							args.add(m_symbols.elementAt(m_symbols.size() - arg_len + i));
+
+						if(!before_shift || seen_tokens_old < rule_len - 1)
+						{
+							if(m_debug)
+							{
+								System.out.println("Applying partial rule " + rule_id +
+									" with " + arg_len + " arguments" +
+									" (handle " + active_rule.handle + ")" +
+									" Before shift: " + before_shift + ".");
+							}
+							active_rule.retval = m_semantics.get(rule_id).call(
+								args, false, active_rule.retval);
+						}
+
+						if(before_shift)
+						{
+							args.add(m_lookahead);
+
+							if(m_debug)
+							{
+								System.out.println("Applying partial rule " + rule_id +
+									" with " + rule_len + " arguments" +
+									" (handle " + active_rule.handle + ")" +
+									" Before shift: " + before_shift + ".");
+							}
+							active_rule.retval = m_semantics.get(rule_id).call(
+								args, false, active_rule.retval);
+						}
+					}
+				}
+
+			""");
+			}
 
 			// GetEndConst()
 			pw.print("\t@Override\n");
@@ -351,6 +535,18 @@ public class ParserGen
 			pw.print("\t\t\treturn m_symbols.peek();\n");
 			pw.print("\t\treturn null;\n");
 			pw.print("\t}\n\n");  // end Parse()
+
+			// constructor
+			pw.print("\tpublic " + parser_name + "()\n\t{\n");
+			pw.print("\t\tm_debug = false;\n");
+			pw.print("\t\tm_use_partials = true;\n");
+			pw.print("\t\tm_input = null;\n");
+			pw.print("\t\tm_semantics = null;\n");
+			pw.print("\t\tm_symbols = new Stack<Symbol<t_lval>>();\n");
+			//if(m_gen_partials)
+				pw.print("\t\tm_active_rules = new HashMap<Integer, Stack<ActiveRule<t_lval>>>();\n");
+			pw.print("\t\tReset();\n");
+			pw.print("\t}\n\n");  // end constructor
 
 			ok = CreateStates(pw);
 
@@ -388,7 +584,7 @@ public class ParserGen
 
 
 	/**
-	 * get the table id from its index
+	 * get the table id from its index (or also vice-versa)
 	 */
 	protected Integer GetTableId(HashMap<Integer, Integer> map, int idx)
 	{
@@ -419,6 +615,19 @@ public class ParserGen
 		if(id == null)
 			throw new RuntimeException("Invalid nonterminal index: " + idx + ".");
 		return id;
+	}
+
+
+	/**
+	 * get the nonterminal index from its table id
+	 */
+	protected int GetNontermTableIdx(int id)
+	{
+		Integer idx = GetTableId(m_map_nonterm_idx, id);
+
+		if(idx == null)
+			throw new RuntimeException("Invalid nonterminal id: " + id + ".");
+		return idx;
 	}
 
 

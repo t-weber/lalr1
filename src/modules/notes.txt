@@ -1,5 +1,6 @@
 Compiling:
-  - javac -verbose -d . lalr1_java/*.java
+  - javac -verbose --source 17 -d . lalr1_java/*.java
+  - javac -verbose --enable-preview --source 14 -d . lalr1_java/*.java
 
 TODO:
   - handle partial rule matches in all parsers and parser generators
