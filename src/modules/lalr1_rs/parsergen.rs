@@ -22,6 +22,8 @@ mod idents;
 use types::*;
 
 
+const GEN_PARTIALS : bool = true;
+
 const CODE : &str = r#"/*
  * Parser created using liblalr1 by Tobias Weber, 2020-2022.
  * DOI: https://doi.org/10.5281/zenodo.6987396
@@ -41,6 +43,9 @@ pub struct Parser
 
 	failed : bool,
 	accepted : bool,
+
+	active_rules : HashMap<TSemanticId, Vec<ActiveRule>>,
+	cur_rule_handle : isize,
 
 	lookahead : Option<Symbol>,
 
@@ -65,6 +70,9 @@ impl Parser
 
 			failed : false,
 			accepted : false,
+
+			active_rules : HashMap::<TSemanticId, Vec<ActiveRule>>::new(),
+			cur_rule_handle : 0,
 
 			lookahead : None,
 
@@ -100,11 +108,141 @@ impl Parser
 		self.next_lookahead();
 	}
 
+	fn apply_partial_rule(&mut self, rule_id : TSemanticId, arg_len : TIndex, before_shift : bool)
+	{
+		let mut rule_len = arg_len;
+		if before_shift
+		{
+			rule_len += 1;
+		}
+
+		//println!("Active rules: {:?}", self.active_rules);
+		let mut already_seen_active_rule : bool = false;
+		let mut insert_new_active_rule : bool = false;
+		let mut seen_tokens_old : isize = -1;
+
+		let mut rulestack : Option<&mut Vec<ActiveRule>> = self.active_rules.get_mut(&rule_id);
+		if rulestack.is_some()
+		{
+			if !rulestack.as_ref().unwrap().is_empty()
+			{
+				let active_rule = rulestack.as_mut().unwrap().last_mut().unwrap();
+				seen_tokens_old = active_rule.seen_tokens as isize;
+
+				if before_shift
+				{
+					if active_rule.seen_tokens < rule_len
+					{
+						active_rule.seen_tokens = rule_len;
+					}
+					else
+					{
+						insert_new_active_rule = true;
+					}
+
+				}
+				else  // before jump
+				{
+					if active_rule.seen_tokens == rule_len
+					{
+						already_seen_active_rule = true;
+					}
+					else
+					{
+						active_rule.seen_tokens = rule_len;
+					}
+				}
+			}
+			else
+			{
+				insert_new_active_rule = true;
+			}
+		}
+		else
+		{
+			self.active_rules.insert(rule_id, Vec::<ActiveRule>::new());
+			rulestack = self.active_rules.get_mut(&rule_id);
+			insert_new_active_rule = true;
+		}
+
+		if insert_new_active_rule
+		{
+			seen_tokens_old = -1;
+
+			let mut active_rule = ActiveRule::new();
+			active_rule.seen_tokens = rule_len;
+			active_rule.handle = self.cur_rule_handle;
+			self.cur_rule_handle += 1;
+
+			rulestack.as_mut().unwrap().push(active_rule);
+		}
+
+		if !already_seen_active_rule
+		{
+			let semantics : Option<&TSemantics> = self.semantics.get(&rule_id);
+			if semantics == None
+			{
+				self.error_semantics(rule_id);
+				return;
+			}
+
+			let active_rule = rulestack.as_mut().unwrap().last_mut().unwrap();
+
+			let mut args : Vec<Symbol> = Vec::<Symbol>::new();
+			args.reserve(rule_len);
+
+			for _i in 0..arg_len
+			{
+				args.insert(0, self.symbol[self.symbol.len() - arg_len + _i].clone());
+			}
+
+			if !before_shift || seen_tokens_old < (rule_len as isize - 1)
+			{
+				if self.debug
+				{
+					println!("Partially applying rule {} with {} arguments (handle {}). Before shift: {}.",
+						rule_id, arg_len, active_rule.handle, before_shift);
+				}
+
+				active_rule.retval = (*semantics.unwrap())(
+					args.clone(), false, active_rule.retval as TLVal);
+			}
+
+			if before_shift
+			{
+				args.push(self.lookahead.as_ref().unwrap().clone());
+
+				if self.debug
+				{
+					println!("Partially applying rule {} with {} arguments (handle {}). Before shift: {}.",
+						rule_id, rule_len, active_rule.handle, before_shift);
+				}
+
+				active_rule.retval = (*semantics.unwrap())(
+					args, false, active_rule.retval as TLVal);
+			}
+		}
+	}
+
 	fn apply_rule(&mut self, rule_id : TSemanticId, num_rhs : TIndex, lhs_id : TSymbolId)
 	{
+		let mut retval : TLVal = 0 as TLVal;
+		let mut handle : isize = -1;
+
+		if self.use_partials
+		{
+			let rulestack : Option<&mut Vec<ActiveRule>> = self.active_rules.get_mut(&rule_id);
+			if rulestack.is_some() && !rulestack.as_ref().unwrap().is_empty()
+			{
+				let active_rule = rulestack.unwrap().pop();
+				retval = active_rule.as_ref().unwrap().retval;
+				handle = active_rule.as_ref().unwrap().handle as isize;
+			}
+		}
+
 		if self.debug
 		{
-			println!("Applying rule {} with {} arguments.", rule_id, num_rhs);
+			println!("Applying rule {} with {} arguments (handle {}).", rule_id, num_rhs, handle);
 		}
 
 		self.dist_to_jump = num_rhs;
@@ -117,11 +255,10 @@ impl Parser
 			args.insert(0, self.symbol.pop().unwrap());
 		}
 
-		let mut retval : TLVal = 0 as TLVal;
 		let semantics : Option<&TSemantics> = self.semantics.get(&rule_id);
 		if semantics != None
 		{
-			retval = (*semantics.unwrap())(args, true, 0 as TLVal);
+			retval = (*semantics.unwrap())(args, true, retval);
 		}
 
 		self.symbol.push(Symbol{
@@ -130,7 +267,7 @@ impl Parser
 			val : retval,
 			strval : None,
 		});
-        }
+	}
 
 	fn error_term(&mut self, state_idx : usize, sym_id : TSymbolId)
 	{
@@ -143,6 +280,13 @@ impl Parser
 		println!("Error: Invalid non-terminal transition {sym_id} in state {state_idx}.");
 		self.failed = true;
 	}
+
+	fn error_semantics(&mut self, rule_id : TSemanticId)
+	{
+		println!("Semantic rule {0} is not defined.", rule_id);
+		self.failed = true;
+	}
+
 
 %%STATES%%
 }
@@ -197,6 +341,8 @@ impl Parsable for Parser
 		self.lookahead = None;
 		self.symbol.clear();
 		self.dist_to_jump = 0;
+		self.active_rules.clear();
+		self.cur_rule_handle = 0;
 
 		self.failed = false;
 		self.accepted = false;
@@ -243,6 +389,21 @@ fn get_table_id(tab : &[(TSymbolId, TIndex, &str)], idx : TIndex) -> TSymbolId
 }
 
 
+fn get_table_index(tab : &[(TSymbolId, TIndex, &str)], id : TSymbolId) -> TIndex
+{
+	for entry in tab
+	{
+		if entry.0 == id
+		{
+			return entry.1;
+		}
+	}
+
+	println!("Error: Table id {id} was not found.");
+	lalr1_tables::ERR
+}
+
+
 fn get_table_id_str(tab : &[(TSymbolId, TIndex, &str)], idx : TIndex) -> (TSymbolId, String)
 {
 	for entry in tab
@@ -280,9 +441,17 @@ fn create_states() -> String
 
 	for state_idx in 0..num_states
 	{
+		// main parsing tables
 		let shift = &lalr1_tables::SHIFT[state_idx];
 		let reduce = &lalr1_tables::REDUCE[state_idx];
 		let jump = &lalr1_tables::JUMP[state_idx];
+
+		// partial rule tables
+		let part_term = &lalr1_tables::PARTIALS_RULE_TERM[state_idx];
+		let part_nonterm = &lalr1_tables::PARTIALS_RULE_NONTERM[state_idx];
+		let part_term_len = &lalr1_tables::PARTIALS_MATCHLEN_TERM[state_idx];
+		let part_nonterm_len = &lalr1_tables::PARTIALS_MATCHLEN_NONTERM[state_idx];
+		let part_nonterm_lhs = &lalr1_tables::PARTIALS_LHS_NONTERM[state_idx];
 
 		let num_terms = shift.len();
 		let num_nonterms = jump.len();
@@ -313,16 +482,37 @@ fn create_states() -> String
 
 			if newstate_idx != lalr1_tables::ERR
 			{
-				states += &format!("\t\t\t{term_id} => next_state = Some(Parser::state_{newstate_idx}), // {term_str}\n");
+				// shift
+				states += &format!("\t\t\t{term_id} =>\n\t\t\t{{\n");
+				states += &format!("\t\t\t\tnext_state = Some(Parser::state_{newstate_idx}); // {term_str}\n");
+
+				// partial rules
+				if GEN_PARTIALS
+				{
+					let partial_idx = part_term[term_idx];
+					if partial_idx != lalr1_tables::ERR
+					{
+						let partial_id = get_semantic_table_id(&lalr1_tables::SEMANTIC_IDX, partial_idx);
+						let partial_len = part_term_len[term_idx];
+
+						states += &format!("\t\t\t\tif self.use_partials\n\t\t\t\t{{\n");
+						states += &format!("\t\t\t\t\tself.apply_partial_rule({partial_id}, {partial_len}, true);\n");
+						states += &format!("\t\t\t\t}}\n");
+					}
+				}
+
+				states += &format!("\t\t\t}},\n");
 			}
 			else if rule_idx != lalr1_tables::ERR
 			{
 				if rule_idx == lalr1_tables::ACC
 				{
+					// accept
 					acc_term_id.push((term_id, term_str));
 				}
 				else
 				{
+					// reduce
 					let elem = rules_term_id.get_mut(&rule_idx);
 					if elem.is_some()
 					{
@@ -338,13 +528,13 @@ fn create_states() -> String
 
 		for (rule_idx, sym_ids) in &rules_term_id
 		{
+			// reduce
 			let cases : String = sym_ids.iter().map(|elem| elem.0.to_string()).
 				collect::<Vec<String>>().join(" | ");
 			let comment : String = sym_ids.iter().map(|elem| elem.1.clone()).
 				collect::<Vec<String>>().join(" | ");
 
-			let rule_id : TSemanticId = get_semantic_table_id(
-				&lalr1_tables::SEMANTIC_IDX, *rule_idx);
+			let rule_id : TSemanticId = get_semantic_table_id(&lalr1_tables::SEMANTIC_IDX, *rule_idx);
 			let num_rhs : TIndex = lalr1_tables::NUM_RHS_SYMS[*rule_idx];
 			let lhs_id : TSymbolId = get_table_id(
 				&lalr1_tables::NONTERM_IDX, lalr1_tables::LHS_IDX[*rule_idx]);
@@ -368,6 +558,7 @@ fn create_states() -> String
 
 		if has_shift_entry
 		{
+			// shift
 			states += "\t\tif next_state.is_some()\n\t\t{\n";
 			states += "\t\t\tself.push_lookahead();\n";
 			states += "\t\t\tnext_state.unwrap()(self);\n";
@@ -376,6 +567,7 @@ fn create_states() -> String
 
 		if has_jump_entry
 		{
+			// jump
 			states += "\t\twhile self.dist_to_jump == 0 && self.symbol.len() > 0 && !self.accepted && !self.failed\n\t\t{\n";
 
 			states += "\t\t\tlet top_sym : &Symbol = self.get_top_symbol().unwrap();\n";
@@ -393,7 +585,30 @@ fn create_states() -> String
 					let (nonterm_id, nonterm_str) : (TSymbolId, String) = get_table_id_str(
 						&lalr1_tables::NONTERM_IDX, nonterm_idx);
 
-					states += &format!("\t\t\t\t{nonterm_id} => self.state_{jump_state_idx}(), // {nonterm_str}\n");
+					states += &format!("\t\t\t\t{nonterm_id} =>\n\t\t\t\t{{\n");
+
+					// partial rules
+					if GEN_PARTIALS
+					{
+						let lhs_id = part_nonterm_lhs[nonterm_idx];
+						if lhs_id != lalr1_tables::ERR
+						{
+							let lhs_idx = get_table_index(&lalr1_tables::NONTERM_IDX, lhs_id);
+							let partial_idx = part_nonterm[lhs_idx];
+							if partial_idx != lalr1_tables::ERR
+							{
+								let partial_id = get_semantic_table_id(&lalr1_tables::SEMANTIC_IDX, partial_idx);
+								let partial_len = part_nonterm_len[lhs_idx];
+
+								states += &format!("\t\t\t\tif self.use_partials\n\t\t\t\t{{\n");
+								states += &format!("\t\t\t\t\tself.apply_partial_rule({partial_id}, {partial_len}, false);\n");
+								states += &format!("\t\t\t\t}}\n");
+							}
+						}
+					}
+
+					states += &format!("\t\t\t\t\tself.state_{jump_state_idx}(); // {nonterm_str}\n");
+					states += &format!("\t\t\t\t}},\n");
 				}
 			}
 

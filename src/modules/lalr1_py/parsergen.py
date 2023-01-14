@@ -249,10 +249,10 @@ def write_closure(tables, state_idx, outfile):
 
 	# partial rule tables
 	part_term = tables["partials_rule_term"]["elems"][state_idx]
-	part_nonterm = tables["partials_rule_nonterm"]["elems"]
+	part_nonterm = tables["partials_rule_nonterm"]["elems"][state_idx]
 	part_term_len = tables["partials_matchlen_term"]["elems"][state_idx]
-	part_nonterm_len = tables["partials_matchlen_nonterm"]["elems"]
-	part_nonterm_lhs = tables["partials_lhs_nonterm"]["elems"]
+	part_nonterm_len = tables["partials_matchlen_nonterm"]["elems"][state_idx]
+	part_nonterm_lhs = tables["partials_lhs_nonterm"]["elems"][state_idx]
 
 	# special values
 	acc_token = tables["consts"]["acc"]
@@ -356,13 +356,13 @@ def write_closure(tables, state_idx, outfile):
 				pr(f"\t\t\t\tcase {nonterm_id}: # id: {nonterm_strid} index: {nonterm_idx}")
 
 				if g_gen_partials:  # partial rules
-					lhs_id = part_nonterm_lhs[state_idx][nonterm_idx]
+					lhs_id = part_nonterm_lhs[nonterm_idx]
 					if lhs_id != err_token:
 						lhs_idx = get_table_index(nontermidx_tab, lhs_id)
-						partial_idx = part_nonterm[state_idx][lhs_idx]
+						partial_idx = part_nonterm[lhs_idx]
 						if partial_idx != err_token:
 							partial_id = get_table_id(semanticidx_tab, partial_idx)
-							partial_len = part_nonterm_len[state_idx][lhs_idx]
+							partial_len = part_nonterm_len[lhs_idx]
 							pr("\t\t\t\t\tif self.use_partials:")
 							pr(f"\t\t\t\t\t\tself.apply_partial_rule({partial_id}, {partial_len}, False)")
 
