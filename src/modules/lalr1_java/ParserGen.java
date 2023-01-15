@@ -198,19 +198,28 @@ public class ParserGen
 		// shift
 		if(has_shift_entry)
 		{
-			pw.print("\t\tif(next_state != null)\n\t\t{\n");
-			pw.print("\t\t\tPushLookahead();\n");
-			pw.print("\t\t\tnext_state.run();\n");
-			pw.print("\t\t}\n");  // end if
+			pw.print("""
+				if(next_state != null)
+				{
+					PushLookahead();
+					next_state.run();
+				}
+		""");
 		}
 
 		// jump
 		if(has_jump_entry)
 		{
-			pw.print("\t\twhile(m_dist_to_jump == 0 && m_symbols.size() > 0 && !m_accepted)\n\t\t{\n");
-			pw.print("\t\t\tSymbol<t_lval> topsym = m_symbols.peek();\n");
-			pw.print("\t\t\tif(topsym.IsTerm())\n\t\t\t\tbreak;\n");
-			pw.print("\t\t\tswitch(topsym.GetId())\n\t\t\t{\n");
+			pw.print("""
+				while(m_dist_to_jump == 0 && m_symbols.size() > 0 && !m_accepted)
+				{
+					Symbol<t_lval> topsym = m_symbols.peek();
+					if(topsym.IsTerm())
+						break;
+					switch(topsym.GetId())
+					{
+		""");
+
 
 			for(int nonterm_idx = 0; nonterm_idx < num_nonterms; ++nonterm_idx)
 			{
@@ -289,7 +298,7 @@ public class ParserGen
 
 			pw.print("""
 			/**
-			 * Parser created using liblalr1 by Tobias Weber, 2020-2022.
+			 * Parser created using liblalr1 by Tobias Weber, 2020-2023.
 			 * DOI: https://doi.org/10.5281/zenodo.6987396
 			 */
 
@@ -317,8 +326,17 @@ public class ParserGen
 				protected Symbol<t_lval> m_lookahead;
 				protected int m_dist_to_jump;
 				protected boolean m_accepted;
-				protected HashMap<Integer, Stack<ActiveRule<t_lval>>> m_active_rules;
-				protected int m_cur_rule_handle;
+			""");
+
+			if(m_gen_partials)
+			{
+				pw.print("""
+					protected HashMap<Integer, Stack<ActiveRule<t_lval>>> m_active_rules;
+					protected int m_cur_rule_handle;
+				""");
+			}
+
+			pw.print("""
 
 				protected void NextLookahead()
 				{
@@ -340,8 +358,15 @@ public class ParserGen
 					m_lookahead = null;
 					m_dist_to_jump = 0;
 					m_accepted = false;
+			""");
+			if(m_gen_partials)
+			{
+				pw.print("""
 					m_active_rules.clear();
 					m_cur_rule_handle = 0;
+			""");
+			}
+			pw.print("""
 				}
 
 				@Override
@@ -378,6 +403,10 @@ public class ParserGen
 				{
 					t_lval retval = null;
 					int handle = -1;
+			""");
+			if(m_gen_partials)
+			{
+				pw.print("""
 					if(m_use_partials)
 					{
 						Stack<ActiveRule<t_lval>> rulestack = m_active_rules.get(rule_id);
@@ -389,7 +418,9 @@ public class ParserGen
 							rulestack.pop();
 						}
 					}
-
+			""");
+			}
+			pw.print("""
 					if(m_debug)
 					{
 						System.out.print("Applying rule " + rule_id + " with " + num_rhs + " arguments");
@@ -543,7 +574,7 @@ public class ParserGen
 			pw.print("\t\tm_input = null;\n");
 			pw.print("\t\tm_semantics = null;\n");
 			pw.print("\t\tm_symbols = new Stack<Symbol<t_lval>>();\n");
-			//if(m_gen_partials)
+			if(m_gen_partials)
 				pw.print("\t\tm_active_rules = new HashMap<Integer, Stack<ActiveRule<t_lval>>>();\n");
 			pw.print("\t\tReset();\n");
 			pw.print("\t}\n\n");  // end constructor

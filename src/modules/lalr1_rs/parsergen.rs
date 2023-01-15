@@ -22,93 +22,12 @@ mod idents;
 use types::*;
 
 
+// generate code for partial semantic rule matches
 const GEN_PARTIALS : bool = true;
 
-const CODE : &str = r#"/*
- * Parser created using liblalr1 by Tobias Weber, 2020-2022.
- * DOI: https://doi.org/10.5281/zenodo.6987396
- */
 
-use std::collections::HashMap;
-use std::mem::take;
-
-use types::{*};
-use common::{*};
-
-pub struct Parser
-{
-	symbol : Vec<Symbol>,
-
-	dist_to_jump : usize,
-
-	failed : bool,
-	accepted : bool,
-
-	active_rules : HashMap<TSemanticId, Vec<ActiveRule>>,
-	cur_rule_handle : isize,
-
-	lookahead : Option<Symbol>,
-
-	input : Vec<Symbol>,
-	next_input_index : usize,
-
-	semantics : HashMap<TSemanticId, TSemantics>,
-
-	debug : bool,
-	use_partials : bool,
-	end : TSymbolId,
-}
-
-impl Parser
-{
-	pub fn new() -> Parser
-	{
-		let mut parser : Parser = Parser
-		{
-			symbol : Vec::<Symbol>::new(),
-			dist_to_jump : 0,
-
-			failed : false,
-			accepted : false,
-
-			active_rules : HashMap::<TSemanticId, Vec<ActiveRule>>::new(),
-			cur_rule_handle : 0,
-
-			lookahead : None,
-
-			semantics : HashMap::<TSemanticId, TSemantics>::new(),
-			input : Vec::<Symbol>::new(),
-			next_input_index : 0,
-
-			debug : false,
-			use_partials : true,
-			end : lalr1_tables::END,
-		};
-
-		parser.reset();
-		parser
-	}
-
-	fn next_lookahead(&mut self)
-	{
-		self.lookahead = Some(self.input[self.next_input_index].clone());
-
-		if self.debug
-		{
-			println!("Lookahead: {:?}, input index: {}.",
-				self.lookahead, self.next_input_index);
-		}
-
-		self.next_input_index += 1;
-        }
-
-	fn push_lookahead(&mut self)
-	{
-		self.symbol.push(take(&mut self.lookahead).unwrap());
-		self.next_lookahead();
-	}
-
-	fn apply_partial_rule(&mut self, rule_id : TSemanticId, arg_len : TIndex, before_shift : bool)
+const CODE_APPLY_PARTIAL_RULE : &str =
+	r#"fn apply_partial_rule(&mut self, rule_id : TSemanticId, arg_len : TIndex, before_shift : bool)
 	{
 		let mut rule_len = arg_len;
 		if before_shift
@@ -222,14 +141,11 @@ impl Parser
 					args, false, active_rule.retval as TLVal);
 			}
 		}
-	}
+	}"#;
 
-	fn apply_rule(&mut self, rule_id : TSemanticId, num_rhs : TIndex, lhs_id : TSymbolId)
-	{
-		let mut retval : TLVal = 0 as TLVal;
-		let mut handle : isize = -1;
 
-		if self.use_partials
+const CODE_APPLY_RULE_PARTIALS : &str =
+		r#"if self.use_partials
 		{
 			let rulestack : Option<&mut Vec<ActiveRule>> = self.active_rules.get_mut(&rule_id);
 			if rulestack.is_some() && !rulestack.as_ref().unwrap().is_empty()
@@ -238,7 +154,112 @@ impl Parser
 				retval = active_rule.as_ref().unwrap().retval;
 				handle = active_rule.as_ref().unwrap().handle as isize;
 			}
+		}"#;
+
+
+const CODE_ACTIVE_RULES_DECL : &str =
+	r#"active_rules : HashMap<TSemanticId, Vec<ActiveRule>>,
+	cur_rule_handle : isize,"#;
+
+
+const CODE_ACTIVE_RULES_NEW : &str =
+	r#"active_rules : HashMap::<TSemanticId, Vec<ActiveRule>>::new(),
+			cur_rule_handle : 0,"#;
+
+
+const CODE_ACTIVE_RULES_RESET : &str =
+	r#"self.active_rules.clear();
+		self.cur_rule_handle = 0;"#;
+
+
+const CODE : &str = r#"/*
+ * Parser created using liblalr1 by Tobias Weber, 2020-2022.
+ * DOI: https://doi.org/10.5281/zenodo.6987396
+ */
+
+use std::collections::HashMap;
+use std::mem::take;
+
+use types::{*};
+use common::{*};
+
+pub struct Parser
+{
+	symbol : Vec<Symbol>,
+
+	dist_to_jump : usize,
+
+	failed : bool,
+	accepted : bool,
+
+	%%ACTIVE_RULES_DECL%%
+
+	lookahead : Option<Symbol>,
+
+	input : Vec<Symbol>,
+	next_input_index : usize,
+
+	semantics : HashMap<TSemanticId, TSemantics>,
+
+	debug : bool,
+	use_partials : bool,
+	end : TSymbolId,
+}
+
+impl Parser
+{
+	pub fn new() -> Parser
+	{
+		let mut parser : Parser = Parser
+		{
+			symbol : Vec::<Symbol>::new(),
+			dist_to_jump : 0,
+
+			failed : false,
+			accepted : false,
+
+			%%ACTIVE_RULES_NEW%%
+
+			lookahead : None,
+
+			semantics : HashMap::<TSemanticId, TSemantics>::new(),
+			input : Vec::<Symbol>::new(),
+			next_input_index : 0,
+
+			debug : false,
+			use_partials : true,
+			end : lalr1_tables::END,
+		};
+
+		parser.reset();
+		parser
+	}
+
+	fn next_lookahead(&mut self)
+	{
+		self.lookahead = Some(self.input[self.next_input_index].clone());
+
+		if self.debug
+		{
+			println!("Lookahead: {:?}, input index: {}.",
+				self.lookahead, self.next_input_index);
 		}
+
+		self.next_input_index += 1;
+        }
+
+	fn push_lookahead(&mut self)
+	{
+		self.symbol.push(take(&mut self.lookahead).unwrap());
+		self.next_lookahead();
+	}
+
+	fn apply_rule(&mut self, rule_id : TSemanticId, num_rhs : TIndex, lhs_id : TSymbolId)
+	{
+		let mut retval : TLVal = 0 as TLVal;
+		let mut handle : isize = -1;
+
+		%%APPLY_RULE_PARTIALS%%
 
 		if self.debug
 		{
@@ -268,6 +289,8 @@ impl Parser
 			strval : None,
 		});
 	}
+
+	%%APPLY_PARTIAL_RULE%%
 
 	fn error_term(&mut self, state_idx : usize, sym_id : TSymbolId)
 	{
@@ -341,8 +364,7 @@ impl Parsable for Parser
 		self.lookahead = None;
 		self.symbol.clear();
 		self.dist_to_jump = 0;
-		self.active_rules.clear();
-		self.cur_rule_handle = 0;
+		%%ACTIVE_RULES_RESET%%
 
 		self.failed = false;
 		self.accepted = false;
@@ -483,8 +505,9 @@ fn create_states() -> String
 			if newstate_idx != lalr1_tables::ERR
 			{
 				// shift
-				states += &format!("\t\t\t{term_id} =>\n\t\t\t{{\n");
-				states += &format!("\t\t\t\tnext_state = Some(Parser::state_{newstate_idx}); // {term_str}\n");
+				states += &format!("\t\t\t{term_id} => // {term_str}\n");
+				states += &format!("\t\t\t{{\n");
+				states += &format!("\t\t\t\tnext_state = Some(Parser::state_{newstate_idx});\n");
 
 				// partial rules
 				if GEN_PARTIALS
@@ -495,7 +518,8 @@ fn create_states() -> String
 						let partial_id = get_semantic_table_id(&lalr1_tables::SEMANTIC_IDX, partial_idx);
 						let partial_len = part_term_len[term_idx];
 
-						states += &format!("\t\t\t\tif self.use_partials\n\t\t\t\t{{\n");
+						states += &format!("\t\t\t\tif self.use_partials\n");
+						states += &format!("\t\t\t\t{{\n");
 						states += &format!("\t\t\t\t\tself.apply_partial_rule({partial_id}, {partial_len}, true);\n");
 						states += &format!("\t\t\t\t}}\n");
 					}
@@ -585,7 +609,8 @@ fn create_states() -> String
 					let (nonterm_id, nonterm_str) : (TSymbolId, String) = get_table_id_str(
 						&lalr1_tables::NONTERM_IDX, nonterm_idx);
 
-					states += &format!("\t\t\t\t{nonterm_id} =>\n\t\t\t\t{{\n");
+					states += &format!("\t\t\t\t{nonterm_id} => // {nonterm_str}\n");
+					states += &format!("\t\t\t\t{{\n");
 
 					// partial rules
 					if GEN_PARTIALS
@@ -600,14 +625,15 @@ fn create_states() -> String
 								let partial_id = get_semantic_table_id(&lalr1_tables::SEMANTIC_IDX, partial_idx);
 								let partial_len = part_nonterm_len[lhs_idx];
 
-								states += &format!("\t\t\t\tif self.use_partials\n\t\t\t\t{{\n");
-								states += &format!("\t\t\t\t\tself.apply_partial_rule({partial_id}, {partial_len}, false);\n");
-								states += &format!("\t\t\t\t}}\n");
+								states += &format!("\t\t\t\t\tif self.use_partials\n");
+								states += &format!("\t\t\t\t\t{{\n");
+								states += &format!("\t\t\t\t\t\tself.apply_partial_rule({partial_id}, {partial_len}, false);\n");
+								states += &format!("\t\t\t\t\t}}\n");
 							}
 						}
 					}
 
-					states += &format!("\t\t\t\t\tself.state_{jump_state_idx}(); // {nonterm_str}\n");
+					states += &format!("\t\t\t\t\tself.state_{jump_state_idx}();\n");
 					states += &format!("\t\t\t\t}},\n");
 				}
 			}
@@ -637,6 +663,27 @@ fn main()
 	code = code
 		.replace("%%STATES%%", &states)
 		.replace("%%START_IDX%%", &lalr1_tables::START.to_string());
+
+	if GEN_PARTIALS
+	{
+		// insert code blocks for partial rules
+		code = code
+			.replace("%%APPLY_PARTIAL_RULE%%", &CODE_APPLY_PARTIAL_RULE)
+			.replace("%%APPLY_RULE_PARTIALS%%", &CODE_APPLY_RULE_PARTIALS)
+			.replace("%%ACTIVE_RULES_DECL%%", &CODE_ACTIVE_RULES_DECL)
+			.replace("%%ACTIVE_RULES_NEW%%", &CODE_ACTIVE_RULES_NEW)
+			.replace("%%ACTIVE_RULES_RESET%%", &CODE_ACTIVE_RULES_RESET);
+	}
+	else
+	{
+		// remove markers for partial rules
+		code = code
+			.replace("%%APPLY_PARTIAL_RULE%%", &"")
+			.replace("%%APPLY_RULE_PARTIALS%%", &"")
+			.replace("%%ACTIVE_RULES_DECL%%", &"")
+			.replace("%%ACTIVE_RULES_NEW%%", &"")
+			.replace("%%ACTIVE_RULES_RESET%%", &"");
+	}
 
 	let outfilename : &str = &"generated_parser.rs";
 	let mut outfile = File::create(outfilename).expect("Cannot create file.");
