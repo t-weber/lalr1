@@ -12,8 +12,10 @@
 #include <cstring>
 
 
-VM::VM(t_addr memsize, std::optional<t_addr> framesize)
-	: m_memsize{memsize}, m_framesize{framesize ? *framesize : memsize/16}
+VM::VM(t_addr memsize, std::optional<t_addr> framesize, std::optional<t_addr> heapsize)
+	: m_memsize{memsize},
+	  m_framesize{framesize ? *framesize : memsize/16},
+	  m_heapsize{heapsize ? *heapsize : memsize/16}
 {
 	m_mem.reset(new t_byte[m_memsize]);
 	Reset();
@@ -541,6 +543,7 @@ VM::t_addr VM::PopAddress()
 		case VMType::ADDR_SP: addr += m_sp; break;
 		case VMType::ADDR_BP: addr += m_bp; break;
 		case VMType::ADDR_GBP: addr += m_gbp; break;
+		case VMType::ADDR_HP: addr += m_hp; break;
 		//case VMType::ADDR_BP_ARG: break;
 		default: throw std::runtime_error("Unknown address base register."); break;
 	}
@@ -645,6 +648,7 @@ VM::t_data VM::TopData() const
 		case VMType::ADDR_SP:
 		case VMType::ADDR_BP:
 		case VMType::ADDR_GBP:
+		case VMType::ADDR_HP:
 		{
 			dat = t_data{std::in_place_index<m_addridx>,
 				TopRaw<t_addr, m_addrsize>(m_bytesize)};
@@ -716,6 +720,7 @@ VM::t_data VM::PopData()
 		case VMType::ADDR_SP:
 		case VMType::ADDR_BP:
 		case VMType::ADDR_GBP:
+		case VMType::ADDR_HP:
 		{
 			dat = t_data{std::in_place_index<m_addridx>,
 				PopRaw<t_addr, m_addrsize>()};
@@ -855,6 +860,7 @@ VM::t_addr VM::GetArgAddr(VM::t_addr addr, VM::t_addr arg_num) const
 			case VMType::ADDR_SP:
 			case VMType::ADDR_BP:
 			case VMType::ADDR_GBP:
+			case VMType::ADDR_HP:
 				addr += m_addrsize;
 				break;
 			case VMType::STR:
@@ -925,6 +931,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		case VMType::ADDR_SP:
 		case VMType::ADDR_BP:
 		case VMType::ADDR_GBP:
+		case VMType::ADDR_HP:
 		{
 			t_addr val = ReadMemRaw<t_addr>(addr);
 			dat = t_data{std::in_place_index<m_addridx>, val};
@@ -1086,10 +1093,11 @@ VM::t_addr VM::GetDataSize(const t_data& data) const
 void VM::Reset()
 {
 	m_ip = 0;
-	m_sp = m_memsize - m_framesize;
-	m_bp = m_memsize;
+	m_sp = m_memsize - m_framesize - m_heapsize;
+	m_bp = m_memsize - m_heapsize;
 	m_bp -= sizeof(t_data) + 1; // padding of max. data type size to avoid writing beyond memory size
 	m_gbp = m_bp;
+	m_hp = m_memsize - m_heapsize;
 
 	std::memset(m_mem.get(), static_cast<t_byte>(OpCode::HALT), m_memsize*m_bytesize);
 	m_code_range[0] = m_code_range[1] = -1;

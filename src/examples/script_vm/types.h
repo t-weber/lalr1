@@ -39,6 +39,7 @@ enum class VMType : t_vm_byte
 	ADDR_SP     = 0b00001010,  // address relative to the stack pointer
 	ADDR_BP     = 0b00001011,  // address relative to a local base pointer
 	ADDR_GBP    = 0b00001100,  // address relative to the global base pointer
+	ADDR_HP     = 0b00001101,  // address relative to the heap pointer
 
 	ADDR_BP_ARG = 0b00011011,  // number of arguments from base pointer
 };
@@ -59,6 +60,7 @@ constexpr t_str get_vm_base_reg(VMType ty)
 		case VMType::ADDR_SP:     return "sp";
 		case VMType::ADDR_BP:     return "bp";
 		case VMType::ADDR_GBP:    return "gbp";
+		case VMType::ADDR_HP:     return "hp";
 		case VMType::ADDR_BP_ARG: return "index/bp";
 		default:                  return "<unknown>";
 	}
@@ -85,6 +87,7 @@ constexpr t_str get_vm_type_name(VMType ty)
 		case VMType::ADDR_SP:     return "address relative to sp";
 		case VMType::ADDR_BP:     return "address relative to bp";
 		case VMType::ADDR_GBP:    return "address relative to gbp";
+		case VMType::ADDR_HP:     return "address relative to hp";
 		case VMType::ADDR_BP_ARG: return "argument index relative bp";
 		default:                  return "<unknown>";
 	}
@@ -117,6 +120,8 @@ template<bool with_descr> constexpr inline t_vm_addr vm_type_size<VMType::ADDR_S
 template<bool with_descr> constexpr inline t_vm_addr vm_type_size<VMType::ADDR_BP, with_descr>
 	= sizeof(t_vm_addr) + (with_descr ? sizeof(t_vm_byte) : 0);
 template<bool with_descr> constexpr inline t_vm_addr vm_type_size<VMType::ADDR_GBP, with_descr>
+	= sizeof(t_vm_addr) + (with_descr ? sizeof(t_vm_byte) : 0);
+template<bool with_descr> constexpr inline t_vm_addr vm_type_size<VMType::ADDR_HP, with_descr>
 	= sizeof(t_vm_addr) + (with_descr ? sizeof(t_vm_byte) : 0);
 
 
@@ -151,6 +156,7 @@ static inline t_vm_addr get_vm_type_size(VMType ty, bool with_descr = false)
 		case VMType::ADDR_SP:
 		case VMType::ADDR_BP:
 		case VMType::ADDR_GBP:
+		case VMType::ADDR_HP:
 			size = sizeof(t_vm_addr);
 			break;
 		default:

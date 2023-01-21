@@ -31,6 +31,7 @@ struct VMOptions
 {
 	t_vm_addr mem_size { 4096 };
 	std::optional<t_vm_addr> frame_size { std::nullopt };
+	std::optional<t_vm_addr> heap_size { std::nullopt };
 	bool enable_debug { false };
 	bool zero_mem { false };
 	bool enable_memimages { false };
@@ -53,7 +54,7 @@ static bool run_vm(const fs::path& prog, const VMOptions& opts)
 	if(ifstr.fail())
 		return false;
 
-	VM vm(opts.mem_size, opts.frame_size);
+	VM vm(opts.mem_size, opts.frame_size, opts.heap_size);
 	VM::t_addr sp_initial = vm.GetSP();
 
 	vm.SetDebug(opts.enable_debug);
@@ -94,20 +95,23 @@ int main(int argc, char** argv)
 	{
 		std::ios_base::sync_with_stdio(false);
 
-                // --------------------------------------------------------------------
-                // get program arguments
-                // --------------------------------------------------------------------
+		// --------------------------------------------------------------------
+		// get program arguments
+		// --------------------------------------------------------------------
 		std::vector<std::string> progs;
 		VMOptions vmopts
 		{
 			.mem_size = 4096,
 			.frame_size = std::nullopt,
+			.heap_size = std::nullopt,
 			.enable_debug = false,
 			.zero_mem = false,
 			.enable_memimages = false,
 			.enable_checks = true,
 		};
+
 		typename decltype(vmopts.frame_size)::value_type frame_size = -1;
+		typename decltype(vmopts.heap_size)::value_type heap_size = -1;
 		bool enable_timer = false;
 
 		args::options_description arg_descr("Virtual machine arguments");
@@ -121,6 +125,7 @@ int main(int argc, char** argv)
 			("checks,c", args::value<bool>(&vmopts.enable_checks), "enable memory checks")
 			("mem,m", args::value<decltype(vmopts.mem_size)>(&vmopts.mem_size), "set memory size")
 			("frame,f", args::value<decltype(frame_size)>(&frame_size), "set stack frame size")
+			("heap,h", args::value<decltype(heap_size)>(&heap_size), "set heap size")
 			("prog", args::value<decltype(progs)>(&progs), "input program to run");
 
 		args::positional_options_description posarg_descr;
@@ -151,9 +156,9 @@ int main(int argc, char** argv)
 			std::cout << arg_descr << std::endl;
 			return 0;
 		}
-                // --------------------------------------------------------------------
+		// --------------------------------------------------------------------
 
-                // input file
+		// input file
 		fs::path inprog = progs[0];
 
 		t_timepoint start_time {};
@@ -162,6 +167,8 @@ int main(int argc, char** argv)
 
 		if(frame_size >= 0)
 			vmopts.frame_size = frame_size;
+		if(heap_size >= 0)
+			vmopts.heap_size = heap_size;
 
 		if(!run_vm(inprog, vmopts))
 		{

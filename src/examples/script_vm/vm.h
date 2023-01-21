@@ -66,7 +66,8 @@ public:
 
 
 public:
-	VM(t_addr memsize = 0x1000, std::optional<t_addr> framesize = std::nullopt);
+	VM(t_addr memsize = 0x1000, std::optional<t_addr> framesize = std::nullopt,
+		std::optional<t_addr> heapsize = std::nullopt);
 	~VM();
 
 	void SetDebug(bool b) { m_debug = b; }
@@ -648,10 +649,12 @@ private:
 	t_addr m_sp{};                     // stack pointer
 	t_addr m_bp{};                     // base pointer for local variables
 	t_addr m_gbp{};                    // global base pointer
+	t_addr m_hp{};                     // heap pointer
 
 	// memory sizes and ranges
 	t_addr m_memsize = 0x1000;         // total memory size
 	t_addr m_framesize = 0x100;        // size per function stack frame
+	t_addr m_heapsize = 0x100;         // heap memory size
 
 	// signals interrupt requests
 	std::array<std::atomic_bool, m_num_interrupts> m_irqs{};
