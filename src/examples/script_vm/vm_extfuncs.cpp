@@ -130,6 +130,12 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 			StartTimer();
 		}
 	}
+	else
+	{
+		std::ostringstream ostrerr;
+		ostrerr << "Unknown external function \"" + func_name << "\".";
+		throw std::runtime_error(ostrerr.str());
+	}
 
 	return retval;
 }

@@ -55,7 +55,9 @@ using namespace lalr1;
 	static std::tuple<bool, std::string>
 	lalr1_run_parser([[maybe_unused]] const std::string& script_file,
 		[[maybe_unused]] bool debug_codegen = false,
-		[[maybe_unused]] bool debug_parser = false)
+		[[maybe_unused]] bool debug_parser = false,
+		[[maybe_unused]] bool direct_consts = false,
+		[[maybe_unused]] bool no_reloc = false)
 	{
 		std::cerr << "No parsing tables available, please\n"
 			"\t- run \"./script_parsergen\" first,\n"
@@ -76,7 +78,10 @@ using namespace lalr1;
 
 static std::tuple<bool, std::string>
 lalr1_run_parser(const std::string& script_file,
-	bool debug_codegen = false, bool debug_parser = false)
+	bool debug_codegen = false,
+	bool debug_parser = false,
+	bool direct_consts = false,
+	bool no_reloc = false)
 {
 	try
 	{
@@ -208,17 +213,18 @@ lalr1_run_parser(const std::string& script_file,
 					std::make_tuple("shr", OpCode::SHR)),
 			}};
 
-			std::stringstream ostrAsm;
+			std::ostringstream ostrAsm;
 			if(debug_codegen)
 			{
 				ASTAsm astasm{ostrAsm, &ops};
 				ast->accept(&astasm);
 			}
 
-			std::stringstream ostrAsmBin(std::ios_base::in | std::ios_base::out
-				| std::ios_base::binary);
+			std::ostringstream ostrAsmBin(std::ios_base::out | std::ios_base::binary);
 			ASTAsm astasmbin{ostrAsmBin, &ops};
 			astasmbin.SetBinary(true);
+			astasmbin.SetCollectConsts(!direct_consts);
+			astasmbin.SetRelocatable(!no_reloc);
 			ast->accept(&astasmbin);
 			astasmbin.PatchFunctionAddresses();
 			astasmbin.FinishCodegen();
@@ -239,7 +245,7 @@ lalr1_run_parser(const std::string& script_file,
 			binfile = binfile.filename();
 			binfile.replace_extension(".bin");
 
-			std::fstream ofstrAsmBin(binfile.string(), std::ios_base::in | std::ios_base::out
+			std::ofstream ofstrAsmBin(binfile.string(), std::ios_base::out
 				| std::ios_base::trunc | std::ios_base::binary);
 			if(!ofstrAsmBin)
 			{
@@ -316,12 +322,16 @@ int main(int argc, char** argv)
 	bool debug_codegen = false;
 	bool debug_parser = false;
 	bool runvm = false;
+	bool direct_consts = false;
+	bool no_reloc = false;
 
 	args::options_description arg_descr("Script compiler arguments");
 	arg_descr.add_options()
 	("run,r", args::bool_switch(&runvm), "directly run the compiled program")
 	("debug,d", args::bool_switch(&debug_codegen), "enable debug output for code generation")
 	("debugparser,p", args::bool_switch(&debug_parser), "enable debug output for parser")
+	("direct_consts", args::bool_switch(&direct_consts), "do not create a constants table")
+	("non_relocatable", args::bool_switch(&no_reloc), "create non-relocatable code")
 	("prog", args::value<decltype(progs)>(&progs), "input program to run");
 
 	args::positional_options_description posarg_descr;
@@ -358,7 +368,7 @@ int main(int argc, char** argv)
 	fs::path script_file = progs[0];
 
 	if(auto [code_ok, prog] = lalr1_run_parser(
-		script_file.string(), debug_codegen, debug_parser);
+		script_file.string(), debug_codegen, debug_parser, direct_consts, no_reloc);
 		code_ok)
 	{
 		auto [run_time, time_unit] = get_elapsed_time<

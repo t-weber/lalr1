@@ -214,7 +214,7 @@ if(BUILD_EXAMPLES)
 		src/examples/script/ast_asm.cpp src/examples/script/ast_asm.h
 		src/examples/script_vm/opcodes.h
 		src/examples/script_vm/types.h
-		src/examples/script/sym.h
+		src/examples/script/sym.cpp src/examples/script/sym.h
 		src/examples/script/ast.h
 	)
 

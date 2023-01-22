@@ -23,7 +23,7 @@
 class ASTAsm : public ASTVisitor
 {
 public:
-	ASTAsm(std::iostream& ostr,
+	ASTAsm(std::ostream& ostr = std::cout,
 		std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> *ops = nullptr);
 
 	ASTAsm(const ASTAsm&) = delete;
@@ -44,7 +44,7 @@ public:
 	virtual void visit(const ASTJump* ast, std::size_t level) override;
 	virtual void visit(const ASTDeclare* ast, std::size_t level) override;
 
-	void SetStream(std::iostream* ostr) { m_ostr = ostr; }
+	void SetStream(std::ostream* ostr) { m_ostr = ostr; }
 	void SetBinary(bool bin) { m_binary = bin; }
 
 	void AddExternalFunc(const std::string& name) { m_ext_funcs.insert(name); }
@@ -53,10 +53,12 @@ public:
 	void FinishCodegen();
 
 	const SymTab& GetSymbolTable() const { return m_symtab; }
+	void SetRelocatable(bool b) { m_relocatable = b; }
+	void SetCollectConsts(bool b) { m_collect_consts = b; }
 
 
 private:
-	std::iostream* m_ostr{};
+	std::ostream* m_ostr{&std::cout};
 	const std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> *m_ops{nullptr};
 	bool m_binary{false};
 
@@ -75,12 +77,15 @@ private:
 	std::vector<std::streampos> m_endfunc_comefroms{};
 	std::unordered_multimap<std::string, std::streampos> m_loop_begin_comefroms{};
 	std::unordered_multimap<std::string, std::streampos> m_loop_end_comefroms{};
-	std::vector<std::streampos> m_const_addrs{};
+	std::vector<std::tuple<std::streampos, std::streampos>> m_const_addrs{};
 
 	std::size_t m_glob_label{0};           // jump label counter
 
 	bool m_always_call_ext{false};         // always call external function
 	std::unordered_set<std::string> m_ext_funcs{};  // external functions
+
+	bool m_relocatable{true};              // create relocatable code
+	bool m_collect_consts{true};           // collect constants into a table
 };
 
 

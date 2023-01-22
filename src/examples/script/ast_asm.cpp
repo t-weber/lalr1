@@ -9,10 +9,6 @@
 #include <cmath>
 
 
-#define AST_ABS_FUNC_ADDR  0  // use absolute or relative function addresses
-#define AST_COLLECT_CONSTS 1  // collect constants into their own data block
-
-
 /**
  * exit with an error
  */
@@ -45,7 +41,7 @@ static void throw_err(const ::ASTBase* ast, const std::string& err)
 
 
 
-ASTAsm::ASTAsm(std::iostream& ostr,
+ASTAsm::ASTAsm(std::ostream& ostr,
 	std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> *ops)
 	: m_ostr{&ostr}, m_ops{ops}
 {
@@ -182,32 +178,48 @@ void ASTAsm::visit(const ASTToken<t_str>* ast,
 		// the token names a string literal
 		else
 		{
-	#if AST_COLLECT_CONSTS == 0
-			// push external function name
-			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
-			// write type descriptor byte
-			m_ostr->put(static_cast<t_vm_byte>(VMType::STR));
-			// write string length
-			t_vm_addr len = static_cast<t_vm_addr>(val.length());
-			m_ostr->write(reinterpret_cast<const char*>(&len),
-				vm_type_size<VMType::ADDR_MEM, false>);
-			// write string data
-			m_ostr->write(val.data(), len);
-	#else
-			// get string constant address
-			std::streampos str_addr = m_consttab.AddConst(val);
+			if(!m_collect_consts)
+			{
+				// push external function name
+				m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+				// write type descriptor byte
+				m_ostr->put(static_cast<t_vm_byte>(VMType::STR));
+				// write string length
+				t_vm_addr len = static_cast<t_vm_addr>(val.length());
+				m_ostr->write(reinterpret_cast<const char*>(&len),
+					vm_type_size<VMType::ADDR_MEM, false>);
+				// write string data
+				m_ostr->write(val.data(), len);
+			}
+			else
+			{
+				// get string constant address
+				std::streampos str_addr = m_consttab.AddConst(val);
 
-			// push string constant address
-			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
-			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
-			std::streampos addr_pos = m_ostr->tellp();
-			m_const_addrs.push_back(addr_pos);
-			m_ostr->write(reinterpret_cast<const char*>(&str_addr),
-				vm_type_size<VMType::ADDR_MEM, false>);
+				// push string constant address
+				m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 
-			// dereference string constant address
-			m_ostr->put(static_cast<t_vm_byte>(OpCode::RDMEM));
-	#endif
+				if(m_relocatable)
+					m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
+				else
+					m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
+
+				std::streampos addr_pos = m_ostr->tellp();
+				if(m_relocatable)
+				{
+					str_addr -= addr_pos;
+					str_addr -= static_cast<std::streampos>(
+						vm_type_size<VMType::ADDR_IP, true>);
+				}
+
+				m_const_addrs.push_back(std::make_tuple(addr_pos, str_addr));
+
+				m_ostr->write(reinterpret_cast<const char*>(&str_addr),
+					vm_type_size<VMType::ADDR_MEM, false>);
+
+				// dereference string constant address
+				m_ostr->put(static_cast<t_vm_byte>(OpCode::RDMEM));
+			}
 		}
 	}
 	else
@@ -664,32 +676,47 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 		// call external function
 		if(is_external_func)
 		{
-	#if AST_COLLECT_CONSTS == 0
-			// push external function name
-			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
-			// write type descriptor byte
-			m_ostr->put(static_cast<t_vm_byte>(VMType::STR));
-			// write function name
-			t_vm_addr len = static_cast<t_vm_addr>(func_name.length());
-			m_ostr->write(reinterpret_cast<const char*>(&len),
-				vm_type_size<VMType::ADDR_MEM, false>);
-			// write string data
-			m_ostr->write(func_name.data(), len);
-	#else
-			// get constant address
-			std::streampos funcname_addr = m_consttab.AddConst(func_name);
+			if(!m_collect_consts)
+			{
+				// push external function name
+				m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+				// write type descriptor byte
+				m_ostr->put(static_cast<t_vm_byte>(VMType::STR));
+				// write function name
+				t_vm_addr len = static_cast<t_vm_addr>(func_name.length());
+				m_ostr->write(reinterpret_cast<const char*>(&len),
+					vm_type_size<VMType::ADDR_MEM, false>);
+				// write string data
+				m_ostr->write(func_name.data(), len);
+			}
+			else
+			{
+				// get constant address
+				std::streampos funcname_addr = m_consttab.AddConst(func_name);
 
-			// push constant address
-			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
-			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
-			std::streampos addr_pos = m_ostr->tellp();
-			m_const_addrs.push_back(addr_pos);
-			m_ostr->write(reinterpret_cast<const char*>(&funcname_addr),
-				vm_type_size<VMType::ADDR_MEM, false>);
+				// push constant address
+				m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+				if(m_relocatable)
+					m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
+				else
+					m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
+	
+				std::streampos addr_pos = m_ostr->tellp();
+				if(m_relocatable)
+				{
+					funcname_addr -= addr_pos;
+					funcname_addr -= static_cast<std::streampos>(
+						vm_type_size<VMType::ADDR_IP, true>);
+				}
 
-			// dereference function name address
-			m_ostr->put(static_cast<t_vm_byte>(OpCode::RDMEM));
-	#endif
+				m_const_addrs.push_back(std::make_tuple(addr_pos, funcname_addr));
+
+				m_ostr->write(reinterpret_cast<const char*>(&funcname_addr),
+					vm_type_size<VMType::ADDR_MEM, false>);
+
+				// dereference function name address
+				m_ostr->put(static_cast<t_vm_byte>(OpCode::RDMEM));
+			}
 
 			// TODO: check number of arguments
 
@@ -717,22 +744,28 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 			}
 
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
-	#if AST_ABS_FUNC_ADDR != 0
-			// push absolute function address
-			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
-			std::streampos addr_pos = m_ostr->tellp();
-			m_ostr->write(reinterpret_cast<const char*>(&func_addr),
-				vm_type_size<VMType::ADDR_MEM, false>);
-	#else
-			// push relative function address
-			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
-			// already skipped over address and jmp instruction
-			std::streampos addr_pos = m_ostr->tellp();
-			t_vm_addr to_skip = static_cast<t_vm_addr>(func_addr - addr_pos);
-			to_skip -= vm_type_size<VMType::ADDR_IP, true>;
-			m_ostr->write(reinterpret_cast<const char*>(&to_skip),
-				vm_type_size<VMType::ADDR_IP, false>);
-	#endif
+			std::streampos addr_pos = 0;
+
+			if(!m_relocatable)
+			{
+				// push absolute function address
+				m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
+				addr_pos = m_ostr->tellp();
+				m_ostr->write(reinterpret_cast<const char*>(&func_addr),
+					vm_type_size<VMType::ADDR_MEM, false>);
+			}
+			else
+			{
+				// push relative function address
+				m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
+				// already skipped over address and jmp instruction
+				addr_pos = m_ostr->tellp();
+				t_vm_addr to_skip = static_cast<t_vm_addr>(func_addr - addr_pos);
+				to_skip -= vm_type_size<VMType::ADDR_IP, true>;
+				m_ostr->write(reinterpret_cast<const char*>(&to_skip),
+					vm_type_size<VMType::ADDR_IP, false>);
+			}
+
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::CALL));
 
 			if(!sym)
@@ -881,18 +914,21 @@ void ASTAsm::PatchFunctionAddresses()
 
 		m_ostr->seekp(pos);
 
-#if AST_ABS_FUNC_ADDR != 0
-		// write absolute function address
-		m_ostr->write(reinterpret_cast<const char*>(&sym->addr),
-			vm_type_size<VMType::ADDR_IP, false>);
-#else
-		// write relative function address
-		t_vm_addr to_skip = static_cast<t_vm_addr>(sym->addr - pos);
-		// already skipped over address and jmp instruction
-		to_skip -= vm_type_size<VMType::ADDR_IP, true>;
-		m_ostr->write(reinterpret_cast<const char*>(&to_skip),
-			vm_type_size<VMType::ADDR_IP, false>);
-#endif
+		if(!m_relocatable)
+		{
+			// write absolute function address
+			m_ostr->write(reinterpret_cast<const char*>(&sym->addr),
+				vm_type_size<VMType::ADDR_IP, false>);
+		}
+		else
+		{
+			// write relative function address
+			t_vm_addr to_skip = static_cast<t_vm_addr>(sym->addr - pos);
+			// already skipped over address and jmp instruction
+			to_skip -= vm_type_size<VMType::ADDR_IP, true>;
+			m_ostr->write(reinterpret_cast<const char*>(&to_skip),
+				vm_type_size<VMType::ADDR_IP, false>);
+		}
 	}
 
 	// seek to end of stream
@@ -913,14 +949,15 @@ void ASTAsm::FinishCodegen()
 	}
 
 	// patch in the addresses of the constants
-	for(std::streampos addr_pos : m_const_addrs)
+	for(auto [addr_pos, const_addr] : m_const_addrs)
 	{
 		constexpr const t_vm_addr addr_size = vm_type_size<VMType::ADDR_MEM, false>;
 
+		t_vm_addr addr = const_addr;
+
 		// read old address
-		m_ostr->seekg(addr_pos);
-		t_vm_addr addr = 0;
-		m_ostr->read(reinterpret_cast<char*>(&addr), addr_size);
+		//m_ostr->seekg(addr_pos);
+		//m_ostr->read(reinterpret_cast<char*>(&addr), addr_size);
 
 		// add address offset to constants table
 		addr += consttab_pos;
@@ -931,6 +968,6 @@ void ASTAsm::FinishCodegen()
 	}
 
 	// move stream pointers back to the end
-	m_ostr->seekg(0, std::ios_base::end);
+	//m_ostr->seekg(0, std::ios_base::end);
 	m_ostr->seekp(0, std::ios_base::end);
 }
