@@ -8,7 +8,9 @@
 #include "ast_asm.h"
 #include <cmath>
 
+
 #define AST_ABS_FUNC_ADDR  0  // use absolute or relative function addresses
+#define AST_COLLECT_CONSTS 1  // collect constants into their own data block
 
 
 /**
@@ -43,7 +45,7 @@ static void throw_err(const ::ASTBase* ast, const std::string& err)
 
 
 
-ASTAsm::ASTAsm(std::ostream& ostr,
+ASTAsm::ASTAsm(std::iostream& ostr,
 	std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> *ops)
 	: m_ostr{&ostr}, m_ops{ops}
 {
@@ -106,20 +108,20 @@ void ASTAsm::visit(const ASTToken<t_int>* ast,
 }
 
 
-void ASTAsm::visit(const ASTToken<std::string>* ast,
+void ASTAsm::visit(const ASTToken<t_str>* ast,
 	[[maybe_unused]] std::size_t level)
 {
 	if(!ast->HasLexerValue())
 		return;
 
-	const std::string& val = ast->GetLexerValue();
+	const t_str& val = ast->GetLexerValue();
 
 	if(m_binary)
 	{
 		// the token names a variable identifier
 		if(ast->IsIdent())
 		{
-			std::string varname;
+			t_str varname;
 			if(m_cur_func != "")
 				varname = m_cur_func + "/" + val;
 			else
@@ -180,6 +182,8 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 		// the token names a string literal
 		else
 		{
+	#if AST_COLLECT_CONSTS == 0
+			// push external function name
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 			// write type descriptor byte
 			m_ostr->put(static_cast<t_vm_byte>(VMType::STR));
@@ -189,6 +193,21 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 				vm_type_size<VMType::ADDR_MEM, false>);
 			// write string data
 			m_ostr->write(val.data(), len);
+	#else
+			// get string constant address
+			std::streampos str_addr = m_consttab.AddConst(val);
+
+			// push string constant address
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
+			std::streampos addr_pos = m_ostr->tellp();
+			m_const_addrs.push_back(addr_pos);
+			m_ostr->write(reinterpret_cast<const char*>(&str_addr),
+				vm_type_size<VMType::ADDR_MEM, false>);
+
+			// dereference string constant address
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::RDMEM));
+	#endif
 		}
 	}
 	else
@@ -560,9 +579,9 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 
 		for(std::size_t i=0; i<ast->GetArgs()->NumChildren(); ++i)
 		{
-			auto ident = std::dynamic_pointer_cast<ASTToken<std::string>>(ast->GetArgs()->GetChild(i));
-			const std::string& argname = ident->GetLexerValue();
-			std::string varname = m_cur_func + "/" + argname;
+			auto ident = std::dynamic_pointer_cast<ASTToken<t_str>>(ast->GetArgs()->GetChild(i));
+			const t_str& argname = ident->GetLexerValue();
+			t_str varname = m_cur_func + "/" + argname;
 
 			constexpr VMType argty = VMType::UNKNOWN;
 			//std::cout << "arg: " << varname << ", addr: " << addr_bp << std::endl;
@@ -645,6 +664,7 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 		// call external function
 		if(is_external_func)
 		{
+	#if AST_COLLECT_CONSTS == 0
 			// push external function name
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 			// write type descriptor byte
@@ -655,6 +675,21 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 				vm_type_size<VMType::ADDR_MEM, false>);
 			// write string data
 			m_ostr->write(func_name.data(), len);
+	#else
+			// get constant address
+			std::streampos funcname_addr = m_consttab.AddConst(func_name);
+
+			// push constant address
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
+			std::streampos addr_pos = m_ostr->tellp();
+			m_const_addrs.push_back(addr_pos);
+			m_ostr->write(reinterpret_cast<const char*>(&funcname_addr),
+				vm_type_size<VMType::ADDR_MEM, false>);
+
+			// dereference function name address
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::RDMEM));
+	#endif
 
 			// TODO: check number of arguments
 
@@ -869,4 +904,33 @@ void ASTAsm::FinishCodegen()
 {
 	// add a final halt instruction
 	m_ostr->put(static_cast<t_vm_byte>(OpCode::HALT));
+
+	// write constants block
+	std::streampos consttab_pos = m_ostr->tellp();
+	if(auto [constsize, constbytes] = m_consttab.GetBytes(); constsize && constbytes)
+	{
+		m_ostr->write((char*)constbytes.get(), constsize);
+	}
+
+	// patch in the addresses of the constants
+	for(std::streampos addr_pos : m_const_addrs)
+	{
+		constexpr const t_vm_addr addr_size = vm_type_size<VMType::ADDR_MEM, false>;
+
+		// read old address
+		m_ostr->seekg(addr_pos);
+		t_vm_addr addr = 0;
+		m_ostr->read(reinterpret_cast<char*>(&addr), addr_size);
+
+		// add address offset to constants table
+		addr += consttab_pos;
+
+		// write new address
+		m_ostr->seekp(addr_pos);
+		m_ostr->write(reinterpret_cast<const char*>(&addr), addr_size);
+	}
+
+	// move stream pointers back to the end
+	m_ostr->seekg(0, std::ios_base::end);
+	m_ostr->seekp(0, std::ios_base::end);
 }

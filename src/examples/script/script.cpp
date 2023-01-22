@@ -208,15 +208,15 @@ lalr1_run_parser(const std::string& script_file,
 					std::make_tuple("shr", OpCode::SHR)),
 			}};
 
-			std::ostringstream ostrAsm;
+			std::stringstream ostrAsm;
 			if(debug_codegen)
 			{
 				ASTAsm astasm{ostrAsm, &ops};
 				ast->accept(&astasm);
 			}
 
-			std::ostringstream ostrAsmBin(
-				std::ios_base::out | std::ios_base::binary);
+			std::stringstream ostrAsmBin(std::ios_base::in | std::ios_base::out
+				| std::ios_base::binary);
 			ASTAsm astasmbin{ostrAsmBin, &ops};
 			astasmbin.SetBinary(true);
 			ast->accept(&astasmbin);
@@ -239,7 +239,8 @@ lalr1_run_parser(const std::string& script_file,
 			binfile = binfile.filename();
 			binfile.replace_extension(".bin");
 
-			std::ofstream ofstrAsmBin(binfile.string(), std::ios_base::binary);
+			std::fstream ofstrAsmBin(binfile.string(), std::ios_base::in | std::ios_base::out
+				| std::ios_base::trunc | std::ios_base::binary);
 			if(!ofstrAsmBin)
 			{
 				std::cerr << "Cannot open \""

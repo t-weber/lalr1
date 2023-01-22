@@ -143,14 +143,14 @@ static void lalr1_run_parser()
 			}};
 
 #if DEBUG_CODEGEN != 0
-			std::ostringstream ostrAsm;
+			std::stringstream ostrAsm;
 			ASTAsm astasm{ostrAsm, &ops};
 			astasm.AlwaysCallExternal(true);
 			ast->accept(&astasm);
 #endif
 
-			std::ostringstream ostrAsmBin(
-				std::ios_base::out | std::ios_base::binary);
+			std::stringstream ostrAsmBin(std::ios_base::in | std::ios_base::out
+				| std::ios_base::binary);
 			ASTAsm astasmbin{ostrAsmBin, &ops};
 			astasmbin.AlwaysCallExternal(true);
 			astasmbin.SetBinary(true);
@@ -160,7 +160,8 @@ static void lalr1_run_parser()
 
 #if WRITE_BINFILE != 0
 			std::string binfile{"expr.bin"};
-			std::ofstream ofstrAsmBin(binfile, std::ios_base::binary);
+			std::fstream ofstrAsmBin(binfile, std::ios_base::in | std::ios_base::out
+				| std::ios_base::trunc | std::ios_base::binary);
 			if(!ofstrAsmBin)
 			{
 				std::cerr << "Cannot open \""

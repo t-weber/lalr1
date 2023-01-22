@@ -19,7 +19,7 @@ using t_vm_real = ::t_real;
 using t_vm_addr = std::int32_t;
 using t_vm_byte = std::uint8_t;
 using t_vm_bool = t_vm_byte;
-using t_vm_str = std::string;
+using t_vm_str = ::t_str;
 
 // maximum size to reserve for static variables
 constexpr const t_vm_addr g_vm_longest_size = 64;
