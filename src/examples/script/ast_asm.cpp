@@ -180,7 +180,7 @@ void ASTAsm::visit(const ASTToken<t_str>* ast,
 		{
 			if(!m_collect_consts)
 			{
-				// push external function name
+				// push string literal
 				m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 				// write type descriptor byte
 				m_ostr->put(static_cast<t_vm_byte>(VMType::STR));

@@ -27,11 +27,16 @@ namespace args = boost::program_options;
 using namespace lalr1;
 
 
+
 struct VMOptions
 {
 	t_vm_addr mem_size { 4096 };
 	std::optional<t_vm_addr> frame_size { std::nullopt };
 	std::optional<t_vm_addr> heap_size { std::nullopt };
+
+	t_vm_addr load_addr { 0 };
+	t_vm_addr entry_point { 0 };
+
 	bool enable_debug { false };
 	bool zero_mem { false };
 	bool enable_memimages { false };
@@ -61,7 +66,8 @@ static bool run_vm(const fs::path& prog, const VMOptions& opts)
 	vm.SetChecks(opts.enable_checks);
 	vm.SetZeroPoppedVals(opts.zero_mem);
 	vm.SetDrawMemImages(opts.enable_memimages);
-	vm.SetMem(0, bytes.data(), filesize, true);
+	vm.SetMem(opts.load_addr, bytes.data(), filesize, true);
+	vm.SetIP(opts.entry_point);
 	vm.Run();
 
 	// print remaining stack
@@ -104,6 +110,8 @@ int main(int argc, char** argv)
 			.mem_size = 4096,
 			.frame_size = std::nullopt,
 			.heap_size = std::nullopt,
+			.load_addr = 0,
+			.entry_point = 0,
 			.enable_debug = false,
 			.zero_mem = false,
 			.enable_memimages = false,
@@ -114,18 +122,35 @@ int main(int argc, char** argv)
 		typename decltype(vmopts.heap_size)::value_type heap_size = -1;
 		bool enable_timer = false;
 
+		// description strings
+		std::ostringstream ostr_mem_size, ostr_load_addr, ostr_entry_point;
+		std::ostringstream ostr_checks, ostr_debug, ostr_zero, ostr_time;
+		ostr_mem_size << "set memory size (default: " << vmopts.mem_size << ")";
+		ostr_load_addr << "base address to load program (default: " << vmopts.load_addr << ")";
+		ostr_entry_point << "program entry point address (default: " << vmopts.entry_point << ")";
+		ostr_checks << "enable memory checks (default: " << std::boolalpha << vmopts.enable_checks << ")";
+		ostr_debug << "enable debug output (default: " << std::boolalpha << vmopts.enable_debug << ")";
+		ostr_zero << "zero memory after use (default: " << std::boolalpha << vmopts.zero_mem << ")";
+		ostr_time << "time code execution (default: " << std::boolalpha << enable_timer << ")";
+#ifdef USE_BOOST_GIL
+		std::ostringstream ostr_images;
+		ostr_images << "write memory images (default: " << std::boolalpha << vmopts.enable_memimages << ")";
+#endif
+
 		args::options_description arg_descr("Virtual machine arguments");
 		arg_descr.add_options()
-			("debug,d", args::bool_switch(&vmopts.enable_debug), "enable debug output")
-			("timer,t", args::bool_switch(&enable_timer), "time code execution")
-			("zeromem,z", args::bool_switch(&vmopts.zero_mem), "zero memory after use")
+			("debug,d", args::bool_switch(&vmopts.enable_debug), ostr_debug.str().c_str())
+			("timer,t", args::bool_switch(&enable_timer), ostr_time.str().c_str())
+			("zeromem,z", args::bool_switch(&vmopts.zero_mem), ostr_zero.str().c_str())
 #ifdef USE_BOOST_GIL
-			("memimages,i", args::bool_switch(&vmopts.enable_memimages), "write memory images")
+			("memimages,i", args::bool_switch(&vmopts.enable_memimages), ostr_images.str().c_str())
 #endif
-			("checks,c", args::value<bool>(&vmopts.enable_checks), "enable memory checks")
-			("mem,m", args::value<decltype(vmopts.mem_size)>(&vmopts.mem_size), "set memory size")
+			("checks,c", args::value<bool>(&vmopts.enable_checks), ostr_checks.str().c_str())
+			("mem,m", args::value<decltype(vmopts.mem_size)>(&vmopts.mem_size), ostr_mem_size.str().c_str())
 			("frame,f", args::value<decltype(frame_size)>(&frame_size), "set stack frame size")
 			("heap,h", args::value<decltype(heap_size)>(&heap_size), "set heap size")
+			("loadaddr", args::value<decltype(vmopts.load_addr)>(&vmopts.load_addr), ostr_load_addr.str().c_str())
+			("entrypoint", args::value<decltype(vmopts.entry_point)>(&vmopts.entry_point), ostr_entry_point.str().c_str())
 			("prog", args::value<decltype(progs)>(&progs), "input program to run");
 
 		args::positional_options_description posarg_descr;
