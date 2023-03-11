@@ -486,7 +486,6 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH)); // push jump address
 		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 		std::streampos after_block = m_ostr->tellp();
-		skip = after_block - before_block;
 		t_vm_addr skip_back = loop_begin - after_block;
 		skip_back -= vm_type_size<VMType::ADDR_IP, true>; // include the next two writes
 		m_ostr->write(reinterpret_cast<const char*>(&skip_back),
