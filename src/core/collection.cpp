@@ -39,10 +39,11 @@ t_hash Collection::HashTransition::operator()(
 	t_hash hashTo = std::get<1>(trans)->hash(true);
 	t_hash hashSym = std::get<2>(trans)->hash();
 
-	boost::hash_combine(hashFrom, hashTo);
-	boost::hash_combine(hashFrom, hashSym);
-
-	return hashFrom;
+	t_hash hash = 0;
+	boost::hash_combine(hash, hashFrom);
+	boost::hash_combine(hash, hashTo);
+	boost::hash_combine(hash, hashSym);
+	return hash;
 }
 
 

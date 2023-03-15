@@ -41,13 +41,15 @@ public:
 	t_symbol_id GetId() const { return m_id; }
 	void SetId(t_symbol_id id) { m_id = id; }
 
-	std::size_t hash() const
+	t_hash hash() const
 	{
-		std::size_t hashTerm = std::hash<bool>{}(IsTerminal());
-		std::size_t hashId = std::hash<t_symbol_id>{}(GetId());
+		t_hash hashTerm = std::hash<bool>{}(IsTerminal());
+		t_hash hashId = std::hash<t_symbol_id>{}(GetId());
 
-		boost::hash_combine(hashId, hashTerm);
-		return hashId;
+		t_hash hash = 0;
+		boost::hash_combine(hash, hashTerm);
+		boost::hash_combine(hash, hashId);
+		return hash;
 	}
 
 	t_index GetTableIndex() const { return *m_tableidx; }

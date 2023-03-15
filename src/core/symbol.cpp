@@ -159,11 +159,11 @@ t_hash Terminal::hash() const
 	t_hash hashEps = std::hash<bool>{}(IsEps());
 	t_hash hashEnd = std::hash<bool>{}(IsEnd());
 
-	boost::hash_combine(hashId, hashEps);
-	boost::hash_combine(hashId, hashEnd);
-
-	m_hash = hashId;
-	return hashId;
+	m_hash = 0;
+	boost::hash_combine(*m_hash, hashId);
+	boost::hash_combine(*m_hash, hashEps);
+	boost::hash_combine(*m_hash, hashEnd);
+	return *m_hash;
 }
 // ----------------------------------------------------------------------------
 
@@ -704,7 +704,9 @@ std::size_t Word::NumSymbols(bool count_eps) const
 const Terminal::t_terminalset& Word::CalcFirst(
 	const TerminalPtr& additional_sym, t_index offs) const
 {
-	t_hash hashval = this->hash();
+	t_hash hashval = 0;
+	boost::hash_combine(hashval, this->hash());
+
 	if(additional_sym)
 	{
 		t_hash hashSym = additional_sym->hash();
@@ -794,16 +796,14 @@ t_hash Word::hash() const
 	if(m_hash)
 		return *m_hash;
 
-	t_hash hash = 0;
-
+	m_hash = 0;
 	for(const SymbolPtr& sym : m_syms)
 	{
 		t_hash hashSym = sym->hash();
-		boost::hash_combine(hash, hashSym);
+		boost::hash_combine(*m_hash, hashSym);
 	}
 
-	m_hash = hash;
-	return hash;
+	return *m_hash;
 }
 
 

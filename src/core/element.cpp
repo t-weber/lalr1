@@ -141,25 +141,27 @@ t_hash Element::hash(bool only_core) const
 	t_hash hashRhs = this->GetRhs()->hash();
 	t_hash hashCursor = std::hash<t_index>{}(this->GetCursor());
 
-	boost::hash_combine(hashLhs, hashRhs);
-	boost::hash_combine(hashLhs, hashCursor);
+	t_hash hash = 0;
+	boost::hash_combine(hash, hashLhs);
+	boost::hash_combine(hash, hashRhs);
+	boost::hash_combine(hash, hashCursor);
 
 	if(!only_core)
 	{
 		for(const TerminalPtr& la : GetLookaheads())
 		{
 			t_hash hashLA = la->hash();
-			boost::hash_combine(hashLhs, hashLA);
+			boost::hash_combine(hash, hashLA);
 		}
 
-		m_hash = hashLhs;
+		m_hash = hash;
 	}
 	else
 	{
-		m_hash_core = hashLhs;
+		m_hash_core = hash;
 	}
 
-	return hashLhs;
+	return hash;
 }
 
 
