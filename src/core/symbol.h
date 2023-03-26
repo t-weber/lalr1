@@ -129,6 +129,9 @@ public:
 public:
 	using t_terminalset = std::unordered_set<TerminalPtr,
 		Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
+	template<class t_val>
+	using t_terminalmap = std::unordered_map<TerminalPtr, t_val,
+		Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
 
 
 private:

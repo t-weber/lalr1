@@ -68,7 +68,9 @@ public:
 	void ResolveLookaheads();
 
 	// tests if the closure has a reduce/reduce conflict
+	t_elements GetReduceConflicts() const;
 	bool HasReduceConflict() const;
+	bool SolveReduceConflicts();
 
 	t_hash hash(bool only_core = false) const;
 

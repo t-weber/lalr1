@@ -315,7 +315,7 @@ bool TableGen::CreateParseTables()
 				if(!lookbacks)
 					lookbacks = m_collection->GetLookbackTerminals(closure);
 
-				if(!m_collection->SolveConflict(sym_at_cursor, *lookbacks, &shiftEntry, &reduceEntry))
+				if(!m_collection->SolveShiftReduceConflict(sym_at_cursor, *lookbacks, &shiftEntry, &reduceEntry))
 				{
 					ok = false;
 

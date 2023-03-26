@@ -93,11 +93,13 @@ public:
 	bool SaveGraph(const std::string& file, bool write_full_coll = true) const;
 
 	void SetStopOnConflicts(bool b = true);
+	void SetSolveReduceConflicts(bool b = true);
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
 
-	bool SolveConflict(
+	bool SolveReduceConflicts();
+	bool SolveShiftReduceConflict(
 		const SymbolPtr& sym_at_cursor, const Terminal::t_terminalset& lookbacks,
 		t_index* shiftEntry, t_index* reduceEntry) const;
 
@@ -105,6 +107,7 @@ public:
 	const t_closures& GetClosures() const;
 	const t_transitions& GetTransitions() const;
 	bool GetStopOnConflicts() const;
+	bool GetSolveReduceConflicts() const;
 
 
 public:
@@ -129,6 +132,7 @@ private:
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures
 
 	bool m_stopOnConflicts{true};               // stop table/code generation on conflicts
+	bool m_trySolveReduceConflicts{true};       // try to solve reduce/reduce conflicts
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

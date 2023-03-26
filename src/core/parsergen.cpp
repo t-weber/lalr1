@@ -988,7 +988,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 						lookbacks = m_collection->GetLookbackTerminals(closure);
 
 					t_index shift_val = 0, reduce_val = 0;  // dummy values (only need to check for ERROR_VAL)
-					if(m_collection->SolveConflict(la, *lookbacks, &shift_val, &reduce_val))
+					if(m_collection->SolveShiftReduceConflict(la, *lookbacks, &shift_val, &reduce_val))
 					{
 						if(shift_val == ERROR_VAL && reduce_val != ERROR_VAL)
 						{

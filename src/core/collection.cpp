@@ -106,6 +106,7 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_closure_cache = coll.m_closure_cache;
 	this->m_seen_closures = coll.m_seen_closures;
 	this->m_stopOnConflicts = coll.m_stopOnConflicts;
+	this->m_trySolveReduceConflicts = coll.m_trySolveReduceConflicts;
 	this->m_progress_observer = coll.m_progress_observer;
 
 	return *this;
@@ -321,6 +322,9 @@ void Collection::DoTransitions()
 			std::cerr << "Error: " << ostrConflicts.str() << std::endl;
 	};
 
+	if(m_trySolveReduceConflicts)
+		SolveReduceConflicts();
+
 	report_conflicts(HasReduceConflicts(), "reduce/reduce");
 	report_conflicts(HasShiftReduceConflicts(), "shift/reduce");
 
@@ -489,9 +493,35 @@ void Collection::SetStopOnConflicts(bool b)
 
 
 /**
+ * try to solve reduce/reduce conflicts
+ */
+void Collection::SetSolveReduceConflicts(bool b)
+{
+	m_trySolveReduceConflicts = b;
+}
+
+
+/**
+ * try to solve reduce/reduce conflicts
+ */
+bool Collection::SolveReduceConflicts()
+{
+	bool ok = true;
+
+	for(const ClosurePtr& closure : m_collection)
+	{
+		if(!closure->SolveReduceConflicts())
+			ok = false;
+	}
+
+	return ok;
+}
+
+
+/**
  * try to solve a shift/reduce conflict
  */
-bool Collection::SolveConflict(
+bool Collection::SolveShiftReduceConflict(
 	const SymbolPtr& sym_at_cursor, const Terminal::t_terminalset& lookbacks,
 	t_index* shiftEntry, t_index* reduceEntry) const
 {
@@ -896,5 +926,12 @@ bool Collection::GetStopOnConflicts() const
 {
 	return m_stopOnConflicts;
 }
+
+
+bool Collection::GetSolveReduceConflicts() const
+{
+	return m_trySolveReduceConflicts;
+}
+
 
 } // namespace lalr1

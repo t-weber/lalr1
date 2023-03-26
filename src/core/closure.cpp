@@ -277,11 +277,12 @@ const Closure::t_transitions& Closure::DoTransitions() const
 
 
 /**
- * tests if the closure has a reduce/reduce conflict
+ * get elements that produce a reduce/reduce conflict
  */
-bool Closure::HasReduceConflict() const
+Closure::t_elements Closure::GetReduceConflicts() const
 {
-	Terminal::t_terminalset seen_lookaheads;
+	Closure::t_elements conflicting_elems;
+	Terminal::t_terminalmap<ElementPtr> seen_lookaheads;
 
 	for(const ElementPtr& elem : m_elems)
 	{
@@ -292,14 +293,51 @@ bool Closure::HasReduceConflict() const
 		// different finished closure elements cannot share lookaheads
 		for(const TerminalPtr& lookahead : elem->GetLookaheads())
 		{
-			if(seen_lookaheads.contains(lookahead))
-				return true;
+			auto iter = seen_lookaheads.find(lookahead);
+			if(iter != seen_lookaheads.end())
+			{
+				// insert conflicting elements
+				if(conflicting_elems.size() == 0)
+					conflicting_elems.push_back(iter->second);
+				conflicting_elems.push_back(elem);
+			}
 			else
-				seen_lookaheads.insert(lookahead);
+			{
+				seen_lookaheads.insert(std::make_pair(lookahead, elem));
+			}
 		}
 	}
 
-	return false;
+	return conflicting_elems;
+}
+
+
+/**
+ * tests if the closure has a reduce/reduce conflict
+ */
+bool Closure::HasReduceConflict() const
+{
+	return GetReduceConflicts().size() > 0;
+}
+
+
+/**
+ * try to solve possible reduce/reduce conflicts
+ */
+bool Closure::SolveReduceConflicts()
+{
+	Closure::t_elements conflicting_elems = GetReduceConflicts();
+
+	// TODO: keep longest matching element and discard others
+
+	/*if(conflicting_elems.size() > 1)
+	{
+		std::cerr << "reduce/reduce conflicts:\n";
+		for(const ElementPtr& elem : conflicting_elems)
+			std::cerr << "\t" << *elem << "\n";
+	}*/
+
+	return true;
 }
 
 
