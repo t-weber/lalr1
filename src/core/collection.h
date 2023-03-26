@@ -78,10 +78,10 @@ public:
 	void DoTransitions();
 
 	// tests which closures of the collection have reduce/reduce conflicts
-	std::set<t_state_id> HasReduceConflicts() const;
+	std::map<t_state_id, std::string> HasReduceConflicts() const;
 
 	// tests which closures of the collection have shift/reduce conflicts
-	std::set<t_state_id> HasShiftReduceConflicts() const;
+	std::map<t_state_id, std::string> HasShiftReduceConflicts() const;
 
 	// get terminals leading to the given closure
 	Terminal::t_terminalset GetLookbackTerminals(const ClosurePtr& closure) const;

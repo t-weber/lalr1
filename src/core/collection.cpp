@@ -295,7 +295,7 @@ void Collection::DoTransitions()
 
 	// reports reduce/reduce or shift/reduce conflicts
 	auto report_conflicts = [this](
-		const std::set<t_state_id>& conflicts, const char* ty) -> void
+		const std::map<t_state_id, std::string>& conflicts, const char* ty) -> void
 	{
 		if(!conflicts.size())
 			return;
@@ -306,15 +306,26 @@ void Collection::DoTransitions()
 			ostrConflicts << "s";  // plural
 		ostrConflicts << " ";
 
+		bool comma_list = true;
 		t_index conflict_idx = 0;
-		for(t_index conflict : conflicts)
+		for(auto [conflictstate, conflictelems] : conflicts)
 		{
-			ostrConflicts << conflict;
-			if(conflict_idx < conflicts.size() - 1)
-				ostrConflicts << ", ";
+			ostrConflicts << conflictstate;
+			if(conflictelems == "")
+			{
+				if(conflict_idx < conflicts.size() - 1)
+					ostrConflicts << ", ";
+			}
+			else
+			{
+				comma_list = false;
+				ostrConflicts << ":\n" << conflictelems;
+			}
 			++conflict_idx;
 		}
-		ostrConflicts << ".";
+
+		if(comma_list)
+			ostrConflicts << ".";
 
 		if(m_stopOnConflicts)
 			throw std::runtime_error(ostrConflicts.str());
@@ -368,14 +379,22 @@ void Collection::Simplify()
 /**
  * tests which closures of the collection have reduce/reduce conflicts
  */
-std::set<t_state_id> Collection::HasReduceConflicts() const
+std::map<t_state_id, std::string> Collection::HasReduceConflicts() const
 {
-	std::set<t_state_id> conflicting_closures;
+	std::map<t_state_id, std::string> conflicting_closures;
 
 	for(const ClosurePtr& closure : m_collection)
 	{
-		if(closure->HasReduceConflict())
-			conflicting_closures.insert(closure->GetId());
+		Closure::t_elements conflicting_elems = closure->GetReduceConflicts();
+
+		if(conflicting_elems.size() > 1)
+		{
+			std::ostringstream ostrelem;
+			for(const ElementPtr& elem : conflicting_elems)
+				ostrelem << "\t" << *elem << "\n";
+
+			conflicting_closures.emplace(std::make_pair(closure->GetId(), ostrelem.str()));
+		}
 	}
 
 	return conflicting_closures;
@@ -385,9 +404,9 @@ std::set<t_state_id> Collection::HasReduceConflicts() const
 /**
  * tests which closures of the collection have shift/reduce conflicts
  */
-std::set<t_state_id> Collection::HasShiftReduceConflicts() const
+std::map<t_state_id, std::string> Collection::HasShiftReduceConflicts() const
 {
-	std::set<t_state_id> conflicting_closures;
+	std::map<t_state_id, std::string> conflicting_closures;
 
 	for(const ClosurePtr& closure : m_collection)
 	{
@@ -418,7 +437,12 @@ std::set<t_state_id> Collection::HasShiftReduceConflicts() const
 			const TerminalPtr termTrans = std::dynamic_pointer_cast<Terminal>(symTrans);
 			bool has_solution = termTrans->GetPrecedence() || termTrans->GetAssociativity();
 			if(reduce_lookaheads.contains(termTrans) && !has_solution)
-				conflicting_closures.insert(closure->GetId());
+			{
+				std::ostringstream ostrtrans;
+				ostrtrans << "\ttransition: " << *termTrans << " from state " << stateFrom->GetId() << "\n";
+
+				conflicting_closures.emplace(std::make_pair(closure->GetId(), ostrtrans.str()));
+			}
 		}
 	}
 

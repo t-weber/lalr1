@@ -297,6 +297,7 @@ Closure::t_elements Closure::GetReduceConflicts() const
 			if(iter != seen_lookaheads.end())
 			{
 				// insert conflicting elements
+				// TODO: also add lookahead together with element to group conflicting elements
 				if(conflicting_elems.size() == 0)
 					conflicting_elems.push_back(iter->second);
 				conflicting_elems.push_back(elem);
@@ -329,13 +330,6 @@ bool Closure::SolveReduceConflicts()
 	Closure::t_elements conflicting_elems = GetReduceConflicts();
 
 	// TODO: keep longest matching element and discard others
-
-	/*if(conflicting_elems.size() > 1)
-	{
-		std::cerr << "reduce/reduce conflicts:\n";
-		for(const ElementPtr& elem : conflicting_elems)
-			std::cerr << "\t" << *elem << "\n";
-	}*/
 
 	return true;
 }
