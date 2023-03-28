@@ -21,6 +21,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <set>
+#include <map>
 #include <list>
 #include <memory>
 #include <functional>
@@ -132,7 +133,7 @@ private:
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures
 
 	bool m_stopOnConflicts{true};               // stop table/code generation on conflicts
-	bool m_trySolveReduceConflicts{true};       // try to solve reduce/reduce conflicts
+	bool m_trySolveReduceConflicts{false};      // try to solve reduce/reduce conflicts
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

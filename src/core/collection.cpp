@@ -385,17 +385,23 @@ std::map<t_state_id, std::string> Collection::HasReduceConflicts() const
 
 	for(const ClosurePtr& closure : m_collection)
 	{
-		Closure::t_elements conflicting_elems = closure->GetReduceConflicts();
+		Closure::t_conflictingelements conflicting_elems = closure->GetReduceConflicts();
 
-		if(conflicting_elems.size() > 1)
+		for(const auto& [lookahead, elems] : conflicting_elems)
 		{
-			std::ostringstream ostrelem;
-			for(const ElementPtr& elem : conflicting_elems)
-				ostrelem << "\t" << *elem << "\n";
+			if(elems.size() > 1)
+			{
+				std::ostringstream ostrelem;
+				for(const ElementPtr& elem : elems)
+				{
+					ostrelem << "\t" << "lookahead: " << *lookahead
+						<< ", element: " << *elem << "\n";
+				}
 
-			conflicting_closures.emplace(std::make_pair(closure->GetId(), ostrelem.str()));
-		}
-	}
+				conflicting_closures.emplace(std::make_pair(closure->GetId(), ostrelem.str()));
+			}
+		} // iterate lookaheads
+	} // iterate closures
 
 	return conflicting_closures;
 }

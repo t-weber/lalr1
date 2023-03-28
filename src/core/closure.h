@@ -44,6 +44,8 @@ public:
 	using t_transition = std::tuple<SymbolPtr, ClosurePtr, t_elements>;
 	using t_transitions = std::deque<t_transition>;
 
+	using t_conflictingelements = Terminal::t_terminalmap<t_elements>;
+
 
 public:
 	Closure();
@@ -68,7 +70,7 @@ public:
 	void ResolveLookaheads();
 
 	// tests if the closure has a reduce/reduce conflict
-	t_elements GetReduceConflicts() const;
+	t_conflictingelements GetReduceConflicts() const;
 	bool HasReduceConflict() const;
 	bool SolveReduceConflicts();
 

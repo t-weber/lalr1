@@ -279,10 +279,9 @@ const Closure::t_transitions& Closure::DoTransitions() const
 /**
  * get elements that produce a reduce/reduce conflict
  */
-Closure::t_elements Closure::GetReduceConflicts() const
+Closure::t_conflictingelements Closure::GetReduceConflicts() const
 {
-	Closure::t_elements conflicting_elems;
-	Terminal::t_terminalmap<ElementPtr> seen_lookaheads;
+	Closure::t_conflictingelements seen_lookaheads;
 
 	for(const ElementPtr& elem : m_elems)
 	{
@@ -296,20 +295,17 @@ Closure::t_elements Closure::GetReduceConflicts() const
 			auto iter = seen_lookaheads.find(lookahead);
 			if(iter != seen_lookaheads.end())
 			{
-				// insert conflicting elements
-				// TODO: also add lookahead together with element to group conflicting elements
-				if(conflicting_elems.size() == 0)
-					conflicting_elems.push_back(iter->second);
-				conflicting_elems.push_back(elem);
+				iter->second.push_back(elem);
 			}
 			else
 			{
-				seen_lookaheads.insert(std::make_pair(lookahead, elem));
+				seen_lookaheads.insert(std::make_pair(
+					lookahead, t_elements{elem}));
 			}
 		}
 	}
 
-	return conflicting_elems;
+	return seen_lookaheads;
 }
 
 
@@ -327,9 +323,9 @@ bool Closure::HasReduceConflict() const
  */
 bool Closure::SolveReduceConflicts()
 {
-	Closure::t_elements conflicting_elems = GetReduceConflicts();
+	Closure::t_conflictingelements conflicting_elems = GetReduceConflicts();
 
-	// TODO: keep longest matching element and discard others
+	// TODO: keep longest matching element and discard the others
 
 	return true;
 }
