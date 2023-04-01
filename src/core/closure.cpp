@@ -299,7 +299,7 @@ Closure::t_conflictingelements Closure::GetReduceConflicts() const
 			}
 			else
 			{
-				seen_lookaheads.insert(std::make_pair(
+				seen_lookaheads.emplace(std::make_pair(
 					lookahead, t_elements{elem}));
 			}
 		}

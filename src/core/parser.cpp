@@ -124,8 +124,25 @@ static void print_stacks(
 		if(i < symbols.size() - 1)
 			ostr << ", ";
 		++i;
-	}
+	} // end symbols loop
 	ostr << "." << std::endl;
+}
+
+
+/**
+ * print a terminal
+ */
+static void print_token(const t_astbaseptr& tok, std::ostream& ostr,
+	std::optional<t_symbol_id> end = std::nullopt)
+{
+	t_symbol_id tok_id = tok->GetId();
+	if(end && tok_id == *end)
+		ostr << "end";
+	else
+		ostr << tok_id;
+	if(isprintable(tok_id))
+		ostr << " = '" << char(tok_id) << "'";
+	ostr << " (terminal index " << tok->GetTableIndex() << ")";
 }
 
 
@@ -135,17 +152,29 @@ static void print_stacks(
 static void print_input_token(t_index inputidx, const t_toknode& curtok,
 	std::ostream& ostr, std::optional<t_symbol_id> end = std::nullopt)
 {
-	t_symbol_id curtok_id = curtok->GetId();
 	ostr << "\tCurrent token [" << inputidx-1 << "]" << ": ";
-	if(end && curtok_id == *end)
-		ostr << "end";
-	else
-		ostr << curtok_id;
-	if(isprintable(curtok_id))
-		ostr << " = '" << char(curtok_id) << "'";
-	ostr << " (terminal index " << curtok->GetTableIndex() << ")."
-		<< std::endl;
-};
+	print_token(curtok, ostr, end);
+	ostr << "." << std::endl;
+}
+
+
+/**
+ * get the top terminal from the symbols stack (this serves as lookback symbol)
+ */
+static t_astbaseptr get_top_term(const ParseStack<t_astbaseptr>& symbols)
+{
+	for(auto iter = symbols.rbegin(); iter != symbols.rend(); std::advance(iter, 1))
+	{
+		const t_astbaseptr& sym = (*iter);
+		if(!sym)
+			continue;
+
+		if(sym->IsTerminal())
+			return sym;
+	}
+
+	return nullptr;
+}
 
 
 /**
@@ -176,36 +205,33 @@ Parser::GetPartialRule(
 		partialrule_idx = (*m_tabPartialsRulesTerm)(topstate, curtok->GetTableIndex());
 		partialmatchlen = (*m_tabPartialsMatchLenTerm)(topstate, curtok->GetTableIndex());
 	}
-	else
+	else if(symbols.size())
 	{
 		// otherwise look for nonterminal transitions
-		if(symbols.size())
+		bool topsym_isterm;
+		t_index topsym_idx;
+
+		const t_astbaseptr& topsym = symbols.top();
+		if(topsym)
 		{
-			bool topsym_isterm;
-			t_index topsym_idx;
-
-			const t_astbaseptr& topsym = symbols.top();
-			if(topsym)
-			{
-				topsym_isterm = topsym->IsTerminal();
-				topsym_idx = topsym->GetTableIndex();
-			}
-			else
-			{
+			topsym_isterm = topsym->IsTerminal();
+			topsym_idx = topsym->GetTableIndex();
+		}
+		else
+		{
 #ifndef LALR1_DONT_USE_SYMBOL_EXP
-				topsym_isterm = false;
-				topsym_idx = symbols_exp.top();
+			topsym_isterm = false;
+			topsym_idx = symbols_exp.top();
 #else
-				throw std::runtime_error("No lhs symbol id available in state "
-					+ std::to_string(topstate) + ".");
+			throw std::runtime_error("No lhs symbol id available in state "
+				+ std::to_string(topstate) + ".");
 #endif
-			}
+		}
 
-			if(!topsym_isterm)
-			{
-				partialrule_idx = (*m_tabPartialsRulesNonTerm)(topstate, topsym_idx);
-				partialmatchlen = (*m_tabPartialsMatchLenNonTerm)(topstate, topsym_idx);
-			}
+		if(!topsym_isterm)
+		{
+			partialrule_idx = (*m_tabPartialsRulesNonTerm)(topstate, topsym_idx);
+			partialmatchlen = (*m_tabPartialsMatchLenNonTerm)(topstate, topsym_idx);
 		}
 	}
 
@@ -300,8 +326,21 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 #endif
 			&topstate, &inputidx, &curtok](std::ostream& ostr)
 		{
+			// print state
 			ostr << "\nState " << topstate << " active." << std::endl;
+
+			// print lookahead
 			print_input_token(inputidx, curtok, ostr, m_end);
+
+			// print lookback
+			if(t_astbaseptr lookback = get_top_term(symbols); lookback)
+			{
+				ostr << "\tLookback token: ";
+				print_token(lookback, ostr, m_end);
+				ostr << "." << std::endl;
+			}
+
+			// print stacks
 			print_stacks(states, symbols,
 #ifndef LALR1_DONT_USE_SYMBOL_EXP
 			symbols_exp,
@@ -455,16 +494,24 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 		bool accepted = false;
 		t_toknode accepted_topnode;
 
+
 		// neither a shift nor a reduce defined
 		if(newstate == ERROR_VAL && rule_idx == ERROR_VAL)
 		{
 			std::ostringstream ostrErr;
 			ostrErr << "Undefined shift and reduce entries"
-				<< " from state " << topstate << "."
-				<< " Current token id is " << curtok->GetId();
-			if(isprintable(curtok->GetId()))
-				ostrErr << " = '" << char(curtok->GetId()) << "'";
+				<< " from state " << topstate << ".";
+
+			ostrErr << " Current token id is ";
+			print_token(curtok, ostrErr, m_end);
 			ostrErr << get_line_numbers(curtok) << ".";
+
+			if(t_astbaseptr lookback = get_top_term(symbols); lookback)
+			{
+				ostrErr << " Lookback token id is ";
+				print_token(lookback, ostrErr, m_end);
+				ostrErr << get_line_numbers(lookback) << ".";
+			}
 
 			throw std::runtime_error(ostrErr.str());
 		}
@@ -475,11 +522,18 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 			std::ostringstream ostrErr;
 			ostrErr << "Shift/reduce conflict between shift"
 				<< " from state " << topstate << " to state " << newstate
-				<< " and reduce using rule " << rule_id << "."
-				<< " Current token id is " << curtok->GetId();
-			if(isprintable(curtok->GetId()))
-				ostrErr << " = '" << char(curtok->GetId()) << "'";
+				<< " and reduce using rule " << rule_id << ".";
+
+			ostrErr << " Current token id is ";
+			print_token(curtok, ostrErr, m_end);
 			ostrErr << get_line_numbers(curtok) << ".";
+
+			if(t_astbaseptr lookback = get_top_term(symbols); lookback)
+			{
+				ostrErr << " Lookback token id is ";
+				print_token(lookback, ostrErr, m_end);
+				ostrErr << get_line_numbers(lookback) << ".";
+			}
 
 			throw std::runtime_error(ostrErr.str());
 		}
