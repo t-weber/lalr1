@@ -46,6 +46,9 @@ Parser& Parser::operator=(const Parser& parser)
 }
 
 
+/**
+ * debug output of the line numbers of a node
+ */
 template<class t_toknode>
 std::string get_line_numbers(const t_toknode& node)
 {
@@ -135,6 +138,12 @@ static void print_stacks(
 static void print_token(const t_astbaseptr& tok, std::ostream& ostr,
 	std::optional<t_symbol_id> end = std::nullopt)
 {
+	if(!tok)
+	{
+		ostr << "<null>";
+		return;
+	}
+
 	t_symbol_id tok_id = tok->GetId();
 	if(end && tok_id == *end)
 		ostr << "end";
@@ -165,7 +174,7 @@ static t_astbaseptr get_top_term(const ParseStack<t_astbaseptr>& symbols)
 {
 	for(auto iter = symbols.rbegin(); iter != symbols.rend(); std::advance(iter, 1))
 	{
-		const t_astbaseptr& sym = (*iter);
+		const t_astbaseptr& sym = *iter;
 		if(!sym)
 			continue;
 

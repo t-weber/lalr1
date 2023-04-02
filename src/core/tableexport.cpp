@@ -42,7 +42,7 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 
 	ofstr << "/*\n";
 	ofstr << " * Parsing tables created on " << get_timestamp();
-	ofstr << " using liblalr1 by Tobias Weber, 2020-2022.\n";
+	ofstr << " using liblalr1 by Tobias Weber, 2020-2023.\n";
 	ofstr << " * DOI: https://doi.org/10.5281/zenodo.6987396\n";
 	ofstr << " */\n\n";
 
@@ -153,6 +153,42 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 	}
 	ofstr << "}};\n\n";
 
+	// terminal operator precedences
+	const t_mapIdPrec& mapTermPrec = GetTermPrecMap();
+	ofstr << "const lalr1::t_mapIdPrec map_term_prec\n{{\n";
+	for(const auto& [id, prec] : mapTermPrec)
+	{
+		ofstr << "\t{ " << id << ", " << prec << " },";
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id);
+			iterStrId != mapTermStrIds.end())
+		{
+			ofstr << " // " << iterStrId->second;
+		}
+
+		ofstr << "\n";
+	}
+	ofstr << "}};\n\n";
+
+	// terminal operator associativities
+	const t_mapIdAssoc& mapTermAssoc = GetTermAssocMap();
+	ofstr << "const lalr1::t_mapIdAssoc map_term_assoc\n{{\n";
+	for(const auto& [id, assoc] : mapTermAssoc)
+	{
+		ofstr << "\t{ " << id << ", '" << assoc << "' },";
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id);
+			iterStrId != mapTermStrIds.end())
+		{
+			ofstr << " // " << iterStrId->second;
+		}
+
+		ofstr << "\n";
+	}
+	ofstr << "}};\n\n";
+
 	// semantic rule indices
 	const t_mapIdIdx& mapSemanticIdx = GetSemanticIndexMap();
 	ofstr << "const lalr1::t_mapSemanticIdIdx map_semantic_idx\n{{\n";
@@ -217,6 +253,13 @@ bool TableGen::SaveParseTablesCXX(const std::string& file) const
 	ofstr << "\t\t_lalr1_tables::err, _lalr1_tables::acc, _lalr1_tables::eps, _lalr1_tables::end, _lalr1_tables::start_idx, _lalr1_tables::acc_idx);\n";
 	ofstr << "}\n\n";
 
+	// precedence/associativity getter
+	ofstr << "[[maybe_unused]] static\nstd::tuple<const lalr1::t_mapIdPrec*, const lalr1::t_mapIdAssoc*>\n";
+	ofstr << "get_lalr1_precedences()\n{\n";
+	ofstr << "\treturn std::make_tuple(\n";
+	ofstr << "\t\t&_lalr1_tables::map_term_prec, &_lalr1_tables::map_term_assoc);\n";
+	ofstr << "}\n\n";
+
 	ofstr << "\n#endif" << std::endl;
 	return true;
 }
@@ -236,7 +279,7 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 
 	ofstr << "/*\n";
 	ofstr << " * Parsing tables created on " << get_timestamp();
-	ofstr << " using liblalr1 by Tobias Weber, 2020-2022.\n";
+	ofstr << " using liblalr1 by Tobias Weber, 2020-2023.\n";
 	ofstr << " * DOI: https://doi.org/10.5281/zenodo.6987396\n";
 	ofstr << " */\n\n";
 
@@ -351,6 +394,42 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 	}
 	ofstr << "\t};\n\n";
 
+	// terminal operator precedences
+	const t_mapIdPrec& mapTermPrec = GetTermPrecMap();
+	ofstr << "\tprivate final int[][] map_term_prec =\n\t{\n";
+	for(const auto& [id, prec] : mapTermPrec)
+	{
+		ofstr << "\t\t{ " << id << ", " << prec << " },";
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id);
+			iterStrId != mapTermStrIds.end())
+		{
+			ofstr << " // " << iterStrId->second;
+		}
+
+		ofstr << "\n";
+	}
+	ofstr << "\t};\n\n";
+
+	// terminal operator associativities
+	const t_mapIdAssoc& mapTermAssoc = GetTermAssocMap();
+	ofstr << "\tprivate final int[][] map_term_assoc =\n\t{\n";
+	for(const auto& [id, assoc] : mapTermAssoc)
+	{
+		ofstr << "\t\t{ " << id << ", '" << assoc << "' },";
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id);
+			iterStrId != mapTermStrIds.end())
+		{
+			ofstr << " // " << iterStrId->second;
+		}
+
+		ofstr << "\n";
+	}
+	ofstr << "\t};\n\n";
+
 	// semantic rule indices
 	const t_mapIdIdx& mapSemanticIdx = GetSemanticIndexMap();
 	ofstr << "\tprivate final int[][] map_semantic_idx =\n\t{\n";
@@ -396,6 +475,9 @@ bool TableGen::SaveParseTablesJava(const std::string& file) const
 	ofstr << "\t@Override public int[][] GetPartialsMatchLengthNonterm() { return tab_partials_matchlen_nonterm; }\n";
 	ofstr << "\t@Override public int[][] GetPartialsLhsIdNonterm() { return tab_partials_lhs_nonterm; }\n";
 
+	ofstr << "\t@Override public int[][] GetPrecedences() { return map_term_prec; }\n";
+	ofstr << "\t@Override public int[][] GetAssociativities() { return map_term_assoc; }\n";
+
 	ofstr << "}\n";  // end class
 	return true;
 }
@@ -428,7 +510,7 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 	// meta infos
 	ofstr << "\"infos\" : ";
 	ofstr << "\"Parsing tables created on " << get_timestamp();
-	ofstr << " using liblalr1 by Tobias Weber, 2020-2022";
+	ofstr << " using liblalr1 by Tobias Weber, 2020-2023";
 	ofstr << " (DOI: https://doi.org/10.5281/zenodo.6987396).\",\n";
 
 	// constants
@@ -553,6 +635,37 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 	}
 	ofstr << "],\n";
 
+	// terminal operator precedences
+	const t_mapIdPrec& mapTermPrec = GetTermPrecMap();
+	ofstr << "\n\"term_prec\" : [\n";
+	for(auto iter = mapTermPrec.begin(); iter != mapTermPrec.end(); std::advance(iter, 1))
+	{
+		const auto& [id, prec] = *iter;
+
+		ofstr << "\t[ " << id << ", " << prec << " ]";
+
+		if(std::next(iter, 1) != mapTermPrec.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "}};\n\n";
+
+	// terminal operator associativities
+	const t_mapIdAssoc& mapTermAssoc = GetTermAssocMap();
+
+	ofstr << "\n\"term_assoc\" : [\n";
+	for(auto iter = mapTermAssoc.begin(); iter != mapTermAssoc.end(); std::advance(iter, 1))
+	{
+		const auto& [id, assoc] = *iter;
+
+		ofstr << "\t[ " << id << ", \"" << assoc << "\" ]";
+
+		if(std::next(iter, 1) != mapTermAssoc.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "}};\n\n";
+
 	// semantic rule indices
 	const t_mapIdIdx& mapSemanticIdx = GetSemanticIndexMap();
 	ofstr << "\n\"semantic_idx\" : [\n";
@@ -608,7 +721,7 @@ bool TableGen::SaveParseTablesRS(const std::string& file) const
 	// meta infos
 	ofstr << "/*\n";
 	ofstr << " * Parsing tables created on " << get_timestamp() << "\n";
-	ofstr << " * using liblalr1 by Tobias Weber, 2020-2022\n";
+	ofstr << " * using liblalr1 by Tobias Weber, 2020-2023\n";
 	ofstr << " * (DOI: https://doi.org/10.5281/zenodo.6987396).\n";
 	ofstr << " */\n\n";
 
@@ -620,9 +733,13 @@ bool TableGen::SaveParseTablesRS(const std::string& file) const
 	ofstr << "pub type TIndex = " << get_rs_typename<t_index>() << ";\n";
 	ofstr << "pub type TSymbolId = " << get_rs_typename<t_symbol_id>() << ";\n";
 	ofstr << "pub type TSemanticId = " << get_rs_typename<t_semantic_id>() << ";\n";
-	std::string ty_idx = "TIndex"; //get_rs_typename<t_index>();
-	std::string ty_sym = "TSymbolId"; //get_rs_typename<t_symbol_id>();
-	std::string ty_sem = "TSemanticId"; //get_rs_typename<t_semantic_id>();
+	ofstr << "pub type TPrec = " << get_rs_typename<t_precedence>() << ";\n";
+	ofstr << "pub type TAssoc = " << get_rs_typename<t_associativity>() << ";\n";
+	std::string ty_idx = "TIndex";
+	std::string ty_sym = "TSymbolId";
+	std::string ty_sem = "TSemanticId";
+	std::string ty_prec = "TPrec";
+	std::string ty_assoc = "TAssoc";
 
 	ofstr << "\n";
 
@@ -721,6 +838,51 @@ bool TableGen::SaveParseTablesRS(const std::string& file) const
 		ofstr << "\t( " << id << ", " << idx << " )";
 		if(std::next(iter, 1) != mapSemanticIdx.end())
 			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "];\n\n";
+
+	// terminal operator precedences
+	const t_mapIdPrec& mapTermPrec = GetTermPrecMap();
+	ofstr << "pub const TERM_PREC : [(" << ty_sym << ", " << ty_prec
+		<< "); " << mapTermPrec.size() << "] =\n[\n";
+	for(auto iter = mapTermPrec.begin(); iter != mapTermPrec.end(); std::advance(iter, 1))
+	{
+		const auto& [id, prec] = *iter;
+		ofstr << "\t( " << id << ", " << prec << " )";
+
+		if(std::next(iter, 1) != mapTermPrec.end())
+			ofstr << ",";
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id); iterStrId != mapTermStrIds.end())
+		{
+			ofstr << " // " << iterStrId->second;
+		}
+
+		ofstr << "\n";
+	}
+	ofstr << "];\n";
+
+	// terminal operator associativities
+	const t_mapIdAssoc& mapTermAssoc = GetTermAssocMap();
+
+	ofstr << "pub const TERM_ASSOC : [(" << ty_sym << ", " << ty_assoc
+		<< "); " << mapTermPrec.size() << "] =\n[\n";
+	for(auto iter = mapTermAssoc.begin(); iter != mapTermAssoc.end(); std::advance(iter, 1))
+	{
+		const auto& [id, assoc] = *iter;
+		ofstr << "\t( " << id << ", '" << assoc << "' as " << ty_assoc << " )";
+
+		if(std::next(iter, 1) != mapTermAssoc.end())
+			ofstr << ",";
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id); iterStrId != mapTermStrIds.end())
+		{
+			ofstr << " // " << iterStrId->second;
+		}
+
 		ofstr << "\n";
 	}
 	ofstr << "];\n\n";

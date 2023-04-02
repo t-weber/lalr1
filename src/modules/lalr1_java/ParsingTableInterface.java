@@ -32,4 +32,7 @@ public interface ParsingTableInterface
 	public int[][] GetPartialsMatchLengthTerm();
 	public int[][] GetPartialsMatchLengthNonterm();
 	public int[][] GetPartialsLhsIdNonterm();
+
+	public int[][] GetPrecedences();
+	public int[][] GetAssociativities();
 }

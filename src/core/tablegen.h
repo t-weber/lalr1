@@ -56,6 +56,9 @@ public:
 	const t_mapIdIdx& GetNontermIndexMap() const { return m_mapNonTermIdx; }
 	const t_mapIdIdx& GetSemanticIndexMap() const { return m_mapSemanticIdx; }
 
+	const t_mapIdPrec& GetTermPrecMap() const { return m_mapTermPrec; }
+	const t_mapIdAssoc& GetTermAssocMap() const { return m_mapTermAssoc; }
+
 	const std::vector<std::size_t>& GetNumRhsSymbolsPerRule() const { return m_numRhsSymsPerRule; }
 	const std::vector<t_index>& GetRuleLhsIndices() const { return m_ruleLhsIdx; }
 
@@ -78,6 +81,7 @@ public:
 
 protected:
 	void CreateTableIndices();
+	void CreateTerminalPrecedences();
 
 
 private:
@@ -86,6 +90,9 @@ private:
 	t_mapIdIdx m_mapTermIdx{};                  // maps the terminal ids to table indices
 	t_mapIdIdx m_mapNonTermIdx{};               // maps the non-terminal ids to table indices
 	t_mapIdIdx m_mapSemanticIdx{};              // maps the semantic ids to tables indices
+
+	t_mapIdPrec m_mapTermPrec{};                // terminal operator precedences
+	t_mapIdAssoc m_mapTermAssoc{};              // terminal operator associativities
 
 	t_mapIdStrId m_mapNonTermStrIds{};          // maps the non-terminal ids to the respective string identifiers
 	t_mapIdStrId m_mapTermStrIds{};             // maps the terminal ids to the respective string identifiers
@@ -102,6 +109,8 @@ private:
 
 	std::vector<std::size_t> m_numRhsSymsPerRule{}; // number of symbols on rhs of a production rule
 	std::vector<t_index> m_ruleLhsIdx{};            // nonterminal index of the rule's result type
+
+	std::vector<TerminalPtr> m_seen_terminals{};    // collection of all possible terminal symbols
 };
 
 } // namespace lalr1

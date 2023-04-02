@@ -38,6 +38,7 @@ void TableGen::CreateTableIndices()
 	// generate table indices for terminals
 	m_mapTermIdx.clear();
 	m_mapTermStrIds.clear();
+	m_seen_terminals.clear();
 	t_index curTermIdx = 0;
 
 	const Collection::t_closures& closures = m_collection->GetClosures();
@@ -50,18 +51,32 @@ void TableGen::CreateTableIndices()
 		if(symTrans->IsEps() || !symTrans->IsTerminal())
 			continue;
 
+		// terminal id map
 		if(auto [iter, inserted] = m_mapTermIdx.try_emplace(
 			symTrans->GetId(), curTermIdx); inserted)
+		{
 			++curTermIdx;
 
-		// nonterminal string id map
+			const TerminalPtr termTrans = std::dynamic_pointer_cast<Terminal>(symTrans);
+			m_seen_terminals.push_back(termTrans);
+		}
+
+		// terminal string id map
 		const std::string& sym_strid = symTrans->GetStrId();
 		m_mapTermStrIds.try_emplace(symTrans->GetId(), sym_strid);
 	}
 
 	// add end symbol
-	m_mapTermIdx.try_emplace(g_end->GetId(), curTermIdx++);
+	if(auto [iter, inserted] = m_mapTermIdx.try_emplace(g_end->GetId(), curTermIdx++);
+		inserted)
+	{
+		const TerminalPtr termTrans = std::dynamic_pointer_cast<Terminal>(g_end);
+		m_seen_terminals.push_back(g_end);
+	}
+
+	// end string id
 	m_mapTermStrIds.try_emplace(g_end->GetId(), g_end->GetStrId());
+
 
 	// generate table indices for non-terminals and semantic rules
 	m_mapNonTermIdx.clear();
@@ -100,11 +115,33 @@ void TableGen::CreateTableIndices()
 
 
 /**
+ * creates operator precedence and associativity tables
+ */
+void TableGen::CreateTerminalPrecedences()
+{
+	m_mapTermPrec.clear();
+	m_mapTermAssoc.clear();
+
+	for(const TerminalPtr& term : m_seen_terminals)
+	{
+		if(!term)
+			continue;
+
+		if(auto prec = term->GetPrecedence(); prec)
+			m_mapTermPrec.emplace(std::make_pair(term->GetId(), *prec));
+		if(auto assoc = term->GetAssociativity(); assoc)
+			m_mapTermAssoc.emplace(std::make_pair(term->GetId(), *assoc));
+	}
+}
+
+
+/**
  * create lalr(1) parse tables to C++ code
  */
 bool TableGen::CreateParseTables()
 {
 	CreateTableIndices();
+	CreateTerminalPrecedences();
 
 	const Collection::t_closures& closures = m_collection->GetClosures();
 	const Collection::t_transitions& transitions = m_collection->GetTransitions();

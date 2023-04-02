@@ -38,6 +38,11 @@ using t_mapIdIdx = std::unordered_map<t_symbol_id, t_index>;
 using t_mapIdStrId = std::unordered_map<t_symbol_id, std::string>;
 using t_vecIdx = std::vector<t_index>;
 
+// maps for operator precedences and associativities
+using t_mapIdPrec = std::unordered_map<t_symbol_id, t_precedence>;
+using t_mapIdAssoc = std::unordered_map<t_symbol_id, t_associativity>;
+
+// maps for semantic ids
 using t_mapSemanticIdIdx = std::unordered_map<t_semantic_id, t_index>;
 using t_mapSemanticIdxId = std::unordered_map<t_index, t_semantic_id>;
 

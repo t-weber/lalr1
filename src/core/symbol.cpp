@@ -110,32 +110,32 @@ const Terminal& Terminal::operator=(const Terminal& other)
 }
 
 
-void Terminal::SetPrecedence(std::size_t prec)
+void Terminal::SetPrecedence(t_precedence prec)
 {
 	m_precedence = prec;
 }
 
 
-void Terminal::SetAssociativity(char assoc)
+void Terminal::SetAssociativity(t_associativity assoc)
 {
 	m_associativity = assoc;
 }
 
 
-void Terminal::SetPrecedence(std::size_t prec, char assoc)
+void Terminal::SetPrecedence(t_precedence prec, t_associativity assoc)
 {
 	SetPrecedence(prec);
 	SetAssociativity(assoc);
 }
 
 
-std::optional<std::size_t> Terminal::GetPrecedence() const
+std::optional<t_precedence> Terminal::GetPrecedence() const
 {
 	return m_precedence;
 }
 
 
-std::optional<char> Terminal::GetAssociativity() const
+std::optional<t_associativity> Terminal::GetAssociativity() const
 {
 	return m_associativity;
 }

@@ -48,7 +48,7 @@ bool ParserGen::SaveParser(const std::string& filename_cpp, const std::string& c
 	// output header file stub
 	// --------------------------------------------------------------------------------
 	std::string outfile_h = R"raw(/**
- * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
+ * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2023.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
 
@@ -93,9 +93,11 @@ public:
 	t_symbol Parse(const t_tokens& input);
 
 protected:
+	void PrintSymbol(const t_symbol& sym) const;
 	void PrintSymbols() const;
 	void GetNextLookahead();
 	void PushLookahead();
+	t_symbol GetLookback() const;
 
 	static lalr1::t_semanticargs GetArguments(t_stack& symbols, std::size_t num_rhs);
 	lalr1::t_semanticargs GetCopyArguments(std::size_t num_rhs) const;
@@ -149,7 +151,7 @@ private:
 	// output cpp file stub
 	// --------------------------------------------------------------------------------
 	std::string outfile_cpp = R"raw(/**
- * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2022.
+ * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2023.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
 
@@ -160,6 +162,32 @@ private:
 #include <sstream>
 
 using namespace lalr1;
+
+/**
+ * print a symbol
+ */
+void %%PARSER_CLASS%%::PrintSymbol(const t_symbol& sym) const
+{
+	if(!sym)
+	{
+		std::cout << "<null>";
+		return;
+	}
+
+	const t_symbol_id sym_id = sym->GetId();
+	if(sym->IsTerminal() && sym_id == s_end_id)
+		std::cout << "end";
+	else
+		std::cout << sym_id;
+
+	if(sym->IsTerminal() && isprintable(sym_id))
+		std::cout << " ('" << get_escaped_char(char(sym_id)) << "')";
+
+	if(sym->IsTerminal())
+		std::cout << " [t]";
+	else
+		std::cout << " [nt]";
+}
 
 /**
  * print the symbol stack
@@ -191,14 +219,7 @@ void %%PARSER_CLASS%%::PrintSymbols() const
 			continue;
 		}
 
-		std::cout << sym->GetId();
-		if(sym->IsTerminal() && isprintable(sym->GetId()))
-			std::cout << " ('" << get_escaped_char(char(sym->GetId())) << "')";
-
-		if(sym->IsTerminal())
-			std::cout << " [t]";
-		else
-			std::cout << " [nt]";
+		PrintSymbol(sym);
 
 		if(i < m_symbols.size()-1)
 			std::cout << ", ";
@@ -241,6 +262,24 @@ void %%PARSER_CLASS%%::PushLookahead()
 }
 
 /**
+ * get the lookback terminal (i.e., the top terminal from the symbols stack)
+ */
+%%PARSER_CLASS%%::t_symbol %%PARSER_CLASS%%::GetLookback() const
+{
+	for(auto iter = m_symbols.rbegin(); iter != m_symbols.rend(); std::advance(iter, 1))
+	{
+		const t_symbol& sym = *iter;
+		if(!sym)
+			continue;
+
+		if(sym->IsTerminal())
+			return sym;
+	}
+
+	return nullptr;
+}
+
+/**
  * take the symbols from the stack and create an argument container for the semantic rule
  */
 t_semanticargs %%PARSER_CLASS%%::GetArguments(t_stack& symbols, std::size_t num_rhs)
@@ -280,17 +319,23 @@ void %%PARSER_CLASS%%::SetDebug(bool b)
  */
 void %%PARSER_CLASS%%::DebugMessageState(t_state_id state_id, const char* state_name) const
 {
+	// state
 	std::cout << "\nRunning state " << state_id
 		<< " function \"" << state_name << "\"" << "..." << std::endl;
+
+	// lookahead token
 	if(m_lookahead)
 	{
 		std::cout << "Lookahead [" << m_lookahead_idx << "]: ";
-		if(m_lookahead_id == s_end_id)
-			std::cout << "end";
-		else
-			std::cout << m_lookahead_id;
-		if(isprintable(m_lookahead_id))
-			std::cout << " = '" << get_escaped_char(char(m_lookahead_id)) << "'";
+		PrintSymbol(m_lookahead);
+		std::cout << "." << std::endl;
+	}
+
+	// lookback token
+	if(t_symbol lookback = GetLookback(); lookback)
+	{
+		std::cout << "Lookback [" << lookback->GetTableIndex() << "]: ";
+		PrintSymbol(lookback);
 		std::cout << "." << std::endl;
 	}
 

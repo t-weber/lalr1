@@ -122,8 +122,8 @@ public:
 	void SetAssociativity(char assoc);
 	void SetPrecedence(std::size_t prec, char assoc);
 
-	std::optional<std::size_t> GetPrecedence() const;
-	std::optional<char> GetAssociativity() const;
+	std::optional<t_precedence> GetPrecedence() const;
+	std::optional<t_associativity> GetAssociativity() const;
 
 
 public:
@@ -136,8 +136,8 @@ public:
 
 private:
 	// operator precedence and associativity
-	std::optional<std::size_t> m_precedence{};
-	std::optional<char> m_associativity{};     // 'l' or 'r'
+	std::optional<t_precedence> m_precedence{};
+	std::optional<t_associativity> m_associativity{};  // 'l' or 'r'
 
 	// cached hash value
 	mutable std::optional<t_hash> m_hash{ std::nullopt };

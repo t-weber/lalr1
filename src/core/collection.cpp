@@ -595,8 +595,7 @@ bool Collection::SolveShiftReduceConflict(
 				auto assoc_rhs = term_at_cursor->GetAssociativity();
 
 				// both terminals have an associativity
-				if(assoc_lhs && assoc_rhs &&
-					*assoc_lhs == *assoc_rhs)
+				if(assoc_lhs && assoc_rhs && *assoc_lhs == *assoc_rhs)
 				{
 					if(*assoc_lhs == 'r')      // shift
 					{

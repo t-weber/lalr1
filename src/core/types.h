@@ -21,6 +21,9 @@ using t_symbol_id   = std::size_t;
 using t_state_id    = std::size_t;
 using t_semantic_id = std::size_t;
 
+using t_precedence    = std::size_t;
+using t_associativity = char;
+
 
 /**
  * get the rust equivalent name of the given type
