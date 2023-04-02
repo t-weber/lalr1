@@ -92,6 +92,9 @@ static void lr1_create_parser()
 		};
 
 		CollectionPtr collsLALR = std::make_shared<Collection>(closure);
+		//collsLALR->SetSolveReduceConflicts(false);
+		//collsLALR->SetStopOnConflicts(false);
+		//collsLALR->SetDontGenerateLookbacks(true);
 		collsLALR->SetProgressObserver(progress);
 		collsLALR->DoTransitions();
 

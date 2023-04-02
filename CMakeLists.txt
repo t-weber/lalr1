@@ -66,6 +66,7 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/core/common.h
 		${PROJECT_SOURCE_DIR}/src/core/timer.h
 		${PROJECT_SOURCE_DIR}/src/core/stack.h
+		${PROJECT_SOURCE_DIR}/src/core/conflicts.h
 
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/src/core/symbol.cpp
@@ -77,6 +78,7 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/core/parsergen.cpp
 		${PROJECT_SOURCE_DIR}/src/core/tablegen.cpp
 		${PROJECT_SOURCE_DIR}/src/core/tableexport.cpp
+		${PROJECT_SOURCE_DIR}/src/core/conflicts.cpp
 )
 
 set_target_properties(lalr1 PROPERTIES PUBLIC_HEADER
@@ -93,6 +95,7 @@ ${PROJECT_SOURCE_DIR}/src/core/ast.h;\
 ${PROJECT_SOURCE_DIR}/src/core/common.h;\
 ${PROJECT_SOURCE_DIR}/src/core/types.h;\
 ${PROJECT_SOURCE_DIR}/src/core/stack.h;\
+${PROJECT_SOURCE_DIR}/src/core/conflicts.h;\
 ${PROJECT_SOURCE_DIR}/src/core/timer.h"
 )
 
@@ -119,9 +122,11 @@ target_sources(lalr1-parser
 		${PROJECT_SOURCE_DIR}/src/core/table.h
 		${PROJECT_SOURCE_DIR}/src/core/common.h
 		${PROJECT_SOURCE_DIR}/src/core/stack.h
+		${PROJECT_SOURCE_DIR}/src/core/conflicts.h
 
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/src/core/parser.cpp
+		${PROJECT_SOURCE_DIR}/src/core/conflicts.cpp
 )
 
 set_target_properties(lalr1-parser PROPERTIES PUBLIC_HEADER

@@ -15,6 +15,7 @@
  */
 
 #include "collection.h"
+#include "conflicts.h"
 #include "options.h"
 
 #include <sstream>
@@ -105,8 +106,11 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_transitions = coll.m_transitions;
 	this->m_closure_cache = coll.m_closure_cache;
 	this->m_seen_closures = coll.m_seen_closures;
+
 	this->m_stopOnConflicts = coll.m_stopOnConflicts;
 	this->m_trySolveReduceConflicts = coll.m_trySolveReduceConflicts;
+	this->m_dontGenerateLookbacks = coll.m_dontGenerateLookbacks;
+
 	this->m_progress_observer = coll.m_progress_observer;
 
 	return *this;
@@ -166,6 +170,9 @@ Collection::t_transitions Collection::GetTransitions(
 Terminal::t_terminalset Collection::GetLookbackTerminals(
 	const ClosurePtr& closure) const
 {
+	if(m_dontGenerateLookbacks)
+		return Terminal::t_terminalset{};
+
 	m_seen_closures = std::make_shared<std::unordered_set<t_hash>>();
 	return _GetLookbackTerminals(closure);
 }
@@ -174,6 +181,9 @@ Terminal::t_terminalset Collection::GetLookbackTerminals(
 Terminal::t_terminalset Collection::_GetLookbackTerminals(
 	const ClosurePtr& closure) const
 {
+	if(m_dontGenerateLookbacks)
+		return Terminal::t_terminalset{};
+
 	Terminal::t_terminalset terms;
 
 	for(const t_transition& transition : m_transitions)
@@ -532,6 +542,21 @@ void Collection::SetSolveReduceConflicts(bool b)
 
 
 /**
+ * skip generation of lookback terminals
+ */
+void Collection::SetDontGenerateLookbacks(bool b)
+{
+	m_dontGenerateLookbacks = b;
+}
+
+
+bool Collection::GetDontGenerateLookbacks() const
+{
+	return m_dontGenerateLookbacks;
+}
+
+
+/**
  * try to solve reduce/reduce conflicts
  */
 bool Collection::SolveReduceConflicts()
@@ -569,49 +594,17 @@ bool Collection::SolveShiftReduceConflict(
 
 		for(const TerminalPtr& lookback : lookbacks)
 		{
-			auto prec_lhs = lookback->GetPrecedence();
-			auto prec_rhs = term_at_cursor->GetPrecedence();
-
-			// both terminals have a precedence
-			if(prec_lhs && prec_rhs)
+			if(ConflictSolution sol = solve_shift_reduce_conflict(lookback, term_at_cursor);
+				sol != ConflictSolution::NOT_FOUND)
 			{
-				if(*prec_lhs < *prec_rhs)       // shift
-				{
+				if(sol == ConflictSolution::DO_SHIFT)
 					*reduceEntry = ERROR_VAL;
-					solution_found = true;
-				}
-				else if(*prec_lhs > *prec_rhs)  // reduce
-				{
+				else if(sol == ConflictSolution::DO_REDUCE)
 					*shiftEntry = ERROR_VAL;
-					solution_found = true;
-				}
 
-				// same precedence -> use associativity
-			}
-
-			if(!solution_found)
-			{
-				auto assoc_lhs = lookback->GetAssociativity();
-				auto assoc_rhs = term_at_cursor->GetAssociativity();
-
-				// both terminals have an associativity
-				if(assoc_lhs && assoc_rhs && *assoc_lhs == *assoc_rhs)
-				{
-					if(*assoc_lhs == 'r')      // shift
-					{
-						*reduceEntry = ERROR_VAL;
-						solution_found = true;
-					}
-					else if(*assoc_lhs == 'l') // reduce
-					{
-						*shiftEntry = ERROR_VAL;
-						solution_found = true;
-					}
-				}
-			}
-
-			if(solution_found)
+				solution_found = true;
 				break;
+			}
 		}
 	}
 

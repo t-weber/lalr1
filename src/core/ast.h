@@ -21,6 +21,7 @@
 
 namespace lalr1 {
 
+
 /**
  * syntax tree base
  */
@@ -102,6 +103,7 @@ using t_semanticrule = std::function<
 
 // map of semantic rules to their ids
 using t_semanticrules = std::unordered_map<t_semantic_id, t_semanticrule>;
+
 
 } // namespace lalr1
 

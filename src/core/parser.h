@@ -15,6 +15,7 @@
 #include "stack.h"
 
 #include <optional>
+#include <tuple>
 
 
 namespace lalr1 {
@@ -46,6 +47,9 @@ public:
 	void SetSemanticIdxMap(const t_mapSemanticIdIdx* map);
 	void SetSemanticRules(const t_semanticrules* rules) { m_semantics = rules; }
 
+	void SetTermPrec(const t_mapIdPrec *map) { m_mapTermPrec = map; }
+	void SetTermAssoc(const t_mapIdAssoc *map) { m_mapTermAssoc = map; }
+
 	void SetEndId(t_symbol_id id) { m_end = id; }
 	void SetStartingState(t_index state) { m_starting_state = state; }
 	void SetAcceptingRule(t_index rule) { m_accepting_rule = rule; }
@@ -67,6 +71,10 @@ protected:
 
 	// get a semantic rule id from a rule index
 	t_semantic_id GetRuleId(t_index idx) const;
+
+	// get terminal operator precedence and associativity
+	std::tuple<std::optional<t_precedence>, std::optional<t_associativity>>
+	GetTermPrec(const t_astbaseptr& sym) const;
 
 
 private:
@@ -93,6 +101,10 @@ private:
 
 	// semantic rules
 	const t_semanticrules *m_semantics{nullptr};
+
+	// terminal precedences and associativities
+	const t_mapIdPrec *m_mapTermPrec{nullptr};
+	const t_mapIdAssoc *m_mapTermAssoc{nullptr};
 
 	// end token id
 	t_symbol_id m_end{END_IDENT};

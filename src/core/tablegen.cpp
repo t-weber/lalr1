@@ -320,6 +320,7 @@ bool TableGen::CreateParseTables()
 
 	// check for and try to resolve shift/reduce conflicts
 	t_state_id state = 0;
+	const bool no_lookbacks_avail = m_collection->GetDontGenerateLookbacks();
 	for(const ClosurePtr& closure : closures)
 	{
 		std::optional<Terminal::t_terminalset> lookbacks;
@@ -354,7 +355,10 @@ bool TableGen::CreateParseTables()
 
 				if(!m_collection->SolveShiftReduceConflict(sym_at_cursor, *lookbacks, &shiftEntry, &reduceEntry))
 				{
-					ok = false;
+					// only report fail state when the lookbacks have been calculated,
+					// otherwise the user wants to have the conflict solved in the parser
+					if(!no_lookbacks_avail)
+						ok = false;
 
 					std::ostringstream ostrErr;
 					ostrErr << "Shift/reduce conflict detected"

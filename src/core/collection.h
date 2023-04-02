@@ -95,6 +95,9 @@ public:
 
 	void SetStopOnConflicts(bool b = true);
 	void SetSolveReduceConflicts(bool b = true);
+	void SetDontGenerateLookbacks(bool b = true);
+
+	bool GetDontGenerateLookbacks() const;
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
@@ -134,6 +137,7 @@ private:
 
 	bool m_stopOnConflicts{true};               // stop table/code generation on conflicts
 	bool m_trySolveReduceConflicts{false};      // try to solve reduce/reduce conflicts
+	bool m_dontGenerateLookbacks{false};        // skip generation of lookback terminals
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

@@ -96,6 +96,10 @@ lalr1_run_parser(const std::string& script_file,
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
 		auto [term_idx, nonterm_idx, semantic_idx] = get_lalr1_table_indices();
 		auto [err_idx, acc_idx, eps_id, end_id, start_idx, acc_rule_idx] = get_lalr1_constants();
+		auto [partials_rules_term, partials_matchlen_term,
+			partials_rules_nonterm, partials_matchlen_nonterm]
+				= get_lalr1_partials_tables();
+		auto [term_prec, term_assoc] = get_lalr1_precedences();
 
 		Parser parser;
 		parser.SetShiftTable(shift_tab);
@@ -103,6 +107,12 @@ lalr1_run_parser(const std::string& script_file,
 		parser.SetJumpTable(jump_tab);
 		parser.SetSemanticIdxMap(semantic_idx);
 		parser.SetNumRhsSymsPerRule(num_rhs);
+		parser.SetPartialsRulesTerm(partials_rules_term);
+		parser.SetPartialsMatchLenTerm(partials_matchlen_term);
+		parser.SetPartialsRulesNonTerm(partials_rules_nonterm);
+		parser.SetPartialsMatchLenNonTerm(partials_matchlen_nonterm);
+		parser.SetTermPrec(term_prec);
+		parser.SetTermAssoc(term_assoc);
 		parser.SetLhsIndices(lhs_idx);
 		parser.SetEndId(end_id);
 		parser.SetStartingState(start_idx);

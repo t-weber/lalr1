@@ -10,6 +10,7 @@
  */
 
 #include "parser.h"
+#include "conflicts.h"
 
 #include <sstream>
 #include <unordered_set>
@@ -31,15 +32,27 @@ Parser& Parser::operator=(const Parser& parser)
 	m_tabActionShift = parser.m_tabActionShift;
 	m_tabActionReduce = parser.m_tabActionReduce;
 	m_tabJump = parser.m_tabJump;
+
 	m_tabPartialsRulesTerm = parser.m_tabPartialsRulesTerm;
 	m_tabPartialsMatchLenTerm = parser.m_tabPartialsMatchLenTerm;
 	m_tabPartialsRulesNonTerm = parser.m_tabPartialsRulesNonTerm;
 	m_tabPartialsMatchLenNonTerm = parser.m_tabPartialsMatchLenNonTerm;
+
 	m_numRhsSymsPerRule = parser.m_numRhsSymsPerRule;
 	m_vecLhsIndices = parser.m_vecLhsIndices;
+
+	m_mapSemanticIdx = parser.m_mapSemanticIdx;
+	m_mapSemanticIdx_inv = parser.m_mapSemanticIdx_inv;
+
 	m_semantics = parser.m_semantics;
+
+	m_mapTermPrec = parser.m_mapTermPrec;
+	m_mapTermAssoc = parser.m_mapTermAssoc;
+
+	m_end = parser.m_end;
 	m_starting_state = parser.m_starting_state;
 	m_accepting_rule = parser.m_accepting_rule;
+
 	m_debug = parser.m_debug;
 
 	return *this;
@@ -290,6 +303,35 @@ t_semantic_id Parser::GetRuleId(t_index idx) const
 
 
 /**
+ * get terminal operator precedence and associativity
+ */
+std::tuple<std::optional<t_precedence>, std::optional<t_associativity>>
+Parser::GetTermPrec(const t_astbaseptr& sym) const
+{
+	if(!sym || !sym->IsTerminal())
+		return std::make_tuple(std::nullopt, std::nullopt);
+
+	const t_symbol_id sym_id = sym->GetId();
+
+	std::optional<t_precedence> prec;
+	if(m_mapTermPrec)
+	{
+		if(auto iter = m_mapTermPrec->find(sym_id); iter != m_mapTermPrec->end())
+			prec = iter->second;
+	}
+
+	std::optional<t_precedence> assoc;
+	if(m_mapTermAssoc)
+	{
+		if(auto iter = m_mapTermAssoc->find(sym_id); iter != m_mapTermAssoc->end())
+			assoc = iter->second;
+	}
+
+	return std::make_tuple(prec, assoc);
+}
+
+
+/**
  * parse the input tokens using the lalr(1) tables
  */
 t_astbaseptr Parser::Parse(const t_toknodes& input) const
@@ -528,23 +570,60 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 		// both a shift and a reduce would be possible
 		else if(newstate != ERROR_VAL && rule_idx != ERROR_VAL)
 		{
-			std::ostringstream ostrErr;
-			ostrErr << "Shift/reduce conflict between shift"
-				<< " from state " << topstate << " to state " << newstate
-				<< " and reduce using rule " << rule_id << ".";
+			t_astbaseptr lookback = get_top_term(symbols);
+			ConflictSolution sol = ConflictSolution::NOT_FOUND;
 
-			ostrErr << " Current token id is ";
-			print_token(curtok, ostrErr, m_end);
-			ostrErr << get_line_numbers(curtok) << ".";
-
-			if(t_astbaseptr lookback = get_top_term(symbols); lookback)
+			if(lookback && curtok)
 			{
-				ostrErr << " Lookback token id is ";
-				print_token(lookback, ostrErr, m_end);
-				ostrErr << get_line_numbers(lookback) << ".";
+				// try to solve the conflict using operator precedences
+				// (if this hasn't already been done in the parser generator)
+				auto [lookback_prec, lookback_assoc] = GetTermPrec(lookback);
+				auto [lookahead_prec, lookahead_assoc] = GetTermPrec(curtok);
+				sol = solve_shift_reduce_conflict(
+					lookback_prec, lookback_assoc,
+					lookahead_prec, lookahead_assoc);
+
+				if(sol == ConflictSolution::DO_SHIFT)
+					rule_idx = ERROR_VAL;
+				else if(sol == ConflictSolution::DO_REDUCE)
+					newstate = ERROR_VAL;
 			}
 
-			throw std::runtime_error(ostrErr.str());
+			if(sol == ConflictSolution::NOT_FOUND)
+			{
+				// no solution to the conflict could be found
+				std::ostringstream ostrErr;
+				ostrErr << "Shift/reduce conflict between shift"
+					<< " from state " << topstate << " to state " << newstate
+					<< " and reduce using rule " << rule_id << ".";
+
+				ostrErr << " Current token id is ";
+				print_token(curtok, ostrErr, m_end);
+				ostrErr << get_line_numbers(curtok) << ".";
+
+				if(lookback)
+				{
+					ostrErr << " Lookback token id is ";
+					print_token(lookback, ostrErr, m_end);
+					ostrErr << get_line_numbers(lookback) << ".";
+				}
+
+				throw std::runtime_error(ostrErr.str());
+			}
+			else
+			{
+				// conflict could be solved
+				if(m_debug)
+				{
+					std::cout << "\tSolved shift/reduce conflict between lookback ";
+					print_token(lookback, std::cout, m_end);
+					std::cout << " and lookahead ";
+					print_token(curtok, std::cout, m_end);
+					std::cout << " using ";
+					std::cout << (sol == ConflictSolution::DO_SHIFT ? "shift" : "reduce");
+					std::cout << "." << std::endl;
+				}
+			}
 		}
 
 		// accept
