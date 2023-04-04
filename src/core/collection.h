@@ -25,6 +25,7 @@
 #include <list>
 #include <memory>
 #include <functional>
+#include <optional>
 #include <iostream>
 
 
@@ -41,6 +42,10 @@ class Collection : public std::enable_shared_from_this<Collection>
 {
 public:
 	using t_elements = Closure::t_elements;
+
+	// have to use raw pointer as key because elements with the same hash can be in several different closures
+	//using t_element_to_closure = Element::t_elementmap<ClosurePtr>;
+	using t_element_to_closure = std::unordered_map<ElementPtr, ClosurePtr>;
 
 	// transition [ from closure, to closure, symbol, from elements ]
 	using t_transition = std::tuple<ClosurePtr, ClosurePtr, SymbolPtr, t_elements>;
@@ -89,9 +94,11 @@ public:
 
 	// get terminal or non-terminal transitions originating from the given closure
 	t_transitions GetTransitions(const ClosurePtr& closure, bool term = true) const;
+	std::optional<t_transition> GetTransition(const ElementPtr& element,
+		bool term = true) const;
 
-	bool SaveGraph(std::ostream& ostr, bool write_full_coll = true) const;
-	bool SaveGraph(const std::string& file, bool write_full_coll = true) const;
+	bool SaveGraph(std::ostream& ostr, bool write_full_coll = true, bool write_elem_wise = false) const;
+	bool SaveGraph(const std::string& file, bool write_full_coll = true, bool write_elem_wise = false) const;
 
 	void SetStopOnConflicts(bool b = true);
 	void SetSolveReduceConflicts(bool b = true);
@@ -124,13 +131,15 @@ protected:
 
 	void DoTransitions(const ClosurePtr& closure);
 	void Simplify();
+	void MapElementsToClosures();
 
 	static t_hash hash_transition(const t_transition& trans);
 
 
 private:
-	t_closures m_collection{};                  // collection of LR(1) closures
+	t_closures m_closures{};                    // collection of LR(1) closures
 	t_transitions m_transitions{};              // transitions between collection, [from, to, transition symbol]
+	t_element_to_closure m_elem_to_closure{};   // maps elements to their parent closures
 
 	t_closurecache m_closure_cache{};           // seen closures
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures

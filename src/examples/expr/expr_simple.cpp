@@ -196,7 +196,9 @@ static void lr1_create_parser()
 #endif
 
 #if DEBUG_WRITEGRAPH != 0
-		collsLALR->SaveGraph("expr_simple", 1);
+		bool graph_full_closure = true;
+		bool graph_element_wise_arrows = false;
+		collsLALR->SaveGraph("expr_simple", graph_full_closure, graph_element_wise_arrows);
 #endif
 
 		lalr1::TableGen exporter{collsLALR};

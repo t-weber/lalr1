@@ -33,8 +33,7 @@ namespace lalr1 {
 /**
  * hash a transition element
  */
-t_hash Collection::HashTransition::operator()(
-	const t_transition& trans) const
+t_hash Collection::HashTransition::operator()(const t_transition& trans) const
 {
 	t_hash hashFrom = std::get<0>(trans)->hash(true);
 	t_hash hashTo = std::get<1>(trans)->hash(true);
@@ -102,8 +101,10 @@ Collection::Collection(const Collection& coll)
 
 const Collection& Collection::operator=(const Collection& coll)
 {
-	this->m_collection = coll.m_collection;
+	this->m_closures = coll.m_closures;
 	this->m_transitions = coll.m_transitions;
+	this->m_elem_to_closure = coll.m_elem_to_closure;
+
 	this->m_closure_cache = coll.m_closure_cache;
 	this->m_seen_closures = coll.m_seen_closures;
 
@@ -119,7 +120,7 @@ const Collection& Collection::operator=(const Collection& coll)
 
 void Collection::AddClosure(const ClosurePtr& closure)
 {
-	m_collection.push_back(closure);
+	m_closures.push_back(closure);
 }
 
 
@@ -144,7 +145,7 @@ Collection::t_transitions Collection::GetTransitions(
 {
 	t_transitions transitions;
 
-	for(const t_transition& transition : m_transitions)
+	for(const t_transition& transition : GetTransitions())
 	{
 		const ClosurePtr& closure_from = std::get<0>(transition);
 		const SymbolPtr& sym = std::get<2>(transition);
@@ -161,6 +162,37 @@ Collection::t_transitions Collection::GetTransitions(
 	}
 
 	return transitions;
+}
+
+
+/**
+ * get terminal or non-terminal transition originating from the given element
+ */
+std::optional<Collection::t_transition> Collection::GetTransition(
+	const ElementPtr& element, bool term) const
+{
+	// get closure containing the element
+	auto iter = m_elem_to_closure.find(element);
+	if(iter == m_elem_to_closure.end())
+		return std::nullopt;
+	ClosurePtr closure = iter->second;
+
+	t_hash element_hash = element->hash();
+
+	// get all transitions from closure
+	t_transitions transitions = GetTransitions(closure, term);
+
+	for(const t_transition& transition : transitions)
+	{
+		const t_elements& from_elems = std::get<3>(transition);
+		for(const ElementPtr& from_elem : from_elems)
+		{
+			if(from_elem->hash() == element_hash)
+				return transition;
+		}
+	}
+
+	return std::nullopt;
 }
 
 
@@ -186,7 +218,7 @@ Terminal::t_terminalset Collection::_GetLookbackTerminals(
 
 	Terminal::t_terminalset terms;
 
-	for(const t_transition& transition : m_transitions)
+	for(const t_transition& transition : GetTransitions())
 	{
 		const ClosurePtr& closure_from = std::get<0>(transition);
 		const ClosurePtr& closure_to = std::get<1>(transition);
@@ -254,7 +286,7 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
 			<< closure_from->GetId() << " " << g_options.GetArrowChar() << " " << closure_to->GetId()
-			<< ". Total closures: " << m_collection.size()
+			<< ". Total closures: " << m_closures.size()
 			<< ", total transitions: " << m_transitions.size()
 			<< ".";
 		ReportProgress(ostrMsg.str(), false);
@@ -263,7 +295,7 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 		{
 			// new unique closure
 			m_closure_cache->emplace(std::make_pair(hash_to, closure_to));
-			m_collection.push_back(closure_to);
+			m_closures.push_back(closure_to);
 			m_transitions.emplace(std::make_tuple(
 				closure_from, closure_to, trans_sym, elems_from));
 
@@ -288,10 +320,12 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 void Collection::DoTransitions()
 {
 	m_closure_cache = nullptr;
-	DoTransitions(*m_collection.begin());
+	DoTransitions(*m_closures.begin());
 	ReportProgress("Calculated transitions.", true);
 
-	for(ClosurePtr& closure : m_collection)
+	MapElementsToClosures();
+
+	for(const ClosurePtr& closure : GetClosures())
 	{
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating lookaheads for state " << closure->GetId() << ".";
@@ -301,6 +335,7 @@ void Collection::DoTransitions()
 	ReportProgress("Calculated lookaheads.", true);
 
 	Simplify();
+	MapElementsToClosures();
 	ReportProgress("Simplified transitions.", true);
 
 	// reports reduce/reduce or shift/reduce conflicts
@@ -353,10 +388,30 @@ void Collection::DoTransitions()
 }
 
 
+/**
+ * maps the elements to their parent closures containing them
+ */
+void Collection::MapElementsToClosures()
+{
+	m_elem_to_closure.clear();
+
+	for(const ClosurePtr& closure : GetClosures())
+	{
+		for(const ElementPtr& elem : closure->GetElements())
+		{
+			m_elem_to_closure.emplace(std::make_pair(elem, closure));
+		}
+	}
+}
+
+
+/**
+ * simplifies the closures in the collection
+ */
 void Collection::Simplify()
 {
 	// sort rules
-	m_collection.sort(
+	m_closures.sort(
 		[](const ClosurePtr& closure1, const ClosurePtr& closure2) -> bool
 		{
 			return closure1->GetId() < closure2->GetId();
@@ -367,19 +422,24 @@ void Collection::Simplify()
 	std::unordered_set<t_hash> already_seen{};
 	t_state_id newid{};
 
-	for(const ClosurePtr& closure : m_collection)
+	for(const ClosurePtr& closure : GetClosures())
 	{
 		t_state_id oldid = closure->GetId();
 		t_hash hash = closure->hash();
 
+		// skip already-handled closures
 		if(already_seen.contains(hash))
 			continue;
 
 		auto iditer = idmap.find(oldid);
 		if(iditer == idmap.end())
+		{
+			// generate a new id
 			iditer = idmap.emplace(
 				std::make_pair(oldid, newid++)).first;
+		}
 
+		// set the new id
 		closure->SetId(iditer->second);
 		already_seen.insert(hash);
 	}
@@ -393,7 +453,7 @@ std::map<t_state_id, std::string> Collection::HasReduceConflicts() const
 {
 	std::map<t_state_id, std::string> conflicting_closures;
 
-	for(const ClosurePtr& closure : m_collection)
+	for(const ClosurePtr& closure : GetClosures())
 	{
 		Closure::t_conflictingelements conflicting_elems = closure->GetReduceConflicts();
 
@@ -424,7 +484,7 @@ std::map<t_state_id, std::string> Collection::HasShiftReduceConflicts() const
 {
 	std::map<t_state_id, std::string> conflicting_closures;
 
-	for(const ClosurePtr& closure : m_collection)
+	for(const ClosurePtr& closure : GetClosures())
 	{
 		// get all terminals leading to a reduction
 		Terminal::t_terminalset reduce_lookaheads;
@@ -440,7 +500,7 @@ std::map<t_state_id, std::string> Collection::HasShiftReduceConflicts() const
 		}
 
 		// get all terminals leading to a shift
-		for(const Collection::t_transition& tup : m_transitions)
+		for(const Collection::t_transition& tup : GetTransitions())
 		{
 			const ClosurePtr& stateFrom = std::get<0>(tup);
 			const SymbolPtr& symTrans = std::get<2>(tup);
@@ -563,7 +623,7 @@ bool Collection::SolveReduceConflicts()
 {
 	bool ok = true;
 
-	for(const ClosurePtr& closure : m_collection)
+	for(const ClosurePtr& closure : GetClosures())
 	{
 		if(!closure->SolveReduceConflicts())
 			ok = false;
@@ -616,7 +676,7 @@ bool Collection::SolveShiftReduceConflict(
  * write out the transitions graph to an ostream
  * @see https://graphviz.org/doc/info/shapes.html#html
  */
-bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
+bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll, bool write_elem_wise) const
 {
 	const std::string& shift_col = g_options.GetShiftColour();
 	const std::string& reduce_col = g_options.GetReduceColour();
@@ -626,7 +686,7 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 	ofstr << "digraph G_lalr1\n{\n";
 
 	// write states
-	for(const ClosurePtr& closure : m_collection)
+	for(const ClosurePtr& closure : GetClosures())
 	{
 		ofstr << "\t" << closure->GetId() << " [label=";
 		if(write_full_coll)
@@ -657,7 +717,8 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 					}
 				};
 
-				ofstr << "<td align=\"left\" sides=\"r\">";
+				ofstr << "<td align=\"left\" sides=\"r\" port=\"elem_"
+					<< std::hex << elem->hash() << std::dec << "\">";
 				if(use_colour)
 					set_colour();
 
@@ -722,11 +783,12 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 
 	// write transitions
 	ofstr << "\n";
-	for(const t_transition& tup : m_transitions)
+	for(const t_transition& tup : GetTransitions())
 	{
 		const ClosurePtr& closure_from = std::get<0>(tup);
 		const ClosurePtr& closure_to = std::get<1>(tup);
 		const SymbolPtr& symTrans = std::get<2>(tup);
+		const t_elements& fromElems = std::get<3>(tup);
 
 		bool symIsTerm = symTrans->IsTerminal();
 		bool symIsEps = symTrans->IsEps();
@@ -734,18 +796,44 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 		if(symIsEps)
 			continue;
 
-		ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
-			<< " [label=\"" << symTrans->GetStrId()
-			<< "\", ";
-
-		if(use_colour)
+		auto write_colour = [use_colour, symIsTerm, &ofstr, &shift_col, &jump_col]()
 		{
-			if(symIsTerm)
-				ofstr << "color=\"" << shift_col << "\", fontcolor=\"" << shift_col << "\"";
-			else
-				ofstr << "color=\"" << jump_col << "\", fontcolor=\"" << jump_col << "\"";
+			if(use_colour)
+			{
+				if(symIsTerm)
+					ofstr << "color=\"" << shift_col << "\", fontcolor=\"" << shift_col << "\"";
+				else
+					ofstr << "color=\"" << jump_col << "\", fontcolor=\"" << jump_col << "\"";
+			}
+		};
+
+		if(write_elem_wise)
+		{
+			for(const ElementPtr& elem : fromElems)
+			{
+				ofstr << "\t" << closure_from->GetId()
+					<< ":" << "elem_" << std::hex << elem->hash() << std::dec
+					<< " -> " << closure_to->GetId()
+					<< " [label=\"" << symTrans->GetStrId()
+					<< "\", ";
+				write_colour();
+				ofstr << "];\n";
+
+				// quick consistency check of the element map
+				//if(m_elem_to_closure.find(elem)->second->GetId() != closure_from->GetId())
+				//	std::cerr << "Error: Invalid closure mapping!" << std::endl;
+
+				//std::cout << "closure " << closure_from->GetId() << ": " << *elem << " " << std::hex << elem->hash() << std::dec << std::endl;
+			}
 		}
-		ofstr << "];\n";
+		else
+		{
+			ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
+				<< " [label=\"" << symTrans->GetStrId()
+				<< "\", ";
+			write_colour();
+			ofstr << "];\n";
+		}
 	}
 
 	ofstr << "}" << std::endl;
@@ -756,7 +844,7 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll) const
 /**
  * write out the transitions graph to a file
  */
-bool Collection::SaveGraph(const std::string& file, bool write_full_coll) const
+bool Collection::SaveGraph(const std::string& file, bool write_full_coll, bool write_elem_wise) const
 {
 	std::string outfile_graph = file + ".graph";
 	std::string outfile_svg = file + ".svg";
@@ -765,7 +853,7 @@ bool Collection::SaveGraph(const std::string& file, bool write_full_coll) const
 	if(!ofstr)
 		return false;
 
-	if(!SaveGraph(ofstr, write_full_coll))
+	if(!SaveGraph(ofstr, write_full_coll, write_elem_wise))
 		return false;
 
 	ofstr.flush();
@@ -792,7 +880,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	if(use_colour)
 		ostr << no_col;
 
-	for(const ClosurePtr& closure : coll.m_collection)
+	for(const ClosurePtr& closure : coll.GetClosures())
 	{
 		ostr << *closure;
 
@@ -816,7 +904,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	if(use_colour)
 		ostr << no_col;
 
-	for(const Collection::t_transition& tup : coll.m_transitions)
+	for(const Collection::t_transition& tup : coll.GetTransitions())
 	{
 		const SymbolPtr& symTrans = std::get<2>(tup);
 
@@ -899,7 +987,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 		}
 	}
 
-	for(const ClosurePtr& closure : coll.m_collection)
+	for(const ClosurePtr& closure : coll.GetClosures())
 	{
 		for(const ElementPtr& elem : closure->GetElements())
 		{
@@ -934,7 +1022,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 
 const Collection::t_closures& Collection::GetClosures() const
 {
-	return m_collection;
+	return m_closures;
 }
 
 

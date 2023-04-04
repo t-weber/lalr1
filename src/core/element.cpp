@@ -127,6 +127,19 @@ bool Element::operator==(const Element& other) const
 }
 
 
+t_hash Element::HashElement::operator()(const ElementPtr& elem) const
+{
+	return elem->hash(false);
+}
+
+
+bool Element::CompareElementsEqual::operator()(
+	const ElementPtr& elem1, const ElementPtr& elem2) const
+{
+        return elem1->hash() == elem2->hash();
+}
+
+
 /**
  * calculates a unique hash for the closure element (with or without lookaheads)
  */

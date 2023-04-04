@@ -44,6 +44,29 @@ public:
 	using t_dependencies = std::list<t_dependency>;
 
 
+	/**
+	 * hash function for elements
+	 */
+	struct HashElement
+	{
+		t_hash operator()(const ElementPtr& sym) const;
+	};
+
+	/**
+	 * comparator for elements
+	 */
+	struct CompareElementsEqual
+	{
+		bool operator()(const ElementPtr& elem1, const ElementPtr& elem2) const;
+	};
+
+
+	// type to map an element to another object
+	template<class t_val>
+	using t_elementmap = std::unordered_map<ElementPtr, t_val,
+		Element::HashElement, Element::CompareElementsEqual>;
+
+
 public:
 	Element(const NonTerminalPtr& lhs, t_index rhsidx,
 		t_index cursor, const Terminal::t_terminalset& la);
