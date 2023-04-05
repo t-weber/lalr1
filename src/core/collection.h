@@ -93,9 +93,10 @@ public:
 	Terminal::t_terminalset GetLookbackTerminals(const ClosurePtr& closure) const;
 
 	// get terminal or non-terminal transitions originating from the given closure
-	t_transitions GetTransitions(const ClosurePtr& closure, bool term = true) const;
+	t_transitions GetTransitions(const ClosurePtr& closure,
+		bool term = true, bool only_core_hash = false) const;
 	std::optional<t_transition> GetTransition(const ElementPtr& element,
-		bool term = true) const;
+		bool only_core_hash = false) const;
 
 	bool SaveGraph(std::ostream& ostr, bool write_full_coll = true, bool write_elem_wise = false) const;
 	bool SaveGraph(const std::string& file, bool write_full_coll = true, bool write_elem_wise = false) const;
@@ -131,7 +132,9 @@ protected:
 
 	void DoTransitions(const ClosurePtr& closure);
 	void Simplify();
+
 	void MapElementsToClosures();
+	void MapElementsToFollowingElements();
 
 	static t_hash hash_transition(const t_transition& trans);
 

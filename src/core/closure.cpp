@@ -81,13 +81,11 @@ void Closure::AddElement(const ElementPtr& elem)
 		(*core_iter)->AddLookaheadDependencies(elem->GetLookaheadDependencies());
 		return;
 	}
-
-	// new element
 	else
 	{
+		// new element
 		m_elems.push_back(elem);
 	}
-
 
 	// if the cursor is before a non-terminal, add the rule as element
 	const WordPtr& rhs = elem->GetRhs();

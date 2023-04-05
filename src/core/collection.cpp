@@ -141,7 +141,7 @@ void Collection::ReportProgress(const std::string& msg, bool finished)
  * get terminal or non-terminal transitions originating from the given closure
  */
 Collection::t_transitions Collection::GetTransitions(
-	const ClosurePtr& closure, bool term) const
+	const ClosurePtr& closure, bool term, bool only_core_hash) const
 {
 	t_transitions transitions;
 
@@ -154,7 +154,7 @@ Collection::t_transitions Collection::GetTransitions(
 			continue;
 
 		// only consider transitions from the given closure
-		if(closure_from->hash() != closure->hash())
+		if(closure_from->hash(only_core_hash) != closure->hash(only_core_hash))
 			continue;
 
 		if(sym->IsTerminal() == term)
@@ -166,28 +166,29 @@ Collection::t_transitions Collection::GetTransitions(
 
 
 /**
- * get terminal or non-terminal transition originating from the given element
+ * get transition originating from the given element
  */
 std::optional<Collection::t_transition> Collection::GetTransition(
-	const ElementPtr& element, bool term) const
+	const ElementPtr& element, bool only_core_hash) const
 {
 	// get closure containing the element
 	auto iter = m_elem_to_closure.find(element);
 	if(iter == m_elem_to_closure.end())
 		return std::nullopt;
-	ClosurePtr closure = iter->second;
+	const ClosurePtr& closure = iter->second;
+	t_hash element_hash = element->hash(only_core_hash);
 
-	t_hash element_hash = element->hash();
-
-	// get all transitions from closure
-	t_transitions transitions = GetTransitions(closure, term);
+	// get terminal and non-terminal transitions from closure
+	t_transitions transitions = GetTransitions(closure, true, only_core_hash);
+	t_transitions transitions_nonterm = GetTransitions(closure, false, only_core_hash);
+	transitions.merge(transitions_nonterm);
 
 	for(const t_transition& transition : transitions)
 	{
 		const t_elements& from_elems = std::get<3>(transition);
 		for(const ElementPtr& from_elem : from_elems)
 		{
-			if(from_elem->hash() == element_hash)
+			if(from_elem->hash(only_core_hash) == element_hash)
 				return transition;
 		}
 	}
@@ -324,6 +325,8 @@ void Collection::DoTransitions()
 	ReportProgress("Calculated transitions.", true);
 
 	MapElementsToClosures();
+	MapElementsToFollowingElements();
+	ReportProgress("Calculated element graphs.", true);
 
 	for(const ClosurePtr& closure : GetClosures())
 	{
@@ -335,7 +338,7 @@ void Collection::DoTransitions()
 	ReportProgress("Calculated lookaheads.", true);
 
 	Simplify();
-	MapElementsToClosures();
+	//MapElementsToClosures();
 	ReportProgress("Simplified transitions.", true);
 
 	// reports reduce/reduce or shift/reduce conflicts
@@ -400,6 +403,31 @@ void Collection::MapElementsToClosures()
 		for(const ElementPtr& elem : closure->GetElements())
 		{
 			m_elem_to_closure.emplace(std::make_pair(elem, closure));
+		}
+	}
+}
+
+
+/**
+ * maps the elements to the elements of following closures
+ */
+void Collection::MapElementsToFollowingElements()
+{
+	// can't do a full hash, because the lookaheads are not yet resolved
+	bool only_core_hash = true;
+
+	for(const ClosurePtr& closure : GetClosures())
+	{
+		for(const ElementPtr& elem : closure->GetElements())
+		{
+			// transition originating from elem
+			std::optional<t_transition> trans = GetTransition(elem, only_core_hash);
+			if(!trans)
+				continue;
+
+			const ClosurePtr& closure_to = std::get<1>(*trans);
+			for(const ElementPtr& elem_to : closure_to->GetElements())
+				elem->AddForwardDependency(elem_to);
 		}
 	}
 }
@@ -500,7 +528,7 @@ std::map<t_state_id, std::string> Collection::HasShiftReduceConflicts() const
 		}
 
 		// get all terminals leading to a shift
-		for(const Collection::t_transition& tup : GetTransitions())
+		for(const t_transition& tup : GetTransitions())
 		{
 			const ClosurePtr& stateFrom = std::get<0>(tup);
 			const SymbolPtr& symTrans = std::get<2>(tup);
@@ -923,7 +951,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 		if(use_colour)
 			ostr << no_col;
 
-		/*const Collection::t_elements& from_elems = std::get<3>(tup);
+		/*const t_elements& from_elems = std::get<3>(tup);
 		ostr << "Coming from element(s):\n";
 		t_index elem_idx = 0;
 		for(const ElementPtr& from_elem : from_elems)

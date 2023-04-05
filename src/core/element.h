@@ -39,9 +39,12 @@ using ElementPtr = std::shared_ptr<Element>;
 class Element : public std::enable_shared_from_this<Element>
 {
 public:
-	// lookahead dependencies; bool flag: true: calculate first, false: copy lookaheads
+	// lookahead dependencies to previous elements;
+	// bool flag: true: calculate first, false: copy lookaheads
 	using t_dependency = std::pair<ElementPtr, bool>;
 	using t_dependencies = std::list<t_dependency>;
+
+	using t_elements = std::list<ElementPtr>;
 
 
 	/**
@@ -82,6 +85,13 @@ public:
 	const Terminal::t_terminalset& GetLookaheads() const;
 	SymbolPtr GetSymbolAtCursor() const;
 
+	bool AddLookahead(const TerminalPtr& la);
+	void InvalidateForwardLookaheads();
+	void SetLookaheadsValid(bool valid = true);
+	bool AreLookaheadsValid() const;
+
+	void AddForwardDependency(const ElementPtr& elem);
+
 	const t_dependencies& GetLookaheadDependencies() const;
 	void AddLookaheadDependencies(const t_dependencies& deps);
 	void AddLookaheadDependency(const t_dependency& dep);
@@ -113,8 +123,13 @@ private:
 	t_index m_rhsidx{0};                    // rule index
 	t_index m_cursor{0};                    // pointing before element at this index
 
+	// forward dependencies point to the following elements,
+	// lookahead dependencies point to the preceding elements
+	t_elements m_forward_dependencies{};    // pointers to following closures' elements
 	t_dependencies m_lookahead_dependencies{};                     // lookahead dependencies
+
 	mutable std::optional<Terminal::t_terminalset> m_lookaheads{}; // lookahead symbols
+	bool m_lookaheads_valid{false};
 
 	// cached hash values
 	mutable std::optional<t_hash> m_hash{ std::nullopt };

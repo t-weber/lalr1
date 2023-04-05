@@ -52,14 +52,21 @@ const Element& Element::operator=(const Element& elem)
 {
 	this->m_lhs = elem.m_lhs;
 	this->m_rhs = elem.m_rhs;
+
 	this->m_semanticrule = elem.m_semanticrule;
+
 	this->m_rhsidx = elem.m_rhsidx;
 	this->m_cursor = elem.m_cursor;
-	this->m_lookaheads = elem.m_lookaheads;
+
+	this->m_forward_dependencies = elem.m_forward_dependencies;
 	this->m_lookahead_dependencies = elem.m_lookahead_dependencies;
-	this->m_transition_symbol = elem.m_transition_symbol;
+
+	this->m_lookaheads = elem.m_lookaheads;
+	this->m_lookaheads_valid = elem.m_lookaheads_valid;
+
 	this->m_hash = elem.m_hash;
 	this->m_hash_core = elem.m_hash_core;
+	this->m_transition_symbol = elem.m_transition_symbol;
 
 	return *this;
 }
@@ -86,6 +93,52 @@ std::optional<t_semantic_id> Element::GetSemanticRule() const
 t_index Element::GetCursor() const
 {
 	return m_cursor;
+}
+
+
+/**
+ * adds a lookahead terminal
+ */
+bool Element::AddLookahead(const TerminalPtr& la)
+{
+	auto [iter, inserted] = m_lookaheads->insert(la);
+	if(inserted)
+		m_hash = std::nullopt;
+	return inserted;
+}
+
+
+/**
+ * invalidates the lookaheads of the following closures that depend on this one
+ */
+void Element::InvalidateForwardLookaheads()
+{
+	for(const ElementPtr& elem : m_forward_dependencies)
+	{
+		if(elem->AreLookaheadsValid())
+		{
+			elem->SetLookaheadsValid(false);
+			elem->InvalidateForwardLookaheads();
+		}
+	}
+}
+
+
+/**
+ * are the lookaheads of the current element valid
+ */
+bool Element::AreLookaheadsValid() const
+{
+	return m_lookaheads_valid && m_lookaheads;
+}
+
+
+/**
+ * validates the lookaheads of the current element
+ */
+void Element::SetLookaheadsValid(bool valid)
+{
+	m_lookaheads_valid = valid;
 }
 
 
@@ -192,6 +245,12 @@ SymbolPtr Element::GetSymbolAtCursor() const
 }
 
 
+void Element::AddForwardDependency(const ElementPtr& elem)
+{
+	m_forward_dependencies.push_back(elem);
+}
+
+
 const Element::t_dependencies& Element::GetLookaheadDependencies() const
 {
 	return m_lookahead_dependencies;
@@ -227,40 +286,53 @@ void Element::ResolveLookaheads(std::size_t recurse_depth)
 	if(recurse_depth && m_lookaheads)
 		return;
 
-	// copy lookaheads from other closure element
+	// copy lookaheads from previous closure elements
 	std::unordered_set<ElementPtr> already_seen;
+
 	for(auto& [elem, calc_first] : m_lookahead_dependencies)
 	{
-		if(calc_first)
-			continue;
-
-		if(already_seen.contains(elem))
+		if(calc_first || already_seen.contains(elem))
 			continue;
 		already_seen.insert(elem);
 
-		elem->ResolveLookaheads(recurse_depth + 1);
+		if(!elem->AreLookaheadsValid())
+			elem->ResolveLookaheads(recurse_depth + 1);
+
 		if(!m_lookaheads)
 			m_lookaheads = Terminal::t_terminalset{};
 
-		for(const TerminalPtr& la : elem->GetLookaheads())
-			m_lookaheads->insert(la);
-	}
+		bool invalidate_forwards = false;
 
-	// calculate first sets
+		for(const TerminalPtr& la : elem->GetLookaheads())
+		{
+			// this elemnt's lookaheads have changed, invalidate the dependent ones
+			if(AddLookahead(la))
+				invalidate_forwards = true;
+		}
+
+		if(invalidate_forwards)
+			InvalidateForwardLookaheads();
+		SetLookaheadsValid(true);
+	}  // m_lookahead_dependencies
+
+
+	// calculate first sets from previous closure elements
 	already_seen.clear();
+
 	for(auto& [elem, calc_first] : m_lookahead_dependencies)
 	{
-		if(!calc_first)
-			continue;
-
-		if(already_seen.contains(elem))
+		if(!calc_first || already_seen.contains(elem))
 			continue;
 		already_seen.insert(elem);
 
-		elem->ResolveLookaheads(recurse_depth + 1);
+		if(!elem->AreLookaheadsValid())
+			elem->ResolveLookaheads(recurse_depth + 1);
+
 		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
 		const WordPtr& rhs = elem->GetRhs();
 		const t_index cursor = elem->GetCursor();
+
+		bool invalidate_forwards = false;
 
 		// iterate lookaheads
 		for(const TerminalPtr& la : nonterm_la)
@@ -268,15 +340,22 @@ void Element::ResolveLookaheads(std::size_t recurse_depth)
 			// iterate all terminals in first set
 			for(const TerminalPtr& first_elem : rhs->CalcFirst(la, cursor+1))
 			{
-				if(!first_elem->IsEps())
-				{
-					if(!m_lookaheads)
-						m_lookaheads = Terminal::t_terminalset{};
-					m_lookaheads->insert(first_elem);
-				}
-			}
-		}
-	}
+				if(first_elem->IsEps())
+					continue;
+
+				if(!m_lookaheads)
+					m_lookaheads = Terminal::t_terminalset{};
+
+				// this elemnt's lookaheads have changed, invalidate the dependent ones
+				if(AddLookahead(first_elem))
+					invalidate_forwards = true;
+			}  // first set
+		}  // lookaheads
+
+		if(invalidate_forwards)
+			InvalidateForwardLookaheads();
+		SetLookaheadsValid(true);
+	}  // m_lookahead_dependencies
 }
 
 
