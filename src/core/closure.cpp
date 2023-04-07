@@ -206,10 +206,18 @@ void Closure::AddLookaheadDependencies(const ClosurePtr& closure)
 }
 
 
+/**
+ * resolves the lookaheads for all elements in the closure
+ */
 void Closure::ResolveLookaheads()
 {
+	//std::unordered_map<t_hash, Terminal::t_terminalset> cached_first_sets;
+
 	for(ElementPtr& elem : m_elems)
-		elem->ResolveLookaheads();
+	{
+		if(!elem->AreLookaheadsValid())
+			elem->ResolveLookaheads(/*&cached_first_sets*/);
+	}
 }
 
 

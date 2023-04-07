@@ -439,18 +439,17 @@ void NonTerminal::CalcFirst(t_map_first& map_first,
 		{
 			const SymbolPtr& sym = (*rule)[sym_idx];
 
-			// reached terminal symbol -> end
 			if(sym->IsTerminal())
 			{
+				// reached terminal symbol -> end
 				set_first.insert(std::dynamic_pointer_cast<Terminal>(sym));
 				set_first_perrule[rule_idx].insert(
 					std::dynamic_pointer_cast<Terminal>(sym));
 				break;
 			}
-
-			// non-terminal
 			else
 			{
+				// non-terminal
 				const NonTerminalPtr& symnonterm =
 					std::dynamic_pointer_cast<NonTerminal>(sym);
 
@@ -538,16 +537,15 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 					{
 						const SymbolPtr& sym = (*rule)[next_sym_idx];
 
-						// add terminal to follow set
 						if(sym->IsTerminal() && !sym->IsEps())
 						{
+							// add terminal to follow set
 							set_follow.insert(std::dynamic_pointer_cast<Terminal>(sym));
 							break;
 						}
-
-						// non-terminal
 						else
 						{
+							// non-terminal
 							const auto& iterFirst = map_first.find(sym);
 
 							for(const TerminalPtr& symfirst : iterFirst->second)
@@ -698,7 +696,7 @@ std::size_t Word::NumSymbols(bool count_eps) const
 
 
 /**
- * calculates the first set of a symbol string
+ * calculates the FIRST set of a symbol string starting from an offset and including an additional symbol
  * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
 const Terminal::t_terminalset& Word::CalcFirst(
@@ -737,16 +735,15 @@ const Terminal::t_terminalset& Word::CalcFirst(
 	{
 		const SymbolPtr& sym = sym_idx < num_rule_symbols ? (*this)[sym_idx] : additional_sym;
 
-		// reached terminal symbol -> end
 		if(sym->IsTerminal())
 		{
+			// reached terminal symbol -> end
 			first.insert(std::dynamic_pointer_cast<Terminal>(sym));
 			break;
 		}
-
-		// non-terminal
 		else
 		{
+			// non-terminal
 			const NonTerminalPtr& symnonterm = std::dynamic_pointer_cast<NonTerminal>(sym);
 			symnonterm->CalcFirst(first_nonterms);
 
@@ -804,6 +801,34 @@ t_hash Word::hash() const
 	}
 
 	return *m_hash;
+}
+
+
+/**
+ * calculates a unique hash for the symbol string
+ * starting from an offset into the word and including and optional additional symbol
+ */
+t_hash Word::hash(t_index offs, const TerminalPtr& additional_sym) const
+{
+	t_hash hash = 0;
+
+	// iterate RHS of rule
+	std::size_t num_rule_symbols = NumSymbols();
+	std::size_t num_all_symbols = num_rule_symbols;
+
+	// add an additional symbol to the end of the rules
+	if(additional_sym && additional_sym.get())
+		++num_all_symbols;
+
+	for(t_index sym_idx=offs; sym_idx<num_all_symbols; ++sym_idx)
+	{
+		const SymbolPtr& sym = sym_idx < num_rule_symbols ? (*this)[sym_idx] : additional_sym;
+
+		t_hash hashSym = sym->hash();
+		boost::hash_combine(hash, hashSym);
+	}
+
+	return hash;
 }
 
 

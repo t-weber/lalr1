@@ -129,7 +129,7 @@ void Element::InvalidateForwardLookaheads()
  */
 bool Element::AreLookaheadsValid() const
 {
-	return m_lookaheads_valid && m_lookaheads;
+	return m_lookaheads_valid && HasLookaheads();
 }
 
 
@@ -142,10 +142,20 @@ void Element::SetLookaheadsValid(bool valid)
 }
 
 
+bool Element::HasLookaheads() const
+{
+	return m_lookaheads.operator bool();
+}
+
+
 const Terminal::t_terminalset& Element::GetLookaheads() const
 {
-	if(!m_lookaheads)
-		throw std::runtime_error("Lookaheads have not been resolved.");
+	if(!HasLookaheads())
+	{
+		std::ostringstream ostr;
+		ostr << "Lookaheads have not been resolved for element " << *this << ".";
+		throw std::runtime_error(ostr.str());
+	}
 	return *m_lookaheads;
 }
 
@@ -193,6 +203,24 @@ bool Element::CompareElementsEqual::operator()(
 }
 
 
+t_hash Element::HashLookaheadDependency::operator()(const t_dependency& dep) const
+{
+	t_hash hashval = 0;
+	boost::hash_combine(hashval, dep.first->hash(true));
+	// TODO: also include element's parent closure in hash
+	boost::hash_combine(hashval, std::hash<bool>{}(dep.second));
+	return hashval;
+}
+
+
+bool Element::CompareLookaheadDependenciesEqual::operator()(
+	const t_dependency& dep1, const t_dependency& dep2) const
+{
+        Element::HashLookaheadDependency hasher;
+		return hasher(dep1) == hasher(dep2);
+}
+
+
 /**
  * calculates a unique hash for the closure element (with or without lookaheads)
  */
@@ -212,8 +240,9 @@ t_hash Element::hash(bool only_core) const
 	boost::hash_combine(hash, hashRhs);
 	boost::hash_combine(hash, hashCursor);
 
-	if(!only_core)
+	if(!only_core /*&& HasLookaheads()*/)
 	{
+		// also include lookaheads in hash
 		for(const TerminalPtr& la : GetLookaheads())
 		{
 			t_hash hashLA = la->hash();
@@ -266,24 +295,38 @@ void Element::AddLookaheadDependencies(const Element::t_dependencies& deps)
 
 void Element::AddLookaheadDependency(const Element::t_dependency& dep)
 {
+	//m_lookahead_dependencies.insert(dep);
 	m_lookahead_dependencies.push_back(dep);
 }
 
 
 void Element::AddLookaheadDependency(const ElementPtr& elem, bool calc_first)
 {
-	m_lookahead_dependencies.push_back(std::make_pair(elem, calc_first));
+	//m_lookahead_dependencies.emplace(std::make_pair(elem, calc_first));
+	m_lookahead_dependencies.emplace_back(std::make_pair(elem, calc_first));
+
 	this->m_lookaheads = std::nullopt;
 	this->m_hash = std::nullopt;
 }
 
 
-void Element::ResolveLookaheads(std::size_t recurse_depth)
+/**
+ * moves along the lookahead dependency tree and calculates all lookaheads in the graph
+ */
+void Element::ResolveLookaheads(
+	std::unordered_map<t_hash, Terminal::t_terminalset>* cached_first_sets,
+	std::size_t recurse_depth)
 {
+	if(m_lookahead_dependencies.size() == 0)
+	{
+		SetLookaheadsValid(true);
+		return;
+	}
+
 	// already resolved?
 	// always recalculate if recursive depth is zero, because the FIRST
 	// set might be incomplete in case of loops in the production rules
-	if(recurse_depth && m_lookaheads)
+	if(recurse_depth && HasLookaheads())
 		return;
 
 	// copy lookaheads from previous closure elements
@@ -295,10 +338,10 @@ void Element::ResolveLookaheads(std::size_t recurse_depth)
 			continue;
 		already_seen.insert(elem);
 
-		if(!elem->AreLookaheadsValid())
-			elem->ResolveLookaheads(recurse_depth + 1);
+		if(!elem->AreLookaheadsValid() && elem.get() != this)
+			elem->ResolveLookaheads(cached_first_sets, recurse_depth + 1);
 
-		if(!m_lookaheads)
+		if(!HasLookaheads())
 			m_lookaheads = Terminal::t_terminalset{};
 
 		bool invalidate_forwards = false;
@@ -325,8 +368,8 @@ void Element::ResolveLookaheads(std::size_t recurse_depth)
 			continue;
 		already_seen.insert(elem);
 
-		if(!elem->AreLookaheadsValid())
-			elem->ResolveLookaheads(recurse_depth + 1);
+		if(!elem->AreLookaheadsValid() && elem.get() != this)
+			elem->ResolveLookaheads(cached_first_sets, recurse_depth + 1);
 
 		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
 		const WordPtr& rhs = elem->GetRhs();
@@ -337,13 +380,33 @@ void Element::ResolveLookaheads(std::size_t recurse_depth)
 		// iterate lookaheads
 		for(const TerminalPtr& la : nonterm_la)
 		{
+			// see if the FIRST set of the rhs has already been cached
+			const Terminal::t_terminalset* first = nullptr;
+			t_hash hashrhs = 0;
+			if(cached_first_sets)
+			{
+				hashrhs = rhs->hash(cursor+1, la);
+				if(auto iter = cached_first_sets->find(hashrhs); iter != cached_first_sets->end())
+					first = &iter->second;
+			}
+
+			// calculate FIRST set of the rhs
+			if(!first)
+			{
+				first = &rhs->CalcFirst(la, cursor+1);
+
+				// cache the FIRST set
+				if(cached_first_sets)
+					cached_first_sets->emplace(std::make_pair(hashrhs, *first));
+			}
+
 			// iterate all terminals in first set
-			for(const TerminalPtr& first_elem : rhs->CalcFirst(la, cursor+1))
+			for(const TerminalPtr& first_elem : *first)
 			{
 				if(first_elem->IsEps())
 					continue;
 
-				if(!m_lookaheads)
+				if(!HasLookaheads())
 					m_lookaheads = Terminal::t_terminalset{};
 
 				// this elemnt's lookaheads have changed, invalidate the dependent ones
@@ -474,18 +537,37 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		ostr << g_options.GetCursorChar();
 
 	// lookaheads
-	ostr << " " << g_options.GetSeparatorChar() << " ";
+	if(elem.HasLookaheads())
+	{
+		ostr << " " << g_options.GetSeparatorChar() << " ";
 
-	for(const TerminalPtr& la : elem.GetLookaheads())
-		ostr << la->GetStrId() << " ";
+		for(const TerminalPtr& la : elem.GetLookaheads())
+			ostr << la->GetStrId() << " ";
 
-	// semantic rule
-	if(std::optional<t_semantic_id> rule = elem.GetSemanticRule(); rule)
-		ostr << " " << g_options.GetSeparatorChar() << " rule " << *rule << " ";
+		// semantic rule
+		if(std::optional<t_semantic_id> rule = elem.GetSemanticRule(); rule)
+			ostr << " " << g_options.GetSeparatorChar() << " rule " << *rule << " ";
+	}
+	else
+	{
+		ostr << " ";
+	}
 
 	ostr << "]";
 	if(use_colour)
 		ostr << no_col;
+
+	// print lookahead dependencies
+	/*if(const auto& deps = elem.GetLookaheadDependencies(); deps.size())
+	{
+		ostr << "\n\tlookahead dependencies:\n";
+		for(const Element::t_dependency& dep : deps)
+		{
+			Element elem_cpy = *dep.first;
+			elem_cpy.m_lookahead_dependencies.clear();  // to prevent recursive printing of dependencies
+			ostr << "\t\t" << elem_cpy << ", calc_first: " << std::boolalpha << dep.second << "\n";
+		}
+	}*/
 
 	return ostr;
 }

@@ -80,17 +80,13 @@ private:
 
 
 public:
-	/**
-	 * hash function for terminals
-	 */
+	// hash function for terminals
 	struct HashSymbol
 	{
 		t_hash operator()(const SymbolPtr& sym) const;
 	};
 
-	/**
-	 * comparator for terminals
-	 */
+	// comparator for terminals
 	struct CompareSymbolsEqual
 	{
 		bool operator()(const SymbolPtr& sym1, const SymbolPtr& sym2) const;
@@ -276,7 +272,7 @@ public:
 	bool operator!=(const Word& other) const { return !operator==(other); }
 
 	t_hash hash() const;
-
+	t_hash hash(t_index offs, const TerminalPtr& additional_sym = nullptr) const;
 	friend std::ostream& operator<<(std::ostream& ostr, const Word& word);
 
 

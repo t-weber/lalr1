@@ -39,35 +39,48 @@ using ElementPtr = std::shared_ptr<Element>;
 class Element : public std::enable_shared_from_this<Element>
 {
 public:
+	using t_elements = std::list<ElementPtr>;
+
+	// --------------------------------------------------------------------------------
 	// lookahead dependencies to previous elements;
 	// bool flag: true: calculate first, false: copy lookaheads
 	using t_dependency = std::pair<ElementPtr, bool>;
+
+	// hash function for lookahead dependencies
+	struct HashLookaheadDependency
+	{
+		t_hash operator()(const t_dependency& sym) const;
+	};
+
+	//comparator for lookahead dependencies
+	struct CompareLookaheadDependenciesEqual
+	{
+		bool operator()(const t_dependency& dep1, const t_dependency& dep2) const;
+	};
+
+	//using t_dependencies = std::unordered_set<t_dependency,
+	//	Element::HashLookaheadDependency, Element::CompareLookaheadDependenciesEqual>;
 	using t_dependencies = std::list<t_dependency>;
+		// --------------------------------------------------------------------------------
 
-	using t_elements = std::list<ElementPtr>;
-
-
-	/**
-	 * hash function for elements
-	 */
+	// --------------------------------------------------------------------------------
+	//hash function for elements
 	struct HashElement
 	{
 		t_hash operator()(const ElementPtr& sym) const;
 	};
 
-	/**
-	 * comparator for elements
-	 */
+	// comparator for elements
 	struct CompareElementsEqual
 	{
 		bool operator()(const ElementPtr& elem1, const ElementPtr& elem2) const;
 	};
 
-
 	// type to map an element to another object
 	template<class t_val>
 	using t_elementmap = std::unordered_map<ElementPtr, t_val,
 		Element::HashElement, Element::CompareElementsEqual>;
+	// --------------------------------------------------------------------------------
 
 
 public:
@@ -81,8 +94,10 @@ public:
 	const WordPtr& GetRhs() const;
 	std::optional<t_semantic_id> GetSemanticRule() const;
 
-	t_index GetCursor() const;
+	bool HasLookaheads() const;
 	const Terminal::t_terminalset& GetLookaheads() const;
+
+	t_index GetCursor() const;
 	SymbolPtr GetSymbolAtCursor() const;
 
 	bool AddLookahead(const TerminalPtr& la);
@@ -96,7 +111,9 @@ public:
 	void AddLookaheadDependencies(const t_dependencies& deps);
 	void AddLookaheadDependency(const t_dependency& dep);
 	void AddLookaheadDependency(const ElementPtr& elem, bool calc_first);
-	void ResolveLookaheads(std::size_t recurse_depth = 0);
+	void ResolveLookaheads(
+		std::unordered_map<t_hash, Terminal::t_terminalset>* cached_first_sets = nullptr,
+		std::size_t recurse_depth = 0);
 
 	const SymbolPtr& GetPossibleTransitionSymbol() const;
 
