@@ -70,6 +70,9 @@ public:
 	std::tuple<ClosurePtr, t_elements> DoTransition(const SymbolPtr& transsym) const;
 	const t_transitions& DoTransitions() const;
 
+	void clear();
+	void ClearTransitionCaches();
+
 	void AddLookaheadDependencies(const ClosurePtr& closure);
 	void ResolveLookaheads();
 
@@ -85,7 +88,7 @@ public:
 
 private:
 	t_elements m_elems{};       // lalr(1) elements in the closure
-	t_state_id m_id{0};         // closure id
+	t_state_id m_id{ 0 };       // closure id
 
 	bool m_isreferenced{false}; // is this closure in a collection that is still in use?
 
@@ -97,13 +100,14 @@ private:
 
 	// cached transition symbols (key: hash)
 	mutable std::unordered_map<t_hash, t_symbolset>
-		m_cached_transition_symbols {};
+		m_cached_transition_symbols{};
 
 	// cached transitions (key: hash)
 	mutable std::unordered_map<t_hash, t_transitions>
-		m_cached_transitions {};
+		m_cached_transitions{};
 };
 
 } // namespace lalr1
 
 #endif
+

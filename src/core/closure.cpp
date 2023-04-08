@@ -22,7 +22,7 @@
 #include <boost/functional/hash.hpp>
 
 
-#define __CACHE_FIRST_SETS 1
+#define __CACHE_FIRST_SETS 0
 
 
 namespace lalr1 {
@@ -46,13 +46,7 @@ Closure::Closure(const Closure& closure)
 Closure::~Closure()
 {
 	//std::cerr << "Destroying closure " << GetId() << "." << std::endl;
-
-	// remove elements' parent closure
-	for(const ElementPtr& elem : GetElements())
-	{
-		elem->SetParentClosure(nullptr);
-		//elem->ClearDependencies();
-	}
+	clear();
 }
 
 
@@ -130,7 +124,6 @@ void Closure::AddElement(const ElementPtr& elem)
 		for(t_index nonterm_ruleidx=0; nonterm_ruleidx<nonterm->NumRules(); ++nonterm_ruleidx)
 		{
 			ElementPtr newelem = std::make_shared<Element>(nonterm, nonterm_ruleidx, 0);
-			//newelem->SetParentClosure(shared_from_this());
 			newelem->AddLookaheadDependency(elem, true);
 			AddElement(newelem);
 		}
@@ -172,7 +165,7 @@ const Closure::t_elements& Closure::GetElements() const
  */
 ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
 {
-	for(const ElementPtr& theelem : m_elems)
+	for(const ElementPtr& theelem : GetElements())
 	{
 		t_index cursor = theelem->GetCursor();
 		const WordPtr& rhs = theelem->GetRhs();
@@ -199,7 +192,7 @@ const Closure::t_symbolset& Closure::GetPossibleTransitionSymbols() const
 		return iter->second;
 
 	t_symbolset syms;
-	for(const ElementPtr& theelem : m_elems)
+	for(const ElementPtr& theelem : GetElements())
 	{
 		const SymbolPtr& sym = theelem->GetPossibleTransitionSymbol();
 		if(!sym)
@@ -218,7 +211,7 @@ const Closure::t_symbolset& Closure::GetPossibleTransitionSymbols() const
  */
 void Closure::AddLookaheadDependencies(const ClosurePtr& closure)
 {
-	for(const ElementPtr& elem : m_elems)
+	for(const ElementPtr& elem : GetElements())
 	{
 		t_hash elem_hash = elem->hash(true);
 
@@ -250,7 +243,7 @@ void Closure::ResolveLookaheads()
 	pcached_first_sets = &cached_first_sets;
 #endif
 
-	for(ElementPtr& elem : m_elems)
+	for(const ElementPtr& elem : GetElements())
 	{
 		if(!elem->AreLookaheadsValid())
 			elem->ResolveLookaheads(pcached_first_sets);
@@ -268,7 +261,7 @@ Closure::DoTransition(const SymbolPtr& transsym) const
 	t_elements from_elems;
 
 	// look for elements with that transition
-	for(const ElementPtr& theelem : m_elems)
+	for(const ElementPtr& theelem : GetElements())
 	{
 		const SymbolPtr& sym = theelem->GetPossibleTransitionSymbol();
 		if(!sym || *sym != *transsym)
@@ -279,7 +272,6 @@ Closure::DoTransition(const SymbolPtr& transsym) const
 
 		// copy element and perform transition
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
-		//newelem->SetParentClosure(new_closure);
 		newelem->AdvanceCursor();
 		newelem->AddLookaheadDependency(theelem, false);
 		new_closure->AddElement(newelem);
@@ -321,13 +313,44 @@ const Closure::t_transitions& Closure::DoTransitions() const
 
 
 /**
+ * clears the caches that were used during the calculation of transitions
+ */
+void Closure::ClearTransitionCaches()
+{
+	m_cached_transition_symbols.clear();
+	m_cached_transitions.clear();
+
+	for(const ElementPtr& elem : GetElements())
+		elem->ClearTransitionCaches();
+}
+
+
+/**
+ * clear all
+ */
+void Closure::clear()
+{
+	ClearTransitionCaches();
+
+	// remove elements' parent closure
+	for(const ElementPtr& elem : GetElements())
+	{
+		elem->SetParentClosure(nullptr);
+		elem->ClearDependencies();
+	}
+
+	m_elems.clear();
+}
+
+
+/**
  * get elements that produce a reduce/reduce conflict
  */
 Closure::t_conflictingelements Closure::GetReduceConflicts() const
 {
 	Closure::t_conflictingelements seen_lookaheads;
 
-	for(const ElementPtr& elem : m_elems)
+	for(const ElementPtr& elem : GetElements())
 	{
 		// only consider finished rules that are reduced
 		if(!elem->IsCursorAtEnd())
@@ -388,7 +411,7 @@ t_hash Closure::hash(bool only_core) const
 	// sort element hashes before combining them
 	std::deque<t_hash> hashes;
 
-	for(const ElementPtr& elem : m_elems)
+	for(const ElementPtr& elem : GetElements())
 		hashes.emplace_back(elem->hash(only_core));
 
 	std::sort(hashes.begin(), hashes.end(),

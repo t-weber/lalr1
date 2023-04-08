@@ -41,11 +41,12 @@ using WordPtr = std::shared_ptr<Word>;
 class Symbol : public std::enable_shared_from_this<Symbol>
 {
 public:
+	Symbol() = delete;
+	virtual ~Symbol();
+
 	Symbol(t_symbol_id id, const std::string& strid = "",
 		bool bEps = false, bool bEnd = false);
 	Symbol(const Symbol& other);
-	Symbol() = delete;
-	virtual ~Symbol();
 
 	const Symbol& operator=(const Symbol& other);
 
@@ -101,11 +102,12 @@ public:
 class Terminal : public Symbol
 {
 public:
+	Terminal() = delete;
+	virtual ~Terminal();
+
 	Terminal(t_symbol_id id, const std::string& strid = "",
 		bool bEps = false, bool bEnd = false);
 	Terminal(const Terminal& other);
-	Terminal() = delete;
-	virtual ~Terminal();
 
 	const Terminal& operator=(const Terminal& other);
 
@@ -159,10 +161,11 @@ using t_map_follow = std::unordered_map<
 class NonTerminal : public Symbol
 {
 public:
-	NonTerminal(t_symbol_id id, const std::string& strid);
-	NonTerminal(const NonTerminal& other);
 	NonTerminal() = delete;
 	virtual ~NonTerminal();
+
+	NonTerminal(t_symbol_id id, const std::string& strid);
+	NonTerminal(const NonTerminal& other);
 
 	const NonTerminal& operator=(const NonTerminal& other);
 
@@ -243,9 +246,11 @@ public:
 
 
 public:
+	Word();
+	~Word() = default;
+
 	Word(const std::initializer_list<SymbolPtr>& init);
 	Word(const Word& other);
-	Word();
 
 	const Word& operator=(const Word& word);
 

@@ -99,6 +99,9 @@ public:
 	Element(const Element& elem);
 	const Element& operator=(const Element& elem);
 
+	Element() = delete;
+	~Element() = default;
+
 	const NonTerminalPtr& GetLhs() const;
 	const WordPtr& GetRhs() const;
 	std::optional<t_semantic_id> GetSemanticRule() const;
@@ -114,7 +117,6 @@ public:
 	void SetLookaheadsValid(bool valid = true);
 	bool AreLookaheadsValid() const;
 
-	void ClearDependencies();
 	void AddForwardDependency(const ElementPtr& elem);
 
 	const t_dependencies& GetLookaheadDependencies() const;
@@ -130,6 +132,9 @@ public:
 
 	void AdvanceCursor();
 	bool IsCursorAtEnd() const;
+
+	void ClearTransitionCaches();
+	void ClearDependencies();
 
 	void SetParentClosure(const ClosurePtr& closure);
 	const ClosurePtr& GetParentClosure() const;
@@ -148,33 +153,33 @@ public:
 
 
 private:
-	NonTerminalPtr m_lhs{nullptr};             // left-hand side of the production rule
-	WordPtr m_rhs{nullptr};                    // right-hand side of the production rule
+	NonTerminalPtr m_lhs{ nullptr };           // left-hand side of the production rule
+	WordPtr m_rhs{ nullptr };                  // right-hand side of the production rule
 
 	// optional semantic rule
 	std::optional<t_semantic_id> m_semanticrule{std::nullopt};
 
-	t_index m_rhsidx{0};                       // rule index
-	t_index m_cursor{0};                       // pointing before element at this index
+	t_index m_rhsidx{ 0 };                     // rule index
+	t_index m_cursor{ 0 };                     // pointing before element at this index
 
 	// forward dependencies point to the following elements,
-	// lookahead dependencies point to the preceding elements
 	t_elements m_forward_dependencies{};       // pointers to following closures' elements
+	// lookahead dependencies point to the preceding elements
 	t_dependencies m_lookahead_dependencies{}; // lookahead dependencies
 
 	// lookahead symbols
 	mutable std::optional<Terminal::t_terminalset> m_lookaheads{};
-	bool m_lookaheads_valid{false};
+	bool m_lookaheads_valid{ false };
 
-	ClosurePtr m_parent{nullptr};              // parent closure this element is part of
-	bool m_isreferenced{false};                // is this element in a closure that is still in use?
+	ClosurePtr m_parent{ nullptr };            // parent closure this element is part of
+	bool m_isreferenced{ false };              // is this element in a closure that is still in use?
 
 	// cached hash values
 	mutable std::optional<t_hash> m_hash{ std::nullopt };
 	mutable std::optional<t_hash> m_hash_core{ std::nullopt };
 
 	// cached transition symbols
-	mutable std::unordered_map<t_hash, SymbolPtr> m_transition_symbol{};
+	mutable std::unordered_map<t_hash, SymbolPtr> m_cached_transition_symbol{};
 };
 
 } // namespace lalr1

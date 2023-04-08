@@ -73,7 +73,7 @@ const Element& Element::operator=(const Element& elem)
 
 	this->m_hash = elem.m_hash;
 	this->m_hash_core = elem.m_hash_core;
-	this->m_transition_symbol = elem.m_transition_symbol;
+	this->m_cached_transition_symbol = elem.m_cached_transition_symbol;
 
 	return *this;
 }
@@ -190,6 +190,7 @@ const Terminal::t_terminalset& Element::GetLookaheads() const
 		ostr << ".";
 		throw std::runtime_error(ostr.str());
 	}
+
 	return *m_lookaheads;
 }
 
@@ -319,13 +320,6 @@ SymbolPtr Element::GetSymbolAtCursor() const
 }
 
 
-void Element::ClearDependencies()
-{
-	m_lookahead_dependencies.clear();
-	m_forward_dependencies.clear();
-}
-
-
 void Element::AddForwardDependency(const ElementPtr& elem)
 {
 	m_forward_dependencies.push_back(elem);
@@ -437,7 +431,6 @@ void Element::ResolveLookaheads(
 
 		if(!elem->AreLookaheadsValid() && elem.get() != this)
 			elem->ResolveLookaheads(cached_first_sets, recurse_depth + 1);
-
 		if(!HasLookaheads())
 			m_lookaheads = Terminal::t_terminalset{};
 
@@ -471,6 +464,8 @@ void Element::ResolveLookaheads(
 
 		if(!elem->AreLookaheadsValid() && elem.get() != this)
 			elem->ResolveLookaheads(cached_first_sets, recurse_depth + 1);
+		if(!HasLookaheads())
+			m_lookaheads = Terminal::t_terminalset{};
 
 		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
 		const WordPtr& rhs = elem->GetRhs();
@@ -530,8 +525,8 @@ const SymbolPtr& Element::GetPossibleTransitionSymbol() const
 {
 	// transition symbol already cached?
 	t_hash hashval = hash(true);
-	auto iter = m_transition_symbol.find(hashval);
-	if(iter != m_transition_symbol.end())
+	auto iter = m_cached_transition_symbol.find(hashval);
+	if(iter != m_cached_transition_symbol.end())
 		return iter->second;
 
 	t_index skip_eps = 0;
@@ -541,7 +536,7 @@ const SymbolPtr& Element::GetPossibleTransitionSymbol() const
 		if(m_cursor + skip_eps >= m_rhs->size())
 		{
 			std::tie(iter, std::ignore) =
-				m_transition_symbol.emplace(
+				m_cached_transition_symbol.emplace(
 					std::make_pair(hashval, nullptr));
 			break;
 		}
@@ -555,7 +550,7 @@ const SymbolPtr& Element::GetPossibleTransitionSymbol() const
 
 		// cache and return found symbol
 		std::tie(iter, std::ignore) =
-			m_transition_symbol.emplace(
+			m_cached_transition_symbol.emplace(
 				std::make_pair(hashval, sym));
 		break;
 	}
@@ -589,6 +584,22 @@ bool Element::IsCursorAtEnd() const
 	}
 
 	return m_cursor + skip_eps >= m_rhs->size();
+}
+
+
+/**
+ * clears the caches that were used during the calculation of transitions
+ */
+void Element::ClearTransitionCaches()
+{
+	m_cached_transition_symbol.clear();
+}
+
+
+void Element::ClearDependencies()
+{
+	m_lookahead_dependencies.clear();
+	m_forward_dependencies.clear();
 }
 
 

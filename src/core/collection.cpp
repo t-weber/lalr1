@@ -85,6 +85,18 @@ Collection::Collection() : std::enable_shared_from_this<Collection>{}
 }
 
 
+Collection::~Collection()
+{
+	//std::cerr << "Destroying collection." << std::endl;
+
+	for(const ClosurePtr& closure : GetClosures())
+		closure->clear();
+
+	m_transitions.clear();
+	m_closures.clear();
+}
+
+
 Collection::Collection(const ClosurePtr& closure)
 	: std::enable_shared_from_this<Collection>{}
 {
@@ -103,9 +115,6 @@ const Collection& Collection::operator=(const Collection& coll)
 {
 	this->m_closures = coll.m_closures;
 	this->m_transitions = coll.m_transitions;
-
-	this->m_closure_cache = coll.m_closure_cache;
-	this->m_seen_closures = coll.m_seen_closures;
 
 	this->m_stopOnConflicts = coll.m_stopOnConflicts;
 	this->m_trySolveReduceConflicts = coll.m_trySolveReduceConflicts;
@@ -202,13 +211,14 @@ Terminal::t_terminalset Collection::GetLookbackTerminals(
 	if(m_dontGenerateLookbacks)
 		return Terminal::t_terminalset{};
 
-	m_seen_closures = std::make_shared<std::unordered_set<t_hash>>();
-	return _GetLookbackTerminals(closure);
+	std::unordered_set<t_hash> seen_closures;
+	return _GetLookbackTerminals(closure, &seen_closures);
 }
 
 
 Terminal::t_terminalset Collection::_GetLookbackTerminals(
-	const ClosurePtr& closure) const
+	const ClosurePtr& closure,
+	std::unordered_set<t_hash>* seen_closures) const
 {
 	if(m_dontGenerateLookbacks)
 		return Terminal::t_terminalset{};
@@ -235,13 +245,13 @@ Terminal::t_terminalset Collection::_GetLookbackTerminals(
 		{
 			// closure not yet seen?
 			t_hash hash = closure_from->hash();
-			if(!m_seen_closures->contains(hash))
+			if(!seen_closures->contains(hash))
 			{
-				m_seen_closures->insert(hash);
+				seen_closures->insert(hash);
 
 				// get terminals from previous closure
 				Terminal::t_terminalset _terms =
-					_GetLookbackTerminals(closure_from);
+					_GetLookbackTerminals(closure_from, seen_closures);
 				terms.merge(_terms);
 			}
 		}
@@ -254,15 +264,11 @@ Terminal::t_terminalset Collection::_GetLookbackTerminals(
 /**
  * perform all possible lalr(1) transitions from all closures
  */
-void Collection::DoTransitions(const ClosurePtr& closure_from)
+void Collection::DoTransitions(const ClosurePtr& closure_from,
+	const t_closurecache& closure_cache)
 {
-	if(!m_closure_cache)
-	{
-		m_closure_cache = std::make_shared<
-			std::unordered_map<t_hash, ClosurePtr>>();
-		m_closure_cache->emplace(std::make_pair(
-			closure_from->hash(true), closure_from));
-	}
+	closure_cache->emplace(std::make_pair(
+		closure_from->hash(true), closure_from));
 
 	const Closure::t_transitions& transitions = closure_from->DoTransitions();
 
@@ -277,26 +283,29 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 		const Closure::t_elements& elems_from = std::get<2>(tup);
 
 		t_hash hash_to = closure_to->hash(true);
-		auto cacheIter = m_closure_cache->find(hash_to);
-		bool new_closure = (cacheIter == m_closure_cache->end());
+		auto cacheIter = closure_cache->find(hash_to);
+		bool new_closure = (cacheIter == closure_cache->end());
 
-		std::ostringstream ostrMsg;
-		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
-			<< closure_from->GetId() << " " << g_options.GetArrowChar() << " " << closure_to->GetId()
-			<< ". Total closures: " << m_closures.size()
-			<< ", total transitions: " << m_transitions.size()
-			<< ".";
-		ReportProgress(ostrMsg.str(), false);
+		if(m_progress_observer)
+		{
+			std::ostringstream ostrMsg;
+			ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
+				<< closure_from->GetId() << " " << g_options.GetArrowChar() << " " << closure_to->GetId()
+				<< ". Total closures: " << m_closures.size()
+				<< ", total transitions: " << m_transitions.size()
+				<< ".";
+			ReportProgress(ostrMsg.str(), false);
+		}
 
 		if(new_closure)
 		{
 			// new unique closure
-			m_closure_cache->emplace(std::make_pair(hash_to, closure_to));
+			closure_cache->emplace(std::make_pair(hash_to, closure_to));
 			m_closures.push_back(closure_to);
 			m_transitions.emplace(std::make_tuple(
 				closure_from, closure_to, trans_sym, elems_from));
 
-			DoTransitions(closure_to);
+			DoTransitions(closure_to, closure_cache);
 		}
 		else
 		{
@@ -309,6 +318,11 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 			// add the transition from the closure
 			m_transitions.emplace(std::make_tuple(
 				closure_from, closure_to_existing, trans_sym, elems_from));
+
+			// explicitly remove discarded closure
+			// (this is necessary because the elements keep shared_ptrs to their parent closures,
+			// creating cyclic dependencies with destructors never called)
+			closure_to->clear();
 		}
 	}
 }
@@ -316,8 +330,11 @@ void Collection::DoTransitions(const ClosurePtr& closure_from)
 
 void Collection::DoTransitions()
 {
-	m_closure_cache = nullptr;
-	DoTransitions(*m_closures.begin());
+	t_closurecache closure_cache = std::make_shared<
+		typename t_closurecache::element_type>();
+
+	DoTransitions(*m_closures.begin(), closure_cache);
+	ClearTransitionCaches();
 	ReportProgress("Calculated transitions.", true);
 
 	MapElementsToClosures();
@@ -394,6 +411,16 @@ void Collection::DoTransitions()
 
 
 /**
+ * clears the caches that were used during the calculation of transitions
+ */
+void Collection::ClearTransitionCaches()
+{
+	for(const ClosurePtr& closure : GetClosures())
+		closure->ClearTransitionCaches();
+}
+
+
+/**
  * maps the elements to their parent closures containing them
  */
 void Collection::MapElementsToClosures()
@@ -455,13 +482,15 @@ void Collection::Simplify()
 
 	for(const ClosurePtr& closure : GetClosures())
 	{
-		t_state_id oldid = closure->GetId();
-		t_hash hash = closure->hash();
-
 		// skip already-handled closures
+		t_hash hash = closure->hash();
 		if(already_seen.contains(hash))
+		{
+			closure->clear();
 			continue;
+		}
 
+		t_state_id oldid = closure->GetId();
 		auto iditer = idmap.find(oldid);
 		if(iditer == idmap.end())
 		{

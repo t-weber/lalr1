@@ -71,17 +71,20 @@ public:
 	using t_closures = std::list<ClosurePtr>;
 	using t_transitions = std::unordered_set<t_transition, HashTransition, CompareTransitionsEqual>;
 	using t_closurecache = std::shared_ptr<std::unordered_map<t_hash, ClosurePtr>>;
-	using t_seen_closures = std::shared_ptr<std::unordered_set<t_hash>>;
 
 
 public:
 	Collection();
+	~Collection();
+
 	Collection(const ClosurePtr& closure);
 	Collection(const Collection& coll);
 	const Collection& operator=(const Collection& coll);
 
 	void AddClosure(const ClosurePtr& closure);
 	void DoTransitions();
+
+	void ClearTransitionCaches();
 
 	// tests which closures of the collection have reduce/reduce conflicts
 	std::map<t_state_id, std::string> HasReduceConflicts() const;
@@ -128,9 +131,11 @@ public:
 
 
 protected:
-	Terminal::t_terminalset _GetLookbackTerminals(const ClosurePtr& closure) const;
+	Terminal::t_terminalset _GetLookbackTerminals(
+		const ClosurePtr& closure,
+		 std::unordered_set<t_hash>* seen_closures = nullptr) const;
 
-	void DoTransitions(const ClosurePtr& closure);
+	void DoTransitions(const ClosurePtr& closure, const t_closurecache& closure_cache);
 	void Simplify();
 
 	void MapElementsToClosures();
@@ -141,10 +146,7 @@ protected:
 
 private:
 	t_closures m_closures{};                    // collection of LR(1) closures
-	t_transitions m_transitions{};              // transitions between collection, [from, to, transition symbol]
-
-	t_closurecache m_closure_cache{};           // seen closures
-	mutable t_seen_closures m_seen_closures{};  // set of seen closures
+	t_transitions m_transitions{};              // transitions between closures, [from, to, transition symbol]
 
 	bool m_stopOnConflicts{true};               // stop table/code generation on conflicts
 	bool m_trySolveReduceConflicts{false};      // try to solve reduce/reduce conflicts
