@@ -105,6 +105,9 @@ static bool lr1_create_parser(
 		if(create_ascent_parser)
 		{
 			const char* parser_file = "script_parser.cpp";
+			std::cout << "Creating recursive ascent parser \""
+				<< parser_file << "\"..." << std::endl;
+
 			ParserGen parsergen(collsLALR);
 			parsergen.SetGenDebugCode(gen_debug_code);
 			parsergen.SetGenErrorCode(gen_error_code);

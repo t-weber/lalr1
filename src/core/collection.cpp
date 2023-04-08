@@ -103,7 +103,6 @@ const Collection& Collection::operator=(const Collection& coll)
 {
 	this->m_closures = coll.m_closures;
 	this->m_transitions = coll.m_transitions;
-	this->m_elem_to_closure = coll.m_elem_to_closure;
 
 	this->m_closure_cache = coll.m_closure_cache;
 	this->m_seen_closures = coll.m_seen_closures;
@@ -172,10 +171,7 @@ std::optional<Collection::t_transition> Collection::GetTransition(
 	const ElementPtr& element, bool only_core_hash) const
 {
 	// get closure containing the element
-	auto iter = m_elem_to_closure.find(element);
-	if(iter == m_elem_to_closure.end())
-		return std::nullopt;
-	const ClosurePtr& closure = iter->second;
+	const ClosurePtr& closure = element->GetParentClosure();
 	t_hash element_hash = element->hash(only_core_hash);
 
 	// get terminal and non-terminal transitions from closure
@@ -330,6 +326,12 @@ void Collection::DoTransitions()
 
 	for(const ClosurePtr& closure : GetClosures())
 	{
+		for(const ElementPtr& element : closure->GetElements())
+			element->SimplifyLookaheadDependencies();
+	}
+
+	for(const ClosurePtr& closure : GetClosures())
+	{
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating lookaheads for state " << closure->GetId() << ".";
 		ReportProgress(ostrMsg.str(), false);
@@ -387,7 +389,7 @@ void Collection::DoTransitions()
 	report_conflicts(HasReduceConflicts(), "reduce/reduce");
 	report_conflicts(HasShiftReduceConflicts(), "shift/reduce");
 
-	ReportProgress("Calculated transitions.", true);
+	ReportProgress("Calculated all transitions.", true);
 }
 
 
@@ -396,13 +398,14 @@ void Collection::DoTransitions()
  */
 void Collection::MapElementsToClosures()
 {
-	m_elem_to_closure.clear();
-
 	for(const ClosurePtr& closure : GetClosures())
 	{
+		closure->SetReferenced(true);
+
 		for(const ElementPtr& elem : closure->GetElements())
 		{
-			m_elem_to_closure.emplace(std::make_pair(elem, closure));
+			elem->SetParentClosure(closure);
+			elem->SetReferenced(true);
 		}
 	}
 }
@@ -848,7 +851,7 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll, bool write
 				ofstr << "];\n";
 
 				// quick consistency check of the element map
-				//if(m_elem_to_closure.find(elem)->second->GetId() != closure_from->GetId())
+				//if(elem->GetParentClosure()->GetId() != closure_from->GetId())
 				//	std::cerr << "Error: Invalid closure mapping!" << std::endl;
 
 				//std::cout << "closure " << closure_from->GetId() << ": " << *elem << " " << std::hex << elem->hash() << std::dec << std::endl;

@@ -14,12 +14,16 @@
  */
 
 #include "element.h"
+#include "closure.h"
 #include "options.h"
 
 #include <sstream>
 #include <algorithm>
 
 #include <boost/functional/hash.hpp>
+
+
+#define __PRINT_LOOKAHEAD_DEPENDENCIES 0
 
 
 namespace lalr1 {
@@ -64,6 +68,9 @@ const Element& Element::operator=(const Element& elem)
 	this->m_lookaheads = elem.m_lookaheads;
 	this->m_lookaheads_valid = elem.m_lookaheads_valid;
 
+	this->m_parent = elem.m_parent;
+	this->m_isreferenced = elem.m_isreferenced;
+
 	this->m_hash = elem.m_hash;
 	this->m_hash_core = elem.m_hash_core;
 	this->m_transition_symbol = elem.m_transition_symbol;
@@ -93,6 +100,30 @@ std::optional<t_semantic_id> Element::GetSemanticRule() const
 t_index Element::GetCursor() const
 {
 	return m_cursor;
+}
+
+
+void Element::SetParentClosure(const ClosurePtr& closure)
+{
+	m_parent = closure;
+}
+
+
+const ClosurePtr& Element::GetParentClosure() const
+{
+	return m_parent;
+}
+
+
+void Element::SetReferenced(bool ref)
+{
+	m_isreferenced = ref;
+}
+
+
+bool Element::IsReferenced() const
+{
+	return m_isreferenced;
 }
 
 
@@ -153,7 +184,10 @@ const Terminal::t_terminalset& Element::GetLookaheads() const
 	if(!HasLookaheads())
 	{
 		std::ostringstream ostr;
-		ostr << "Lookaheads have not been resolved for element " << *this << ".";
+		ostr << "Lookaheads have not been resolved for element " << *this;
+		if(m_parent)
+			ostr << ", parent closure " << m_parent->GetId();
+		ostr << ".";
 		throw std::runtime_error(ostr.str());
 	}
 	return *m_lookaheads;
@@ -205,9 +239,20 @@ bool Element::CompareElementsEqual::operator()(
 
 t_hash Element::HashLookaheadDependency::operator()(const t_dependency& dep) const
 {
+
+	const ElementPtr& elem = dep.first;
+	const ClosurePtr& parent = elem->GetParentClosure();
+
+	if(!parent)
+	{
+		std::ostringstream ostrerr;
+		ostrerr << "Cannot hash since element " << *elem << " has no parent closure.";
+		throw std::runtime_error(ostrerr.str());
+	}
+
 	t_hash hashval = 0;
-	boost::hash_combine(hashval, dep.first->hash(true));
-	// TODO: also include element's parent closure in hash
+	boost::hash_combine(hashval, elem->hash(true));
+	boost::hash_combine(hashval, std::hash<t_state_id>{}(parent->GetId()));
 	boost::hash_combine(hashval, std::hash<bool>{}(dep.second));
 	return hashval;
 }
@@ -274,6 +319,13 @@ SymbolPtr Element::GetSymbolAtCursor() const
 }
 
 
+void Element::ClearDependencies()
+{
+	m_lookahead_dependencies.clear();
+	m_forward_dependencies.clear();
+}
+
+
 void Element::AddForwardDependency(const ElementPtr& elem)
 {
 	m_forward_dependencies.push_back(elem);
@@ -286,6 +338,33 @@ const Element::t_dependencies& Element::GetLookaheadDependencies() const
 }
 
 
+/**
+ * removes dependencies to invalid or dangling elements
+ */
+void Element::SimplifyLookaheadDependencies()
+{
+	// simplify backward dependencies
+	for(auto iter = m_lookahead_dependencies.begin(); iter != m_lookahead_dependencies.end(); )
+	{
+		const auto& [elem, calc_first] = *iter;
+		if(!elem || !elem->GetParentClosure() || !elem->IsReferenced())
+			iter = m_lookahead_dependencies.erase(iter);
+		else
+			std::advance(iter, 1);
+	}
+
+	// simplify forward dependencies
+	for(auto iter = m_forward_dependencies.begin(); iter != m_forward_dependencies.end(); )
+	{
+		const auto& elem = *iter;
+		if(!elem || !elem->GetParentClosure() || !elem->IsReferenced())
+			iter = m_forward_dependencies.erase(iter);
+		else
+			std::advance(iter, 1);
+	}
+}
+
+
 void Element::AddLookaheadDependencies(const Element::t_dependencies& deps)
 {
 	for(const t_dependency& dep : deps)
@@ -295,18 +374,32 @@ void Element::AddLookaheadDependencies(const Element::t_dependencies& deps)
 
 void Element::AddLookaheadDependency(const Element::t_dependency& dep)
 {
-	//m_lookahead_dependencies.insert(dep);
+	// ignore invalid elements
+	if(!dep.first)
+		return;
+
+#if __USE_LOOKAHEAD_DEPENDENCIES_SET != 0
+	m_lookahead_dependencies.insert(dep);
+#else
 	m_lookahead_dependencies.push_back(dep);
+#endif
 }
 
 
 void Element::AddLookaheadDependency(const ElementPtr& elem, bool calc_first)
 {
-	//m_lookahead_dependencies.emplace(std::make_pair(elem, calc_first));
-	m_lookahead_dependencies.emplace_back(std::make_pair(elem, calc_first));
+	// ignore invalid elements
+	if(!elem)
+		return;
 
-	this->m_lookaheads = std::nullopt;
-	this->m_hash = std::nullopt;
+#if __USE_LOOKAHEAD_DEPENDENCIES_SET != 0
+	m_lookahead_dependencies.emplace(std::make_pair(elem, calc_first));
+#else
+	m_lookahead_dependencies.emplace_back(std::make_pair(elem, calc_first));
+#endif
+
+	m_lookaheads = std::nullopt;
+	m_hash = std::nullopt;
 }
 
 
@@ -334,6 +427,10 @@ void Element::ResolveLookaheads(
 
 	for(auto& [elem, calc_first] : m_lookahead_dependencies)
 	{
+		// ignore invalid elements having no parent closure
+		if(!elem || !elem->GetParentClosure())
+			continue;
+
 		if(calc_first || already_seen.contains(elem))
 			continue;
 		already_seen.insert(elem);
@@ -364,6 +461,10 @@ void Element::ResolveLookaheads(
 
 	for(auto& [elem, calc_first] : m_lookahead_dependencies)
 	{
+		// ignore invalid elements having no parent closure
+		if(!elem || !elem->GetParentClosure())
+			continue;
+
 		if(!calc_first || already_seen.contains(elem))
 			continue;
 		already_seen.insert(elem);
@@ -557,17 +658,22 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	if(use_colour)
 		ostr << no_col;
 
+#if __PRINT_LOOKAHEAD_DEPENDENCIES != 0
 	// print lookahead dependencies
-	/*if(const auto& deps = elem.GetLookaheadDependencies(); deps.size())
+	if(const auto& deps = elem.GetLookaheadDependencies(); deps.size())
 	{
 		ostr << "\n\tlookahead dependencies:\n";
 		for(const Element::t_dependency& dep : deps)
 		{
 			Element elem_cpy = *dep.first;
-			elem_cpy.m_lookahead_dependencies.clear();  // to prevent recursive printing of dependencies
-			ostr << "\t\t" << elem_cpy << ", calc_first: " << std::boolalpha << dep.second << "\n";
+			elem_cpy.ClearDependencies();  // to prevent recursive printing of dependencies
+			ostr << "\t\telement: " << elem_cpy;
+			if(elem_cpy.GetParentClosure())
+				ostr << ", closure " << elem_cpy.GetParentClosure()->GetId();
+			ostr << ", calc_first: " << std::boolalpha << dep.second << "\n";
 		}
-	}*/
+	}
+#endif
 
 	return ostr;
 }

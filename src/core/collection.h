@@ -142,7 +142,6 @@ protected:
 private:
 	t_closures m_closures{};                    // collection of LR(1) closures
 	t_transitions m_transitions{};              // transitions between collection, [from, to, transition symbol]
-	t_element_to_closure m_elem_to_closure{};   // maps elements to their parent closures
 
 	t_closurecache m_closure_cache{};           // seen closures
 	mutable t_seen_closures m_seen_closures{};  // set of seen closures

@@ -22,6 +22,9 @@
 #include <boost/functional/hash.hpp>
 
 
+#define __CACHE_FIRST_SETS 1
+
+
 namespace lalr1 {
 
 
@@ -40,12 +43,27 @@ Closure::Closure(const Closure& closure)
 }
 
 
+Closure::~Closure()
+{
+	//std::cerr << "Destroying closure " << GetId() << "." << std::endl;
+
+	// remove elements' parent closure
+	for(const ElementPtr& elem : GetElements())
+	{
+		elem->SetParentClosure(nullptr);
+		//elem->ClearDependencies();
+	}
+}
+
+
 const Closure& Closure::operator=(const Closure& closure)
 {
 	this->m_id = closure.m_id;
 
 	for(const ElementPtr& elem : closure.m_elems)
-		this->m_elems.emplace_back(std::make_shared<Element>(*elem));
+		AddElement(std::make_shared<Element>(*elem));
+
+	this->m_isreferenced = closure.m_isreferenced;
 
 	this->m_hash = closure.m_hash;
 	this->m_hash_core = closure.m_hash_core;
@@ -69,6 +87,18 @@ void Closure::SetId(t_state_id id)
 }
 
 
+void Closure::SetReferenced(bool ref)
+{
+	m_isreferenced = ref;
+}
+
+
+bool Closure::IsReferenced() const
+{
+	return m_isreferenced;
+}
+
+
 /**
  * adds an element and generates the rest of the closure
  */
@@ -85,6 +115,7 @@ void Closure::AddElement(const ElementPtr& elem)
 	{
 		// new element
 		m_elems.push_back(elem);
+		elem->SetParentClosure(shared_from_this());
 	}
 
 	// if the cursor is before a non-terminal, add the rule as element
@@ -99,6 +130,7 @@ void Closure::AddElement(const ElementPtr& elem)
 		for(t_index nonterm_ruleidx=0; nonterm_ruleidx<nonterm->NumRules(); ++nonterm_ruleidx)
 		{
 			ElementPtr newelem = std::make_shared<Element>(nonterm, nonterm_ruleidx, 0);
+			//newelem->SetParentClosure(shared_from_this());
 			newelem->AddLookaheadDependency(elem, true);
 			AddElement(newelem);
 		}
@@ -211,12 +243,17 @@ void Closure::AddLookaheadDependencies(const ClosurePtr& closure)
  */
 void Closure::ResolveLookaheads()
 {
-	//std::unordered_map<t_hash, Terminal::t_terminalset> cached_first_sets;
+	std::unordered_map<t_hash, Terminal::t_terminalset>* pcached_first_sets = nullptr;
+
+#if __CACHE_FIRST_SETS != 0
+	std::unordered_map<t_hash, Terminal::t_terminalset> cached_first_sets;
+	pcached_first_sets = &cached_first_sets;
+#endif
 
 	for(ElementPtr& elem : m_elems)
 	{
 		if(!elem->AreLookaheadsValid())
-			elem->ResolveLookaheads(/*&cached_first_sets*/);
+			elem->ResolveLookaheads(pcached_first_sets);
 	}
 }
 
@@ -242,6 +279,7 @@ Closure::DoTransition(const SymbolPtr& transsym) const
 
 		// copy element and perform transition
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
+		//newelem->SetParentClosure(new_closure);
 		newelem->AdvanceCursor();
 		newelem->AddLookaheadDependency(theelem, false);
 		new_closure->AddElement(newelem);

@@ -49,12 +49,16 @@ public:
 
 public:
 	Closure();
+	~Closure();
 
 	Closure(const Closure& coll);
 	const Closure& operator=(const Closure& coll);
 
 	t_state_id GetId() const;
 	void SetId(t_state_id id);
+
+	void SetReferenced(bool ref = true);
+	bool IsReferenced() const;
 
 	void AddElement(const ElementPtr& elem);
 	typename t_elements::const_iterator FindElement(
@@ -80,10 +84,12 @@ public:
 
 
 private:
-	t_elements m_elems{};     // lalr(1) elements in the closure
-	t_state_id m_id{0};       // closure id
+	t_elements m_elems{};       // lalr(1) elements in the closure
+	t_state_id m_id{0};         // closure id
 
-	static t_state_id g_id;   // global closure id counter
+	bool m_isreferenced{false}; // is this closure in a collection that is still in use?
+
+	static t_state_id g_id;     // global closure id counter
 
 	// cached hash values
 	mutable std::optional<t_hash> m_hash{ std::nullopt };

@@ -26,10 +26,16 @@
 #include <iostream>
 
 
+#define __USE_LOOKAHEAD_DEPENDENCIES_SET 0  // TODO
+
+
 namespace lalr1 {
 
 class Element;
 using ElementPtr = std::shared_ptr<Element>;
+
+class Closure;
+using ClosurePtr = std::shared_ptr<Closure>;
 
 
 
@@ -58,10 +64,13 @@ public:
 		bool operator()(const t_dependency& dep1, const t_dependency& dep2) const;
 	};
 
-	//using t_dependencies = std::unordered_set<t_dependency,
-	//	Element::HashLookaheadDependency, Element::CompareLookaheadDependenciesEqual>;
+#if __USE_LOOKAHEAD_DEPENDENCIES_SET != 0
+	using t_dependencies = std::unordered_set<t_dependency,
+		Element::HashLookaheadDependency, Element::CompareLookaheadDependenciesEqual>;
+#else
 	using t_dependencies = std::list<t_dependency>;
-		// --------------------------------------------------------------------------------
+#endif
+	// --------------------------------------------------------------------------------
 
 	// --------------------------------------------------------------------------------
 	//hash function for elements
@@ -105,12 +114,14 @@ public:
 	void SetLookaheadsValid(bool valid = true);
 	bool AreLookaheadsValid() const;
 
+	void ClearDependencies();
 	void AddForwardDependency(const ElementPtr& elem);
 
 	const t_dependencies& GetLookaheadDependencies() const;
 	void AddLookaheadDependencies(const t_dependencies& deps);
 	void AddLookaheadDependency(const t_dependency& dep);
 	void AddLookaheadDependency(const ElementPtr& elem, bool calc_first);
+	void SimplifyLookaheadDependencies();
 	void ResolveLookaheads(
 		std::unordered_map<t_hash, Terminal::t_terminalset>* cached_first_sets = nullptr,
 		std::size_t recurse_depth = 0);
@@ -119,6 +130,12 @@ public:
 
 	void AdvanceCursor();
 	bool IsCursorAtEnd() const;
+
+	void SetParentClosure(const ClosurePtr& closure);
+	const ClosurePtr& GetParentClosure() const;
+
+	void SetReferenced(bool ref = true);
+	bool IsReferenced() const;
 
 	bool IsEqual(const Element& elem, bool only_core = false) const;
 	bool operator==(const Element& other) const;
@@ -131,22 +148,26 @@ public:
 
 
 private:
-	NonTerminalPtr m_lhs{nullptr};          // left-hand side of the production rule
-	WordPtr m_rhs{nullptr};                 // right-hand side of the production rule
+	NonTerminalPtr m_lhs{nullptr};             // left-hand side of the production rule
+	WordPtr m_rhs{nullptr};                    // right-hand side of the production rule
 
 	// optional semantic rule
 	std::optional<t_semantic_id> m_semanticrule{std::nullopt};
 
-	t_index m_rhsidx{0};                    // rule index
-	t_index m_cursor{0};                    // pointing before element at this index
+	t_index m_rhsidx{0};                       // rule index
+	t_index m_cursor{0};                       // pointing before element at this index
 
 	// forward dependencies point to the following elements,
 	// lookahead dependencies point to the preceding elements
-	t_elements m_forward_dependencies{};    // pointers to following closures' elements
-	t_dependencies m_lookahead_dependencies{};                     // lookahead dependencies
+	t_elements m_forward_dependencies{};       // pointers to following closures' elements
+	t_dependencies m_lookahead_dependencies{}; // lookahead dependencies
 
-	mutable std::optional<Terminal::t_terminalset> m_lookaheads{}; // lookahead symbols
+	// lookahead symbols
+	mutable std::optional<Terminal::t_terminalset> m_lookaheads{};
 	bool m_lookaheads_valid{false};
+
+	ClosurePtr m_parent{nullptr};              // parent closure this element is part of
+	bool m_isreferenced{false};                // is this element in a closure that is still in use?
 
 	// cached hash values
 	mutable std::optional<t_hash> m_hash{ std::nullopt };
