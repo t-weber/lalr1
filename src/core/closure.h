@@ -75,6 +75,7 @@ public:
 
 	void AddLookaheadDependencies(const ClosurePtr& closure);
 	void ResolveLookaheads();
+	bool AreLookaheadsValid() const;
 
 	// tests if the closure has a reduce/reduce conflict
 	t_conflictingelements GetReduceConflicts() const;

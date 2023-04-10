@@ -23,7 +23,8 @@
 #include <boost/functional/hash.hpp>
 
 
-#define __PRINT_LOOKAHEAD_DEPENDENCIES 0
+#define __PRINT_LOOKAHEAD_DEPENDENCIES  0
+#define __SKIP_RECURSIVE_LOOKAHEADS     0
 
 
 namespace lalr1 {
@@ -160,9 +161,24 @@ void Element::InvalidateForwardLookaheads()
 		// lookaheads are already invalid
 		if(!elem->AreLookaheadsValid())
 			continue;
+		if(elem == shared_from_this())
+			continue;
 
-		elem->SetLookaheadsValid(false);
-		elem->InvalidateForwardLookaheads();
+		// don't invalidate if all the dependencies are valid
+		bool all_deps_valid = true;
+		for(const auto& dep : GetLookaheadDependencies())
+		{
+			if(dep.first->AreLookaheadsValid())
+				continue;
+			all_deps_valid = false;
+			break;
+		}
+
+		if(!all_deps_valid)
+		{
+			elem->SetLookaheadsValid(false);
+			elem->InvalidateForwardLookaheads();
+		}
 	}
 }
 
@@ -210,46 +226,24 @@ const Terminal::t_terminalset& Element::GetLookaheads() const
 }
 
 
-bool Element::IsEqual(const Element& elem, bool only_core) const
+bool Element::IsEqual(const ElementPtr& elem, bool only_core) const
 {
-	if(*this->GetLhs() != *elem.GetLhs())
-		return false;
-	if(*this->GetRhs() != *elem.GetRhs())
-		return false;
-	if(this->GetCursor() != elem.GetCursor())
-		return false;
-
-	// also compare lookaheads
-	if(!only_core)
-	{
-		// see if all lookaheads of elem are already in this lookahead set
-		for(const TerminalPtr& la : elem.GetLookaheads())
-		{
-			if(this->GetLookaheads().find(la) == this->GetLookaheads().end())
-				return false;
-		}
-	}
-
-	return true;
-}
-
-
-bool Element::operator==(const Element& other) const
-{
-	return IsEqual(other, false);
+	CompareElementsEqual cmp;
+	cmp.only_core = only_core;
+	return cmp(std::const_pointer_cast<Element>(shared_from_this()), elem);
 }
 
 
 t_hash Element::HashElement::operator()(const ElementPtr& elem) const
 {
-	return elem->hash(false);
+	return elem->hash(only_core);
 }
 
 
 bool Element::CompareElementsEqual::operator()(
 	const ElementPtr& elem1, const ElementPtr& elem2) const
 {
-        return elem1->hash() == elem2->hash();
+        return elem1->hash(only_core) == elem2->hash(only_core);
 }
 
 
@@ -266,8 +260,9 @@ t_hash Element::HashLookaheadDependency::operator()(const t_dependency& dep) con
 	}
 
 	t_hash hashval = 0;
-	boost::hash_combine(hashval, elem->hash(true));
-	boost::hash_combine(hashval, std::hash<t_state_id>{}(parent->GetId()));
+	boost::hash_combine(hashval, elem->hash(only_core));
+	if(parent)
+		boost::hash_combine(hashval, std::hash<t_state_id>{}(parent->GetId()));
 	boost::hash_combine(hashval, std::hash<bool>{}(dep.second));
 	return hashval;
 }
@@ -277,7 +272,8 @@ bool Element::CompareLookaheadDependenciesEqual::operator()(
 	const t_dependency& dep1, const t_dependency& dep2) const
 {
         Element::HashLookaheadDependency hasher;
-		return hasher(dep1) == hasher(dep2);
+	hasher.only_core = only_core;
+	return hasher(dep1) == hasher(dep2);
 }
 
 
@@ -349,40 +345,40 @@ const Element::t_dependencies& Element::GetLookaheadDependencies() const
 /**
  * removes dependencies to invalid or dangling elements
  */
-void Element::SimplifyLookaheadDependencies()
+void Element::SimplifyLookaheadDependencies(bool only_referenced_elems)
 {
 	// simplify backward dependencies
 	for(auto iter = m_lookahead_dependencies.begin(); iter != m_lookahead_dependencies.end(); )
 	{
 		const auto& [elem, calc_first] = *iter;
-		if(!elem || !elem->GetParentClosure()
+
+		bool remove = !elem || !elem->GetParentClosure()
 			// points to the same element
-			|| (elem->GetParentClosure() == GetParentClosure() && elem->hash(true) == hash(true))
-			|| !elem->IsReferenced())  // element not part of the final collection
-		{
+			|| (elem->GetParentClosure() == GetParentClosure() && elem->hash(true) == hash(true));
+		if(only_referenced_elems)
+			remove = remove || !elem->IsReferenced();  // element not part of the final collection
+
+		if(remove)
 			iter = m_lookahead_dependencies.erase(iter);
-		}
 		else
-		{
 			std::advance(iter, 1);
-		}
 	}
 
 	// simplify forward dependencies
 	for(auto iter = m_forward_dependencies.begin(); iter != m_forward_dependencies.end(); )
 	{
 		const auto& elem = *iter;
-		if(!elem || !elem->GetParentClosure()
+
+		bool remove = !elem || !elem->GetParentClosure()
 			// points to the same element
-			|| (elem->GetParentClosure() == GetParentClosure() && elem->hash(true) == hash(true))
-			|| !elem->IsReferenced())  // element not part of the final collection
-		{
+			|| (elem->GetParentClosure() == GetParentClosure() && elem->hash(true) == hash(true));
+		if(only_referenced_elems)
+			remove = remove || !elem->IsReferenced();  // element not part of the final collection
+
+		if(remove)
 			iter = m_forward_dependencies.erase(iter);
-		}
 		else
-		{
 			std::advance(iter, 1);
-		}
 	}
 }
 
@@ -394,34 +390,47 @@ void Element::AddLookaheadDependencies(const Element::t_dependencies& deps)
 }
 
 
-void Element::AddLookaheadDependency(const Element::t_dependency& dep)
+void Element::AddLookaheadDependency(const ElementPtr& elem, bool calc_first)
 {
-	// ignore invalid elements
-	if(!dep.first)
-		return;
-
-#if __USE_LOOKAHEAD_DEPENDENCIES_SET != 0
-	m_lookahead_dependencies.insert(dep);
-#else
-	m_lookahead_dependencies.push_back(dep);
-#endif
+	AddLookaheadDependency(std::make_pair(elem, calc_first));
 }
 
 
-void Element::AddLookaheadDependency(const ElementPtr& elem, bool calc_first)
+void Element::AddLookaheadDependency(const Element::t_dependency& dep)
 {
 	// ignore invalid elements
-	if(!elem)
+	if(!dep.first || !dep.first->GetParentClosure())
 		return;
 
+	bool inserted = false;
+
 #if __USE_LOOKAHEAD_DEPENDENCIES_SET != 0
-	m_lookahead_dependencies.emplace(std::make_pair(elem, calc_first));
+	// remove elements with a now dangling parent pointer
+	// (because these have invalid hashes now)
+	SimplifyLookaheadDependencies(false);
+
+	std::tie(std::ignore, inserted) = m_lookahead_dependencies.insert(dep);
 #else
-	m_lookahead_dependencies.emplace_back(std::make_pair(elem, calc_first));
+	// do we already have this dependency?
+	Element::HashLookaheadDependency hasher;
+	t_hash dep_hash = hasher(dep);
+	for(const auto& olddep : GetLookaheadDependencies())
+	{
+		if(!olddep.first || !olddep.first->GetParentClosure())
+			continue;
+		if(hasher(olddep) == dep_hash)
+			return;
+	}
+
+	m_lookahead_dependencies.push_back(dep);
+	inserted = true;
 #endif
 
-	m_lookaheads = std::nullopt;
-	m_hash = std::nullopt;
+	if(inserted)
+	{
+		m_hash = std::nullopt;
+		//m_lookaheads = std::nullopt;
+	}
 }
 
 
@@ -434,11 +443,13 @@ void Element::ResolveLookaheads(
 {
 	if(AreLookaheadsValid())
 		return;
+	SetLookaheadsValid(true);
 
 	// lookaheads already valid since there are no dependencies
 	if(GetLookaheadDependencies().size() == 0)
 		return;
 
+#if __SKIP_RECURSIVE_LOOKAHEADS != 0
 	// already resolved?
 	// always recalculate if recursive depth is zero, because the FIRST
 	// set might be incomplete in case of loops in the production rules
@@ -447,23 +458,23 @@ void Element::ResolveLookaheads(
 		SetLookaheadsValid(true);
 		return;
 	}
+#endif
 
 	// --------------------------------------------------------------------------------
 	// copy lookaheads from previous closure elements
-	std::unordered_set<ElementPtr> already_seen;
-
 	for(auto& [elem, calc_first] : GetLookaheadDependencies())
 	{
 		// ignore invalid elements having no parent closure
 		if(!elem || !elem->GetParentClosure())
 			continue;
-
-		if(calc_first || already_seen.contains(elem))
+		if(calc_first || elem.get() == this)
 			continue;
-		already_seen.insert(elem);
 
-		if(!elem->AreLookaheadsValid() && elem.get() != this)
+		if(!elem->AreLookaheadsValid())
+		{
 			elem->ResolveLookaheads(cached_first_sets, recurse_depth + 1);
+			elem->SetLookaheadsValid(true);
+		}
 		if(!HasLookaheads())
 			m_lookaheads = Terminal::t_terminalset{};
 
@@ -484,20 +495,19 @@ void Element::ResolveLookaheads(
 
 	// --------------------------------------------------------------------------------
 	// calculate first sets from previous closure elements
-	already_seen.clear();
-
 	for(auto& [elem, calc_first] : GetLookaheadDependencies())
 	{
 		// ignore invalid elements having no parent closure
 		if(!elem || !elem->GetParentClosure())
 			continue;
-
-		if(!calc_first || already_seen.contains(elem))
+		if(!calc_first || elem.get() == this)
 			continue;
-		already_seen.insert(elem);
 
-		if(!elem->AreLookaheadsValid() && elem.get() != this)
+		if(!elem->AreLookaheadsValid())
+		{
 			elem->ResolveLookaheads(cached_first_sets, recurse_depth + 1);
+			elem->SetLookaheadsValid(true);
+		}
 		if(!HasLookaheads())
 			m_lookaheads = Terminal::t_terminalset{};
 
@@ -516,6 +526,7 @@ void Element::ResolveLookaheads(
 			if(cached_first_sets)
 			{
 				hashrhs = rhs->hash(cursor+1, la);
+
 				if(auto iter = cached_first_sets->find(hashrhs); iter != cached_first_sets->end())
 					first = &iter->second;
 			}

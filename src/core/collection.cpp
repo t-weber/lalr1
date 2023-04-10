@@ -119,6 +119,7 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_stopOnConflicts = coll.m_stopOnConflicts;
 	this->m_trySolveReduceConflicts = coll.m_trySolveReduceConflicts;
 	this->m_dontGenerateLookbacks = coll.m_dontGenerateLookbacks;
+	this->m_resolvelookaheadsretries = coll.m_resolvelookaheadsretries;
 
 	this->m_progress_observer = coll.m_progress_observer;
 
@@ -348,14 +349,29 @@ void Collection::DoTransitions()
 			element->SimplifyLookaheadDependencies();
 	}
 
-	for(const ClosurePtr& closure : GetClosures())
+	std::size_t retry = 0;
+	for(retry = 0; retry < m_resolvelookaheadsretries; ++retry)
 	{
-		std::ostringstream ostrMsg;
-		ostrMsg << "Calculating lookaheads for state " << closure->GetId() << "...";
-		ReportProgress(ostrMsg.str(), false);
-		closure->ResolveLookaheads();
+		// loop this until there's no more incomplete lookaheads in the elements
+		for(const ClosurePtr& closure : GetClosures())
+		{
+			std::ostringstream ostrMsg;
+			ostrMsg << "Calculating lookaheads for state " << closure->GetId();
+			if(retry)
+				ostrMsg << " (retry " << retry << ")";
+			ostrMsg << "...";
+			ReportProgress(ostrMsg.str(), false);
+			closure->ResolveLookaheads();
+		}
+
+		if(AreLookaheadsValid())
+			break;
 	}
-	ReportProgress("Calculated lookaheads.", true);
+
+	if(retry)
+		ReportProgress("Calculated lookaheads after " + std::to_string(retry) + " retries.", true);
+	else
+		ReportProgress("Calculated lookaheads.", true);
 
 	ReportProgress("Simplifying transitions...", false);
 	Simplify();
@@ -419,6 +435,18 @@ void Collection::ClearTransitionCaches()
 {
 	for(const ClosurePtr& closure : GetClosures())
 		closure->ClearTransitionCaches();
+}
+
+
+/**
+ * tests if all closures' elemets' lookaheads are valid
+ */
+bool Collection::AreLookaheadsValid() const
+{
+	for(const ClosurePtr& closure : GetClosures())
+		if(!closure->AreLookaheadsValid())
+			return false;
+	return true;
 }
 
 

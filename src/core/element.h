@@ -26,7 +26,7 @@
 #include <iostream>
 
 
-#define __USE_LOOKAHEAD_DEPENDENCIES_SET 0  // TODO
+#define __USE_LOOKAHEAD_DEPENDENCIES_SET  0  // TODO
 
 
 namespace lalr1 {
@@ -63,12 +63,14 @@ public:
 	// hash function for lookahead dependencies
 	struct HashLookaheadDependency
 	{
+		bool only_core = true;
 		t_hash operator()(const t_dependency& sym) const;
 	};
 
 	//comparator for lookahead dependencies
 	struct CompareLookaheadDependenciesEqual
 	{
+		bool only_core = true;
 		bool operator()(const t_dependency& dep1, const t_dependency& dep2) const;
 	};
 
@@ -84,12 +86,14 @@ public:
 	//hash function for elements
 	struct HashElement
 	{
+		bool only_core = false;
 		t_hash operator()(const ElementPtr& sym) const;
 	};
 
 	// comparator for elements
 	struct CompareElementsEqual
 	{
+		bool only_core = false;
 		bool operator()(const ElementPtr& elem1, const ElementPtr& elem2) const;
 	};
 
@@ -132,7 +136,7 @@ public:
 	void AddLookaheadDependencies(const t_dependencies& deps);
 	void AddLookaheadDependency(const t_dependency& dep);
 	void AddLookaheadDependency(const ElementPtr& elem, bool calc_first);
-	void SimplifyLookaheadDependencies();
+	void SimplifyLookaheadDependencies(bool only_referenced_elems = true);
 	void ResolveLookaheads(
 		std::unordered_map<t_hash, Terminal::t_terminalset>* cached_first_sets = nullptr,
 		std::size_t recurse_depth = 0);
@@ -151,11 +155,7 @@ public:
 	void SetReferenced(bool ref = true);
 	bool IsReferenced() const;
 
-	bool IsEqual(const Element& elem, bool only_core = false) const;
-	bool operator==(const Element& other) const;
-	bool operator!=(const Element& other) const
-	{ return !operator==(other); }
-
+	bool IsEqual(const ElementPtr& elem, bool only_core = false) const;
 	t_hash hash(bool only_core = false) const;
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Element& elem);
@@ -171,9 +171,9 @@ private:
 	t_index m_rhsidx{ 0 };                     // rule index
 	t_index m_cursor{ 0 };                     // pointing before element at this index
 
-	// forward dependencies point to the following elements,
+	// forward dependencies point to the following elements (not in the same closure),
 	t_elements m_forward_dependencies{};       // pointers to following closures' elements
-	// lookahead dependencies point to the preceding elements
+	// lookahead dependencies point to the preceding elements (may be in the same closure)
 	t_dependencies m_lookahead_dependencies{}; // lookahead dependencies
 
 	// lookahead symbols

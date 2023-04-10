@@ -107,6 +107,7 @@ public:
 	void SetStopOnConflicts(bool b = true);
 	void SetSolveReduceConflicts(bool b = true);
 	void SetDontGenerateLookbacks(bool b = true);
+	bool AreLookaheadsValid() const;
 
 	bool GetDontGenerateLookbacks() const;
 
@@ -151,6 +152,7 @@ private:
 	bool m_stopOnConflicts{true};               // stop table/code generation on conflicts
 	bool m_trySolveReduceConflicts{false};      // try to solve reduce/reduce conflicts
 	bool m_dontGenerateLookbacks{false};        // skip generation of lookback terminals
+	std::size_t m_resolvelookaheadsretries{2};  // how often to loop over the lookahead resolval
 
 	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 

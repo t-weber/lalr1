@@ -54,8 +54,12 @@ const Closure& Closure::operator=(const Closure& closure)
 {
 	this->m_id = closure.m_id;
 
-	for(const ElementPtr& elem : closure.m_elems)
-		AddElement(std::make_shared<Element>(*elem));
+	for(const ElementPtr& elem : closure.GetElements())
+	{
+		ElementPtr newelem = std::make_shared<Element>(*elem);
+		newelem->SetParentClosure(shared_from_this());
+		AddElement(newelem);
+	}
 
 	this->m_isreferenced = closure.m_isreferenced;
 
@@ -105,12 +109,10 @@ void Closure::AddElement(const ElementPtr& elem)
 		(*core_iter)->AddLookaheadDependencies(elem->GetLookaheadDependencies());
 		return;
 	}
-	else
-	{
-		// new element
-		m_elems.push_back(elem);
-		elem->SetParentClosure(shared_from_this());
-	}
+
+	// insert new element
+	elem->SetParentClosure(shared_from_this());
+	m_elems.push_back(elem);
 
 	// if the cursor is before a non-terminal, add the rule as element
 	const WordPtr& rhs = elem->GetRhs();
@@ -124,6 +126,7 @@ void Closure::AddElement(const ElementPtr& elem)
 		for(t_index nonterm_ruleidx=0; nonterm_ruleidx<nonterm->NumRules(); ++nonterm_ruleidx)
 		{
 			ElementPtr newelem = std::make_shared<Element>(nonterm, nonterm_ruleidx, 0);
+			newelem->SetParentClosure(shared_from_this());
 			newelem->AddLookaheadDependency(elem, true);
 			AddElement(newelem);
 		}
@@ -143,7 +146,7 @@ typename Closure::t_elements::const_iterator Closure::FindElement(
 	if(auto iter = std::find_if(m_elems.begin(), m_elems.end(),
 		[&elem, only_core](const ElementPtr& theelem) -> bool
 		{
-			return theelem->IsEqual(*elem, only_core);
+			return theelem->IsEqual(elem, only_core);
 		}); iter != m_elems.end())
 	{
 		return iter;
@@ -232,6 +235,18 @@ void Closure::AddLookaheadDependencies(const ClosurePtr& closure)
 
 
 /**
+ * tests if all elemets' lookaheads are valid
+ */
+bool Closure::AreLookaheadsValid() const
+{
+	for(const ElementPtr& elem : GetElements())
+		if(!elem->AreLookaheadsValid())
+			return false;
+	return true;
+}
+
+
+/**
  * resolves the lookaheads for all elements in the closure
  */
 void Closure::ResolveLookaheads()
@@ -273,6 +288,7 @@ Closure::DoTransition(const SymbolPtr& transsym) const
 		// copy element and perform transition
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
 		newelem->AdvanceCursor();
+		newelem->SetParentClosure(new_closure);
 		newelem->AddLookaheadDependency(theelem, false);
 		new_closure->AddElement(newelem);
 	}
