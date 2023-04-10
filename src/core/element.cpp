@@ -33,7 +33,9 @@ Element::Element(const NonTerminalPtr& lhs, t_index rhsidx, t_index cursor,
 	const Terminal::t_terminalset& la)
 	: Element{lhs, rhsidx, cursor}
 {
+	// directly set lookaheads (for example for start symbol) -> always valid
 	m_lookaheads = la;
+	m_lookaheads_valid = LookaheadValidity::ALWAYS_VALID;
 }
 
 
@@ -132,10 +134,19 @@ bool Element::IsReferenced() const
  */
 bool Element::AddLookahead(const TerminalPtr& la)
 {
+	if(!m_lookaheads)
+		m_lookaheads = Terminal::t_terminalset{};
+
 	auto [iter, inserted] = m_lookaheads->insert(la);
 	if(inserted)
 		m_hash = std::nullopt;
 	return inserted;
+}
+
+
+const Element::t_elements& Element::GetForwardDependencies() const
+{
+	return m_forward_dependencies;
 }
 
 
@@ -144,13 +155,14 @@ bool Element::AddLookahead(const TerminalPtr& la)
  */
 void Element::InvalidateForwardLookaheads()
 {
-	for(const ElementPtr& elem : m_forward_dependencies)
+	for(const ElementPtr& elem : GetForwardDependencies())
 	{
-		if(elem->AreLookaheadsValid())
-		{
-			elem->SetLookaheadsValid(false);
-			elem->InvalidateForwardLookaheads();
-		}
+		// lookaheads are already invalid
+		if(!elem->AreLookaheadsValid())
+			continue;
+
+		elem->SetLookaheadsValid(false);
+		elem->InvalidateForwardLookaheads();
 	}
 }
 
@@ -160,7 +172,7 @@ void Element::InvalidateForwardLookaheads()
  */
 bool Element::AreLookaheadsValid() const
 {
-	return m_lookaheads_valid && HasLookaheads();
+	return m_lookaheads_valid != LookaheadValidity::INVALID && HasLookaheads();
 }
 
 
@@ -169,7 +181,10 @@ bool Element::AreLookaheadsValid() const
  */
 void Element::SetLookaheadsValid(bool valid)
 {
-	m_lookaheads_valid = valid;
+	if(m_lookaheads_valid == LookaheadValidity::ALWAYS_VALID)
+		return;
+
+	m_lookaheads_valid = valid ? LookaheadValidity::VALID : LookaheadValidity::INVALID;
 }
 
 
@@ -240,7 +255,6 @@ bool Element::CompareElementsEqual::operator()(
 
 t_hash Element::HashLookaheadDependency::operator()(const t_dependency& dep) const
 {
-
 	const ElementPtr& elem = dep.first;
 	const ClosurePtr& parent = elem->GetParentClosure();
 
@@ -341,20 +355,34 @@ void Element::SimplifyLookaheadDependencies()
 	for(auto iter = m_lookahead_dependencies.begin(); iter != m_lookahead_dependencies.end(); )
 	{
 		const auto& [elem, calc_first] = *iter;
-		if(!elem || !elem->GetParentClosure() || !elem->IsReferenced())
+		if(!elem || !elem->GetParentClosure()
+			// points to the same element
+			|| (elem->GetParentClosure() == GetParentClosure() && elem->hash(true) == hash(true))
+			|| !elem->IsReferenced())  // element not part of the final collection
+		{
 			iter = m_lookahead_dependencies.erase(iter);
+		}
 		else
+		{
 			std::advance(iter, 1);
+		}
 	}
 
 	// simplify forward dependencies
 	for(auto iter = m_forward_dependencies.begin(); iter != m_forward_dependencies.end(); )
 	{
 		const auto& elem = *iter;
-		if(!elem || !elem->GetParentClosure() || !elem->IsReferenced())
+		if(!elem || !elem->GetParentClosure()
+			// points to the same element
+			|| (elem->GetParentClosure() == GetParentClosure() && elem->hash(true) == hash(true))
+			|| !elem->IsReferenced())  // element not part of the final collection
+		{
 			iter = m_forward_dependencies.erase(iter);
+		}
 		else
+		{
 			std::advance(iter, 1);
+		}
 	}
 }
 
@@ -404,22 +432,27 @@ void Element::ResolveLookaheads(
 	std::unordered_map<t_hash, Terminal::t_terminalset>* cached_first_sets,
 	std::size_t recurse_depth)
 {
-	if(m_lookahead_dependencies.size() == 0)
-	{
-		SetLookaheadsValid(true);
+	if(AreLookaheadsValid())
 		return;
-	}
+
+	// lookaheads already valid since there are no dependencies
+	if(GetLookaheadDependencies().size() == 0)
+		return;
 
 	// already resolved?
 	// always recalculate if recursive depth is zero, because the FIRST
 	// set might be incomplete in case of loops in the production rules
 	if(recurse_depth && HasLookaheads())
+	{
+		SetLookaheadsValid(true);
 		return;
+	}
 
+	// --------------------------------------------------------------------------------
 	// copy lookaheads from previous closure elements
 	std::unordered_set<ElementPtr> already_seen;
 
-	for(auto& [elem, calc_first] : m_lookahead_dependencies)
+	for(auto& [elem, calc_first] : GetLookaheadDependencies())
 	{
 		// ignore invalid elements having no parent closure
 		if(!elem || !elem->GetParentClosure())
@@ -446,13 +479,14 @@ void Element::ResolveLookaheads(
 		if(invalidate_forwards)
 			InvalidateForwardLookaheads();
 		SetLookaheadsValid(true);
-	}  // m_lookahead_dependencies
+	}  // lookahead dependencies
+	// --------------------------------------------------------------------------------
 
-
+	// --------------------------------------------------------------------------------
 	// calculate first sets from previous closure elements
 	already_seen.clear();
 
-	for(auto& [elem, calc_first] : m_lookahead_dependencies)
+	for(auto& [elem, calc_first] : GetLookaheadDependencies())
 	{
 		// ignore invalid elements having no parent closure
 		if(!elem || !elem->GetParentClosure())
@@ -502,9 +536,6 @@ void Element::ResolveLookaheads(
 				if(first_elem->IsEps())
 					continue;
 
-				if(!HasLookaheads())
-					m_lookaheads = Terminal::t_terminalset{};
-
 				// this elemnt's lookaheads have changed, invalidate the dependent ones
 				if(AddLookahead(first_elem))
 					invalidate_forwards = true;
@@ -514,7 +545,8 @@ void Element::ResolveLookaheads(
 		if(invalidate_forwards)
 			InvalidateForwardLookaheads();
 		SetLookaheadsValid(true);
-	}  // m_lookahead_dependencies
+	}  // lookahead dependencies
+	// --------------------------------------------------------------------------------
 }
 
 
@@ -656,9 +688,12 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		for(const TerminalPtr& la : elem.GetLookaheads())
 			ostr << la->GetStrId() << " ";
 
+		if(!elem.AreLookaheadsValid())
+			ostr << "<possibly incomplete> ";
+
 		// semantic rule
 		if(std::optional<t_semantic_id> rule = elem.GetSemanticRule(); rule)
-			ostr << " " << g_options.GetSeparatorChar() << " rule " << *rule << " ";
+			ostr << g_options.GetSeparatorChar() << " rule " << *rule << " ";
 	}
 	else
 	{

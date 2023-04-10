@@ -136,10 +136,12 @@ void TableGen::CreateTerminalPrecedences()
 
 
 /**
- * create lalr(1) parse tables to C++ code
+ * creates lalr(1) parse tables for exporting
  */
 bool TableGen::CreateParseTables()
 {
+	m_collection->ReportProgress("Creating parse tables...", false);
+
 	CreateTableIndices();
 	CreateTerminalPrecedences();
 
@@ -405,6 +407,10 @@ bool TableGen::CreateParseTables()
 		++state;
 	}
 
+	if(ok)
+		m_collection->ReportProgress("Created parse tables.", true);
+	else
+		m_collection->ReportProgress("Failed to create parse tables.", true);
 	return ok;
 }
 

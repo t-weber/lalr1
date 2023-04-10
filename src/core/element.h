@@ -39,6 +39,14 @@ using ClosurePtr = std::shared_ptr<Closure>;
 
 
 
+enum class LookaheadValidity
+{
+	INVALID,
+	VALID,
+	ALWAYS_VALID,
+};
+
+
 /**
  * LALR(1) element
  */
@@ -118,6 +126,7 @@ public:
 	bool AreLookaheadsValid() const;
 
 	void AddForwardDependency(const ElementPtr& elem);
+	const t_elements& GetForwardDependencies() const;
 
 	const t_dependencies& GetLookaheadDependencies() const;
 	void AddLookaheadDependencies(const t_dependencies& deps);
@@ -169,7 +178,7 @@ private:
 
 	// lookahead symbols
 	mutable std::optional<Terminal::t_terminalset> m_lookaheads{};
-	bool m_lookaheads_valid{ false };
+	LookaheadValidity m_lookaheads_valid{ LookaheadValidity::INVALID };
 
 	ClosurePtr m_parent{ nullptr };            // parent closure this element is part of
 	bool m_isreferenced{ false };              // is this element in a closure that is still in use?

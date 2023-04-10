@@ -293,7 +293,7 @@ void Collection::DoTransitions(const ClosurePtr& closure_from,
 				<< closure_from->GetId() << " " << g_options.GetArrowChar() << " " << closure_to->GetId()
 				<< ". Total closures: " << m_closures.size()
 				<< ", total transitions: " << m_transitions.size()
-				<< ".";
+				<< "...";
 			ReportProgress(ostrMsg.str(), false);
 		}
 
@@ -337,6 +337,7 @@ void Collection::DoTransitions()
 	ClearTransitionCaches();
 	ReportProgress("Calculated transitions.", true);
 
+	ReportProgress("Calculating element graphs...", false);
 	MapElementsToClosures();
 	MapElementsToFollowingElements();
 	ReportProgress("Calculated element graphs.", true);
@@ -350,12 +351,13 @@ void Collection::DoTransitions()
 	for(const ClosurePtr& closure : GetClosures())
 	{
 		std::ostringstream ostrMsg;
-		ostrMsg << "Calculating lookaheads for state " << closure->GetId() << ".";
+		ostrMsg << "Calculating lookaheads for state " << closure->GetId() << "...";
 		ReportProgress(ostrMsg.str(), false);
 		closure->ResolveLookaheads();
 	}
 	ReportProgress("Calculated lookaheads.", true);
 
+	ReportProgress("Simplifying transitions...", false);
 	Simplify();
 	//MapElementsToClosures();
 	ReportProgress("Simplified transitions.", true);

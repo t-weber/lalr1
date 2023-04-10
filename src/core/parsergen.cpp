@@ -764,6 +764,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 		const t_state_id closure_id = closure->GetId();
 		const Closure::t_elements& elems = closure->GetElements();
 
+		// create the name of the closure function
 		if(GetUseStateNames() && elems.size())
 		{
 			// name the state function
@@ -801,6 +802,8 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 	{
 		const t_state_id closure_id = closure->GetId();
 		const std::string& closure_name = closure_names[closure_id];
+
+		m_collection->ReportProgress("Creating state \"" + closure_name + "\"...", false);
 
 		std::optional<Terminal::t_terminalset> lookbacks;
 
@@ -1258,6 +1261,7 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 		ostr_h << "\tvoid " << closure_name << "();\n";
 	}  // closure
 
+	m_collection->ReportProgress("Created all state functions.", true);
 
 	// write output files
 	std::string incl = "#include \"" + filename_h + "\"";
