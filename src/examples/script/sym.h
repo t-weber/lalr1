@@ -79,7 +79,7 @@ public:
 	std::streampos AddConst(const t_constval& constval);
 
 	// get the stream's bytes
-	std::pair<std::streampos, std::shared_ptr<std::uint8_t[]>> GetBytes();
+	std::pair<std::streampos, std::shared_ptr<std::uint8_t/*[]*/>> GetBytes();
 
 
 private:

@@ -158,14 +158,16 @@ std::streampos ConstTab::AddConst(const t_constval& constval)
 /**
  * get the stream's bytes
  */
-std::pair<std::streampos, std::shared_ptr<std::uint8_t[]>> ConstTab::GetBytes()
+std::pair<std::streampos, std::shared_ptr<std::uint8_t/*[]*/>> ConstTab::GetBytes()
 {
 	std::streampos size = m_ostr.tellp();
 	if(!size)
 		return std::make_pair(0, nullptr);
 
 	//auto buffer = std::make_shared<std::uint8_t[]>(size);
-	auto buffer = std::shared_ptr<std::uint8_t[]>(new std::uint8_t[size]);
+	auto buffer = std::shared_ptr<std::uint8_t/*[]*/>(
+		/*alloc buffer*/ new std::uint8_t[size],
+		/*deleter*/ [](std::uint8_t* buf) -> void { if(buf) delete[] buf; });
 	m_ostr.seekg(0, std::ios_base::beg);
 
 	m_ostr.read(reinterpret_cast<char*>(buffer.get()), size);
