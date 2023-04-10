@@ -23,8 +23,7 @@
 #include <boost/functional/hash.hpp>
 
 
-#define __PRINT_LOOKAHEAD_DEPENDENCIES  0
-#define __SKIP_RECURSIVE_LOOKAHEADS     0
+#define __CHECK_INVALID_LOOKAHEAD_DEPENDENCIES  0
 
 
 namespace lalr1 {
@@ -348,6 +347,8 @@ const Element::t_dependencies& Element::GetLookaheadDependencies() const
 void Element::SimplifyLookaheadDependencies(bool only_referenced_elems)
 {
 	// simplify backward dependencies
+	std::unordered_set<ElementPtr> already_seen_cpy, already_seen_first;
+
 	for(auto iter = m_lookahead_dependencies.begin(); iter != m_lookahead_dependencies.end(); )
 	{
 		const auto& [elem, calc_first] = *iter;
@@ -358,22 +359,45 @@ void Element::SimplifyLookaheadDependencies(bool only_referenced_elems)
 		if(only_referenced_elems)
 			remove = remove || !elem->IsReferenced();  // element not part of the final collection
 
+		if(!remove)
+		{
+			// check if the same pointer has already been inserted
+			std::unordered_set<ElementPtr>* already_seen =
+				calc_first ? &already_seen_first : &already_seen_cpy;
+			if(already_seen->contains(elem))
+				remove = true;
+			else
+				already_seen->insert(elem);
+		}
+
 		if(remove)
 			iter = m_lookahead_dependencies.erase(iter);
 		else
 			std::advance(iter, 1);
 	}
 
+
 	// simplify forward dependencies
+	std::unordered_set<ElementPtr> already_seen;
+
 	for(auto iter = m_forward_dependencies.begin(); iter != m_forward_dependencies.end(); )
 	{
-		const auto& elem = *iter;
+		const ElementPtr& elem = *iter;
 
 		bool remove = !elem || !elem->GetParentClosure()
 			// points to the same element
 			|| (elem->GetParentClosure() == GetParentClosure() && elem->hash(true) == hash(true));
 		if(only_referenced_elems)
 			remove = remove || !elem->IsReferenced();  // element not part of the final collection
+
+		if(!remove)
+		{
+			// check if the same pointer has already been inserted
+			if(already_seen.contains(elem))
+				remove = true;
+			else
+				already_seen.insert(elem);
+		}
 
 		if(remove)
 			iter = m_forward_dependencies.erase(iter);
@@ -402,16 +426,8 @@ void Element::AddLookaheadDependency(const Element::t_dependency& dep)
 	if(!dep.first || !dep.first->GetParentClosure())
 		return;
 
-	bool inserted = false;
-
-#if __USE_LOOKAHEAD_DEPENDENCIES_SET != 0
-	// remove elements with a now dangling parent pointer
-	// (because these have invalid hashes now)
-	SimplifyLookaheadDependencies(false);
-
-	std::tie(std::ignore, inserted) = m_lookahead_dependencies.insert(dep);
-#else
-	// do we already have this dependency?
+#if __CHECK_INVALID_LOOKAHEAD_DEPENDENCIES != 0
+	// check if we already have this dependency
 	Element::HashLookaheadDependency hasher;
 	t_hash dep_hash = hasher(dep);
 	for(const auto& olddep : GetLookaheadDependencies())
@@ -421,16 +437,10 @@ void Element::AddLookaheadDependency(const Element::t_dependency& dep)
 		if(hasher(olddep) == dep_hash)
 			return;
 	}
-
-	m_lookahead_dependencies.push_back(dep);
-	inserted = true;
 #endif
 
-	if(inserted)
-	{
-		m_hash = std::nullopt;
-		//m_lookaheads = std::nullopt;
-	}
+	m_lookahead_dependencies.push_back(dep);
+	m_hash = std::nullopt;
 }
 
 
@@ -448,17 +458,6 @@ void Element::ResolveLookaheads(
 	// lookaheads already valid since there are no dependencies
 	if(GetLookaheadDependencies().size() == 0)
 		return;
-
-#if __SKIP_RECURSIVE_LOOKAHEADS != 0
-	// already resolved?
-	// always recalculate if recursive depth is zero, because the FIRST
-	// set might be incomplete in case of loops in the production rules
-	if(recurse_depth && HasLookaheads())
-	{
-		SetLookaheadsValid(true);
-		return;
-	}
-#endif
 
 	// --------------------------------------------------------------------------------
 	// copy lookaheads from previous closure elements
@@ -653,6 +652,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	const std::string& jump_col = g_options.GetTermJumpColour();
 	const std::string& no_col = g_options.GetTermNoColour();
 	const bool use_colour = g_options.GetUseColour();
+	const bool print_la_deps = g_options.GetPrintLookaheadDepenencies();
 
 	const NonTerminalPtr& lhs = elem.GetLhs();
 	const WordPtr& rhs = elem.GetRhs();
@@ -715,22 +715,23 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	if(use_colour)
 		ostr << no_col;
 
-#if __PRINT_LOOKAHEAD_DEPENDENCIES != 0
-	// print lookahead dependencies
-	if(const auto& deps = elem.GetLookaheadDependencies(); deps.size())
+	if(print_la_deps)
 	{
-		ostr << "\n\tlookahead dependencies:\n";
-		for(const Element::t_dependency& dep : deps)
+		// print lookahead dependencies
+		if(const auto& deps = elem.GetLookaheadDependencies(); deps.size())
 		{
-			Element elem_cpy = *dep.first;
-			elem_cpy.ClearDependencies();  // to prevent recursive printing of dependencies
-			ostr << "\t\telement: " << elem_cpy;
-			if(elem_cpy.GetParentClosure())
-				ostr << ", closure " << elem_cpy.GetParentClosure()->GetId();
-			ostr << ", calc_first: " << std::boolalpha << dep.second << "\n";
+			ostr << "\n\tlookahead dependencies:\n";
+			for(const Element::t_dependency& dep : deps)
+			{
+				Element elem_cpy = *dep.first;
+				elem_cpy.ClearDependencies();  // to prevent recursive printing of dependencies
+				ostr << "\t\telement: " << elem_cpy;
+				if(elem_cpy.GetParentClosure())
+					ostr << ", closure " << elem_cpy.GetParentClosure()->GetId();
+				ostr << ", calc_first: " << std::boolalpha << dep.second << "\n";
+			}
 		}
 	}
-#endif
 
 	return ostr;
 }

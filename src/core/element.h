@@ -26,9 +26,6 @@
 #include <iostream>
 
 
-#define __USE_LOOKAHEAD_DEPENDENCIES_SET  0  // TODO
-
-
 namespace lalr1 {
 
 class Element;
@@ -74,12 +71,10 @@ public:
 		bool operator()(const t_dependency& dep1, const t_dependency& dep2) const;
 	};
 
-#if __USE_LOOKAHEAD_DEPENDENCIES_SET != 0
-	using t_dependencies = std::unordered_set<t_dependency,
-		Element::HashLookaheadDependency, Element::CompareLookaheadDependenciesEqual>;
-#else
+	// can't use a set because during transition calculation the hashes still change
+	//using t_dependencies = std::unordered_set<t_dependency,
+	//	Element::HashLookaheadDependency, Element::CompareLookaheadDependenciesEqual>;
 	using t_dependencies = std::list<t_dependency>;
-#endif
 	// --------------------------------------------------------------------------------
 
 	// --------------------------------------------------------------------------------

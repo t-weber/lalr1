@@ -139,7 +139,7 @@ void Collection::SetProgressObserver(std::function<void(const std::string&, bool
 }
 
 
-void Collection::ReportProgress(const std::string& msg, bool finished)
+void Collection::ReportProgress(const std::string& msg, bool finished) const
 {
 	if(m_progress_observer)
 		m_progress_observer(msg, finished);
@@ -939,17 +939,34 @@ bool Collection::SaveGraph(const std::string& file, bool write_full_coll, bool w
 	std::string outfile_graph = file + ".graph";
 	std::string outfile_svg = file + ".svg";
 
+	ReportProgress("Saving graph \"" + outfile_graph + "\".", false);
+
 	std::ofstream ofstr{outfile_graph};
 	if(!ofstr)
 		return false;
 
-	if(!SaveGraph(ofstr, write_full_coll, write_elem_wise))
-		return false;
-
+	bool saved = SaveGraph(ofstr, write_full_coll, write_elem_wise);
 	ofstr.flush();
 	ofstr.close();
 
-	return std::system(("dot -Tsvg " + outfile_graph + " -o " + outfile_svg).c_str()) == 0;
+	if(saved)
+	{
+		ReportProgress("Saved graph \"" + outfile_graph + "\".", true);
+	}
+	else
+	{
+		ReportProgress("Failed saving graph \"" + outfile_graph + "\".", true);
+		return false;
+	}
+
+	ReportProgress("Saving graphic \"" + outfile_svg + "\".", false);
+	int ret = std::system(("dot -Tsvg " + outfile_graph + " -o " + outfile_svg).c_str());
+	if(ret == 0)
+		ReportProgress("Saved graphic \"" + outfile_svg + "\".", true);
+	else
+		ReportProgress("Failed saving graphic \"" + outfile_svg + "\".", true);
+
+	return ret == 0;
 }
 
 

@@ -199,6 +199,8 @@ bool TableGen::CreateParseTables()
 
 
 	// calculate shift and jump table entries
+	m_collection->ReportProgress("Calculating shift and jump entries...", false);
+
 	for(const Collection::t_transition& transition : transitions)
 	{
 		const SymbolPtr& symTrans = std::get<2>(transition);
@@ -256,6 +258,8 @@ bool TableGen::CreateParseTables()
 
 
 	// calculate reduce table entries
+	m_collection->ReportProgress("Calculating reduce entries...", false);
+
 	for(const ClosurePtr& closure : closures)
 	{
 		for(const ElementPtr& elem : closure->GetElements())
@@ -300,6 +304,8 @@ bool TableGen::CreateParseTables()
 
 
 	// lalr(1) tables
+	m_collection->ReportProgress("Creating LALR(1) tables...", false);
+
 	m_tabActionShift = t_table{action_shift,
 		ERROR_VAL, ACCEPT_VAL, ERROR_VAL, numStates, numTerminals};
 	m_tabActionReduce = t_table{action_reduce,
@@ -321,6 +327,8 @@ bool TableGen::CreateParseTables()
 
 
 	// check for and try to resolve shift/reduce conflicts
+	m_collection->ReportProgress("Solving shift/reduce conflicts...", false);
+
 	t_state_id state = 0;
 	const bool no_lookbacks_avail = m_collection->GetDontGenerateLookbacks();
 	for(const ClosurePtr& closure : closures)
@@ -410,7 +418,7 @@ bool TableGen::CreateParseTables()
 	if(ok)
 		m_collection->ReportProgress("Created parse tables.", true);
 	else
-		m_collection->ReportProgress("Failed to create parse tables.", true);
+		m_collection->ReportProgress("Failed creating parse tables.", true);
 	return ok;
 }
 

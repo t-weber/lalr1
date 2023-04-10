@@ -22,6 +22,9 @@ public:
 
 	void SetUseAsciiChars(bool b = true);
 
+	void SetPrintLookaheadDependencies(bool b = true);
+	bool GetPrintLookaheadDepenencies() const;
+
 	const std::string& GetShiftColour() const;
 	const std::string& GetReduceColour() const;
 	const std::string& GetJumpColour() const;
@@ -43,6 +46,7 @@ private:
 	// flags
 	bool m_useColour{true};
 	bool m_useAsciiChars{false};
+	bool m_printLookaheadDependencies{false};
 
 	// colours
 	std::string m_shift_col{"#ff0000"};

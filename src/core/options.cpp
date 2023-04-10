@@ -23,6 +23,16 @@ void Options::SetUseColour(bool b)
 
 
 /**
+ * print elements' lookahead dependencies
+ */
+bool Options::GetPrintLookaheadDepenencies() const
+{ return m_printLookaheadDependencies; }
+
+void Options::SetPrintLookaheadDependencies(bool b)
+{ m_printLookaheadDependencies = b; }
+
+
+/**
  * only use ascii characters
  */
 void Options::SetUseAsciiChars(bool b)

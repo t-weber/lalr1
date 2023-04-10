@@ -112,7 +112,7 @@ public:
 	bool GetDontGenerateLookbacks() const;
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
-	void ReportProgress(const std::string& msg, bool finished = false);
+	void ReportProgress(const std::string& msg, bool finished = false) const;
 
 	bool SolveReduceConflicts();
 	bool SolveShiftReduceConflict(
