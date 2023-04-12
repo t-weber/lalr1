@@ -8,6 +8,7 @@
 #include "core/collection.h"
 #include "core/tablegen.h"
 #include "core/parsergen.h"
+#include "core/options.h"
 #include "script/lexer.h"
 #include "script/ast.h"
 #include "script/ast_printer.h"
@@ -25,6 +26,7 @@
 #define DEBUG_WRITEGRAPH  1
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
+#define PRINT_DEPS        0
 
 
 enum : std::size_t
@@ -369,6 +371,7 @@ int main()
 	std::ios_base::sync_with_stdio(false);
 
 #ifdef CREATE_PARSER
+	lalr1::g_options.SetPrintLookaheadDependencies(PRINT_DEPS);
 	create_grammar(false);
 	lr1_create_parser();
 #endif

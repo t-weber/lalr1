@@ -119,7 +119,7 @@ const Collection& Collection::operator=(const Collection& coll)
 	this->m_stopOnConflicts = coll.m_stopOnConflicts;
 	this->m_trySolveReduceConflicts = coll.m_trySolveReduceConflicts;
 	this->m_dontGenerateLookbacks = coll.m_dontGenerateLookbacks;
-	this->m_resolvelookaheadsretries = coll.m_resolvelookaheadsretries;
+	this->m_resolvelookaheadspasses = coll.m_resolvelookaheadspasses;
 
 	this->m_progress_observer = coll.m_progress_observer;
 
@@ -349,29 +349,28 @@ void Collection::DoTransitions()
 			element->SimplifyLookaheadDependencies();
 	}
 
-	std::size_t retry = 0;
-	for(retry = 0; retry < m_resolvelookaheadsretries; ++retry)
+	std::size_t pass = 0;
+	bool lookaheads_valid = false;
+	for(pass = 0; pass < m_resolvelookaheadspasses; ++pass)
 	{
 		// loop this until there's no more incomplete lookaheads in the elements
 		for(const ClosurePtr& closure : GetClosures())
 		{
 			std::ostringstream ostrMsg;
 			ostrMsg << "Calculating lookaheads for state " << closure->GetId();
-			if(retry)
-				ostrMsg << " (retry " << retry << ")";
+			ostrMsg << " (pass " << (pass+1) << ")";
 			ostrMsg << "...";
 			ReportProgress(ostrMsg.str(), false);
 			closure->ResolveLookaheads();
 		}
 
-		if(AreLookaheadsValid())
+		if(lookaheads_valid = AreLookaheadsValid(); lookaheads_valid)
 			break;
 	}
 
-	if(retry)
-		ReportProgress("Calculated lookaheads after " + std::to_string(retry) + " retries.", true);
-	else
-		ReportProgress("Calculated lookaheads.", true);
+	ReportProgress("Calculated lookaheads using " + std::to_string(pass+1) + " passes.", true);
+	if(!lookaheads_valid)
+		ReportProgress("Warning: Lookaheads may still be incomplete.", true);
 
 	ReportProgress("Simplifying transitions...", false);
 	Simplify();
@@ -703,6 +702,15 @@ void Collection::SetDontGenerateLookbacks(bool b)
 bool Collection::GetDontGenerateLookbacks() const
 {
 	return m_dontGenerateLookbacks;
+}
+
+
+/**
+ * how often to pass over the collection to resolve lookaheads
+ */
+void Collection::SetMaxResolverPasses(std::size_t passes)
+{
+	m_resolvelookaheadspasses = passes;
 }
 
 

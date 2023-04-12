@@ -32,8 +32,9 @@ using namespace lalr1;
 
 static bool lr1_create_parser(
 	bool create_ascent_parser = true, bool create_tables = false,
-	bool verbose = false, bool gen_debug_code = true, bool gen_error_code = true,
-	bool write_graph = false)
+	bool verbose = false,
+	bool gen_debug_code = true, bool gen_comments = true,
+	bool gen_error_code = true, bool write_graph = false)
 {
 	try
 	{
@@ -110,6 +111,7 @@ static bool lr1_create_parser(
 
 			ParserGen parsergen(collsLALR);
 			parsergen.SetGenDebugCode(gen_debug_code);
+			parsergen.SetGenComments(gen_comments);
 			parsergen.SetGenErrorCode(gen_error_code);
 			parsergen.SetAcceptingRule(0);
 			parsergen.SetUseStateNames(false);
@@ -160,9 +162,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 	bool create_tables = false;
 	bool verbose = false;
 	bool no_debug_code = false;
+	bool no_comments = false;
 	bool no_error_code = false;
 	bool colours = false;
 	bool ascii = false;
+	bool la_deps = false;
 	bool write_graph = false;
 	bool name_states = false;
 	bool show_help = false;
@@ -174,9 +178,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 		("graph,g", args::bool_switch(&write_graph), "write a graph of the parser")
 		("verbose,v", args::bool_switch(&verbose), "enable verbose output for parser generation")
 		("nodebug,d", args::bool_switch(&no_debug_code), "disable generation of debug code for parser")
+		("nocomments,k", args::bool_switch(&no_comments), "disable generation of comments for parser")
 		("noerror,e", args::bool_switch(&no_error_code), "disable generation of error handling code for parser")
 		("colours,c", args::bool_switch(&colours), "enable colours in output")
 		("ascii,o", args::bool_switch(&ascii), "only use ascii characters in output")
+		("lookaheads,l", args::bool_switch(&la_deps), "print lookahead dependencies")
 		("names,n", args::bool_switch(&name_states), "name state functions")
 		("help,h", args::bool_switch(&show_help), "show help");
 
@@ -204,6 +210,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 
 	g_options.SetUseColour(colours);
 	g_options.SetUseAsciiChars(ascii);
+	g_options.SetPrintLookaheadDependencies(la_deps);
 
 	if(!create_asc && !create_tables)
 	{
@@ -218,7 +225,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 	t_timepoint start_parsergen = t_clock::now();
 
 	if(lr1_create_parser(create_asc, create_tables,
-		verbose, !no_debug_code, !no_error_code,
+		verbose, !no_debug_code, !no_comments, !no_error_code,
 		write_graph))
 	{
 		auto [run_time, time_unit] = get_elapsed_time<

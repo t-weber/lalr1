@@ -32,6 +32,16 @@ bool GenOptions::GetGenDebugCode() const
 
 
 /**
+ * generate comment strings in parser output
+ */
+void GenOptions::SetGenComments(bool b)
+{ m_genComments = b; }
+
+bool GenOptions::GetGenComments() const
+{ return m_genComments; }
+
+
+/**
  * generate error handling code in parser output
  */
 void GenOptions::SetGenErrorCode(bool b)

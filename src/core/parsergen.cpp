@@ -807,57 +807,60 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 
 		std::optional<Terminal::t_terminalset> lookbacks;
 
-		// write comment
-		ostr_cpp << "/**\n" << *closure;
-
-		if(Terminal::t_terminalset lookbacks =
-			m_collection->GetLookbackTerminals(closure);
-			lookbacks.size())
+		if(GetGenComments())
 		{
-			ostr_cpp << "Lookback terminals:";
+			// write comment
+			ostr_cpp << "/**\n" << *closure;
 
-			for(const TerminalPtr& lookback : lookbacks)
-				ostr_cpp << " " << lookback->GetStrId();
-			ostr_cpp << "\n";
-		}
-
-		if(t_transitions terminal_transitions =
-			m_collection->GetTransitions(closure, true);
-			terminal_transitions.size())
-		{
-			ostr_cpp << "Terminal transitions:\n";
-
-			for(const t_transition& transition : terminal_transitions)
+			if(Terminal::t_terminalset lookbacks =
+				m_collection->GetLookbackTerminals(closure);
+				lookbacks.size())
 			{
-				const ClosurePtr& closure_to = std::get<1>(transition);
-				const SymbolPtr& symTrans = std::get<2>(transition);
+				ostr_cpp << "Lookback terminals:";
 
-				ostr_cpp << "\t- to state " << closure_to->GetId()
-					<< " via symbol " << symTrans->GetStrId()
-					<< " (id = " << symTrans->GetId() << ")"
-					<< "\n";
+				for(const TerminalPtr& lookback : lookbacks)
+					ostr_cpp << " " << lookback->GetStrId();
+				ostr_cpp << "\n";
 			}
-		}
 
-		if(t_transitions nonterminal_transitions =
-			m_collection->GetTransitions(closure, false);
-			nonterminal_transitions.size())
-		{
-			ostr_cpp << "Non-Terminal transitions:\n";
-
-			for(const t_transition& transition : nonterminal_transitions)
+			if(t_transitions terminal_transitions =
+				m_collection->GetTransitions(closure, true);
+				terminal_transitions.size())
 			{
-				const ClosurePtr& closure_to = std::get<1>(transition);
-				const SymbolPtr& symTrans = std::get<2>(transition);
+				ostr_cpp << "Terminal transitions:\n";
 
-				ostr_cpp << "\t- to state " << closure_to->GetId()
-					<< " via symbol " << symTrans->GetStrId()
-					<< " (id = " << symTrans->GetId() << ")"
-					<< "\n";
+				for(const t_transition& transition : terminal_transitions)
+				{
+					const ClosurePtr& closure_to = std::get<1>(transition);
+					const SymbolPtr& symTrans = std::get<2>(transition);
+
+					ostr_cpp << "\t- to state " << closure_to->GetId()
+						<< " via symbol " << symTrans->GetStrId()
+						<< " (id = " << symTrans->GetId() << ")"
+						<< "\n";
+				}
 			}
-		}
 
-		ostr_cpp << "*/\n";  // end comment
+			if(t_transitions nonterminal_transitions =
+				m_collection->GetTransitions(closure, false);
+				nonterminal_transitions.size())
+			{
+				ostr_cpp << "Non-Terminal transitions:\n";
+
+				for(const t_transition& transition : nonterminal_transitions)
+				{
+					const ClosurePtr& closure_to = std::get<1>(transition);
+					const SymbolPtr& symTrans = std::get<2>(transition);
+
+					ostr_cpp << "\t- to state " << closure_to->GetId()
+						<< " via symbol " << symTrans->GetStrId()
+						<< " (id = " << symTrans->GetId() << ")"
+						<< "\n";
+				}
+			}
+
+			ostr_cpp << "*/\n";  // end comment
+		}
 
 
 		// write closure function

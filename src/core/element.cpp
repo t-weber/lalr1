@@ -164,20 +164,17 @@ void Element::InvalidateForwardLookaheads()
 			continue;
 
 		// don't invalidate if all the dependencies are valid
-		bool all_deps_valid = true;
+		/*bool all_deps_valid = true;
 		for(const auto& dep : GetLookaheadDependencies())
 		{
 			if(dep.first->AreLookaheadsValid())
 				continue;
 			all_deps_valid = false;
 			break;
-		}
+		}*/
 
-		if(!all_deps_valid)
-		{
-			elem->SetLookaheadsValid(false);
-			elem->InvalidateForwardLookaheads();
-		}
+		elem->SetLookaheadsValid(false);
+		elem->InvalidateForwardLookaheads();
 	}
 }
 
@@ -453,11 +450,19 @@ void Element::ResolveLookaheads(
 {
 	if(AreLookaheadsValid())
 		return;
-	SetLookaheadsValid(true);
 
 	// lookaheads already valid since there are no dependencies
 	if(GetLookaheadDependencies().size() == 0)
 		return;
+
+	// - don't recurse further if we're already in a recursion,
+	//   non-resolved dependencies will be resolved later via multiple passes
+	// - always recalculate if recursive depth is zero, because the FIRST
+	//   set might be incomplete in case of loops in the production rules
+	if(recurse_depth && HasLookaheads())
+		return;
+
+	SetLookaheadsValid(true);
 
 	// --------------------------------------------------------------------------------
 	// copy lookaheads from previous closure elements
@@ -715,12 +720,16 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	if(use_colour)
 		ostr << no_col;
 
+	// print backward and forward lookahead dependencies
 	if(print_la_deps)
 	{
-		// print lookahead dependencies
+		if(elem.GetLookaheadDependencies().size() || elem.GetForwardDependencies().size())
+			ostr << "\n";
+
+		// print backward lookahead dependencies
 		if(const auto& deps = elem.GetLookaheadDependencies(); deps.size())
 		{
-			ostr << "\n\tlookahead dependencies:\n";
+			ostr << "\tlookahead backward dependencies:\n";
 			for(const Element::t_dependency& dep : deps)
 			{
 				Element elem_cpy = *dep.first;
@@ -729,6 +738,21 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 				if(elem_cpy.GetParentClosure())
 					ostr << ", closure " << elem_cpy.GetParentClosure()->GetId();
 				ostr << ", calc_first: " << std::boolalpha << dep.second << "\n";
+			}
+		}
+
+		// print forward lookahead dependencies
+		if(const auto& deps = elem.GetForwardDependencies(); deps.size())
+		{
+			ostr << "\tlookahead forward dependencies:\n";
+			for(const ElementPtr& dep : deps)
+			{
+				Element elem_cpy = *dep;
+				elem_cpy.ClearDependencies();  // to prevent recursive printing of dependencies
+				ostr << "\t\telement: " << elem_cpy;
+				if(elem_cpy.GetParentClosure())
+					ostr << ", closure " << elem_cpy.GetParentClosure()->GetId();
+				ostr << "\n";
 			}
 		}
 	}
