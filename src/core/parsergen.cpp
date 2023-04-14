@@ -896,10 +896,15 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 				if(auto [uniquematch, rule_id, rulelen, lhs_id] =
 					m_collection->GetUniquePartialMatch(elemsFrom, true); uniquematch)
 				{
+					if(GetGenComments())
+					{
+						// partial semantic rule comment
+						ostr_partial << "\t\t\t// partial semantic rule "
+							<< rule_id << " with " << rulelen << " recognised argument(s)\n";
+					}
+
 					// execute partial semantic rule
-					ostr_partial << "\t\t\t// partial semantic rule "
-						<< rule_id << " with " << rulelen << " recognised argument(s)\n";
-					ostr_partial << "\t\t\tbool applied = ApplyPartialRule(true, "
+					ostr_partial << "\t\t\t[[maybe_unused]] bool applied = ApplyPartialRule(true, "
 						<< rule_id << ", " << rulelen << ", " << lhs_id << ");\n";
 					has_partial = true;
 
@@ -926,8 +931,10 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 			}
 			else
 			{
-				ostr_shift << "\t\tcase " << symTrans->GetId() << ": // "
-					<< symTrans->GetStrId() << "\n";
+				ostr_shift << "\t\tcase " << symTrans->GetId() << ":";
+				if(GetGenComments())
+					ostr_shift << " // " << symTrans->GetStrId();
+				ostr_shift << "\n";
 			}
 			ostr_shift << "\t\t{\n";
 			if(has_partial)
@@ -1003,7 +1010,9 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 
 				// execute semantic rule
 				const t_symbol_id lhs_id = elem->GetLhs()->GetId();
-				ostr_reduce << "\t\t\t// semantic rule " << *rule_id << ": " << rule_descr.str() << "\n";
+
+				if(GetGenComments())
+					ostr_reduce << "\t\t\t// semantic rule " << *rule_id << ": " << rule_descr.str() << "\n";
 				ostr_reduce << "\t\t\tApplyRule(" << *rule_id << ", "
 					<< num_rhs << ", " << lhs_id << ", " << accepted << ");\n";
 				ostr_reduce << "\t\t\tbreak;\n";
@@ -1126,8 +1135,10 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 				}
 				else
 				{
-					ostr_cpp << "\t\tcase " << la->GetId() << ": // "
-						<< la->GetStrId() << "\n";
+					ostr_cpp << "\t\tcase " << la->GetId() << ":";
+					if(GetGenComments())
+						ostr_cpp << " // " << la->GetStrId();
+					ostr_cpp << "\n";
 				}
 			}
 			ostr_cpp << reduce;
@@ -1205,10 +1216,15 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 				if(auto [uniquematch, rule_id, rulelen, lhs_id] =
 					m_collection->GetUniquePartialMatch(elemsFrom, false); uniquematch)
 				{
+					if(GetGenComments())
+					{
+						// partial semantic rule comment
+						ostr_partial << "\t\t\t\t// partial semantic rule "
+							<< rule_id << " with " << rulelen << " arguments\n";
+					}
+
 					// execute partial semantic rule
-					ostr_partial << "\t\t\t\t// partial semantic rule "
-						<< rule_id << " with " << rulelen << " arguments\n";
-					ostr_partial << "\t\t\t\tbool applied = ApplyPartialRule(false, "
+					ostr_partial << "\t\t\t\t[[maybe_unused]] bool applied = ApplyPartialRule(false, "
 						<< rule_id << ", " << rulelen << ", " << lhs_id << ");\n";
 					has_partial = true;
 
