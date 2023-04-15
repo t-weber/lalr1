@@ -101,7 +101,7 @@ public:
 	std::optional<t_transition> GetTransition(const ElementPtr& element,
 		bool only_core_hash = false) const;
 
-	bool SaveGraph(std::ostream& ostr, bool write_full_coll = true, bool write_elem_wise = false) const;
+	bool SaveGraph(std::ostream& ostr, bool write_full_closure = true, bool write_elem_wise = false) const;
 	bool SaveGraph(const std::string& file, bool write_full_coll = true, bool write_elem_wise = false) const;
 
 	void SetStopOnConflicts(bool b = true);

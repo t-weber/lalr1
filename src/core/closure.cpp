@@ -260,8 +260,11 @@ void Closure::ResolveLookaheads()
 
 	for(const ElementPtr& elem : GetElements())
 	{
-		if(!elem->AreLookaheadsValid())
-			elem->ResolveLookaheads(pcached_first_sets);
+		if(elem->AreLookaheadsValid())
+			continue;
+
+		// resolve invalid lookaheads
+		elem->ResolveLookaheads(pcached_first_sets);
 	}
 }
 

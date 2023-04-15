@@ -969,59 +969,60 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 			}
 
 			const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
-			if(lookaheads.size())
+			if(!lookaheads.size())
+				continue;
+
+			// has lookaheads
+			std::ostringstream ostr_reduce;
+
+			std::unordered_set<SymbolPtr> reduce_lookaheads;
+			for(const TerminalPtr& la : lookaheads)
+				reduce_lookaheads.insert(la);
+			reduces_lookaheads.emplace_back(std::move(reduce_lookaheads));
+			ostr_reduce << "\t\t{\n";
+
+			// in extended grammar, first production (rule 0) is of the form start -> ...
+			bool accepted = (*rule_id == GetAcceptingRule());
+			if(accepted)
+				ostr_reduce << "\t\t\tm_accepted = true;\n";
+
+			std::ostringstream rule_descr;
+			rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
+
+			// in the table-based parser, num_rhs states are popped,
+			// here we have to count function returns to get to the new top state function
+			std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
+
+			// no more jump needed if the grammar has already been accepted
+			if(!accepted)
 			{
-				std::ostringstream ostr_reduce;
-
-				std::unordered_set<SymbolPtr> reduce_lookaheads;
-				for(const TerminalPtr& la : lookaheads)
-					reduce_lookaheads.insert(la);
-				reduces_lookaheads.emplace_back(std::move(reduce_lookaheads));
-				ostr_reduce << "\t\t{\n";
-
-				// in extended grammar, first production (rule 0) is of the form start -> ...
-				bool accepted = (*rule_id == GetAcceptingRule());
-				if(accepted)
-					ostr_reduce << "\t\t\tm_accepted = true;\n";
-
-				std::ostringstream rule_descr;
-				rule_descr << (*elem->GetLhs()) << " -> " << (*elem->GetRhs());
-
-				// in the table-based parser, num_rhs states are popped,
-				// here we have to count function returns to get to the new top state function
-				std::size_t num_rhs = elem->GetRhs()->NumSymbols(false);
-
-				// no more jump needed if the grammar has already been accepted
-				if(!accepted)
-				{
-					if(GetGenDebugCode())
-						ostr_reduce << "\t\t\tDebugMessageJump(" << closure_id << ");\n";
-					ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
-				}
-
 				if(GetGenDebugCode())
-				{
-					ostr_reduce << "\t\t\tif(m_debug)\n";
-					ostr_reduce << "\t\t\t\tDebugMessageReduce("
-						<< num_rhs << ", "
-						<< *rule_id << ", "
-						<< "\"" << rule_descr.str() << "\");\n";
-				}
-
-				// execute semantic rule
-				const t_symbol_id lhs_id = elem->GetLhs()->GetId();
-
-				if(GetGenComments())
-					ostr_reduce << "\t\t\t// semantic rule " << *rule_id << ": " << rule_descr.str() << "\n";
-				ostr_reduce << "\t\t\tApplyRule(" << *rule_id << ", "
-					<< num_rhs << ", " << lhs_id << ", " << accepted << ");\n";
-				ostr_reduce << "\t\t\tbreak;\n";
-
-				ostr_reduce << "\t\t}\n";  // end case
-
-				reduces.emplace_back(ostr_reduce.str());
+					ostr_reduce << "\t\t\tDebugMessageJump(" << closure_id << ");\n";
+				ostr_reduce << "\t\t\tm_dist_to_jump = " << num_rhs << ";\n";
 			}
-		}
+
+			if(GetGenDebugCode())
+			{
+				ostr_reduce << "\t\t\tif(m_debug)\n";
+				ostr_reduce << "\t\t\t\tDebugMessageReduce("
+					<< num_rhs << ", "
+					<< *rule_id << ", "
+					<< "\"" << rule_descr.str() << "\");\n";
+			}
+
+			// execute semantic rule
+			const t_symbol_id lhs_id = elem->GetLhs()->GetId();
+
+			if(GetGenComments())
+				ostr_reduce << "\t\t\t// semantic rule " << *rule_id << ": " << rule_descr.str() << "\n";
+			ostr_reduce << "\t\t\tApplyRule(" << *rule_id << ", "
+				<< num_rhs << ", " << lhs_id << ", " << accepted << ");\n";
+			ostr_reduce << "\t\t\tbreak;\n";
+
+			ostr_reduce << "\t\t}\n";  // end case
+
+			reduces.emplace_back(ostr_reduce.str());
+		}  // elements
 
 
 		// try to solve shift/reduce conflicts
@@ -1098,8 +1099,8 @@ bool %%PARSER_CLASS%%::ApplyRule(t_semantic_id rule_id, std::size_t rule_len, t_
 
 				if(!already_incremented_la)
 					++iter_la;
-			}
-		}
+			}  // reduce_lookaheads
+		}  // reduces_lookaheads
 
 
 		// write shift and reduce codes

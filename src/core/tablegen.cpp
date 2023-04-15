@@ -357,63 +357,65 @@ bool TableGen::CreateParseTables()
 				conflictelem = closure->GetElementWithCursorAtSymbol(sym_at_cursor);
 			}
 
+			// no conflicts? -> continue
+			if(!conflictelem || shiftEntry==ERROR_VAL || reduceEntry==ERROR_VAL)
+				continue;
+
 			// a conflicting element exists and both tables have an entry?
-			if(conflictelem && shiftEntry!=ERROR_VAL && reduceEntry!=ERROR_VAL)
+			if(!lookbacks)
+				lookbacks = m_collection->GetLookbackTerminals(closure);
+
+			if(m_collection->SolveShiftReduceConflict(sym_at_cursor, *lookbacks, &shiftEntry, &reduceEntry))
 			{
-				if(!lookbacks)
-					lookbacks = m_collection->GetLookbackTerminals(closure);
-
-				if(!m_collection->SolveShiftReduceConflict(sym_at_cursor, *lookbacks, &shiftEntry, &reduceEntry))
+				// solution found:
+				// also apply conflict solution to partial matches
+				/*if(shiftEntry == ERROR_VAL)
 				{
-					// only report fail state when the lookbacks have been calculated,
-					// otherwise the user wants to have the conflict solved in the parser
-					if(!no_lookbacks_avail)
-						ok = false;
+					partialRuleEntry = ERROR_VAL;
+					partialMatchLenEntry = 0;
+				}*/
+				continue;
+			}
 
-					std::ostringstream ostrErr;
-					ostrErr << "Shift/reduce conflict detected"
-						<< " for state " << state;
-					if(conflictelem)
-						ostrErr << ":\n\t" << *conflictelem << "\n";
-					if(lookbacks->size())
-					{
-						ostrErr << " with look-back terminal(s): ";
-						std::size_t i = 0;
-						for(const TerminalPtr& lookback : *lookbacks)
-						{
-							ostrErr << lookback->GetStrId();
-							if(i < lookbacks->size()-1)
-								ostrErr << ", ";
-							++i;
-						}
-					}
-					if(termid)
-						ostrErr << " and look-ahead terminal " << (*termid);
-					else
-						ostrErr << "and terminal index " << termidx;
-					ostrErr << " (can either shift to state " << shiftEntry
-						<< " or reduce using rule " << reduceEntry
-						<< ").\n";
+			// no solution found:
+			// only report fail state when the lookbacks have been calculated,
+			// otherwise the user wants to have the conflict solved in the parser
+			if(!no_lookbacks_avail)
+				ok = false;
 
-					if(GetStopOnConflicts())
-						throw std::runtime_error(ostrErr.str());
-					else
-						std::cerr << ostrErr.str() << std::endl;
-				}
-				else  // solution found
+			std::ostringstream ostrErr;
+			ostrErr << "Shift/reduce conflict detected"
+				<< " for state " << state;
+			if(conflictelem)
+				ostrErr << ":\n\t" << *conflictelem << "\n";
+			if(lookbacks->size())
+			{
+				ostrErr << " with look-back terminal(s): ";
+				std::size_t i = 0;
+				for(const TerminalPtr& lookback : *lookbacks)
 				{
-					// also apply conflict solution to partial matches
-					/*if(shiftEntry == ERROR_VAL)
-					{
-						partialRuleEntry = ERROR_VAL;
-						partialMatchLenEntry = 0;
-					}*/
+					ostrErr << lookback->GetStrId();
+					if(i < lookbacks->size()-1)
+						ostrErr << ", ";
+					++i;
 				}
 			}
-		}
+			if(termid)
+				ostrErr << " and look-ahead terminal " << (*termid);
+			else
+				ostrErr << "and terminal index " << termidx;
+			ostrErr << " (can either shift to state " << shiftEntry
+				<< " or reduce using rule " << reduceEntry
+				<< ").\n";
+
+			if(GetStopOnConflicts())
+				throw std::runtime_error(ostrErr.str());
+			else
+				std::cerr << ostrErr.str() << std::endl;
+		}  // terminal index
 
 		++state;
-	}
+	}  // closure
 
 	if(ok)
 		m_collection->ReportProgress("Created parse tables.", true);

@@ -157,22 +157,13 @@ void Element::InvalidateForwardLookaheads()
 {
 	for(const ElementPtr& elem : GetForwardDependencies())
 	{
-		// lookaheads are already invalid
+		// are lookaheads already invalid?
 		if(!elem->AreLookaheadsValid())
 			continue;
 		if(elem == shared_from_this())
 			continue;
 
-		// don't invalidate if all the dependencies are valid
-		/*bool all_deps_valid = true;
-		for(const auto& dep : GetLookaheadDependencies())
-		{
-			if(dep.first->AreLookaheadsValid())
-				continue;
-			all_deps_valid = false;
-			break;
-		}*/
-
+		// recursively invalidate
 		elem->SetLookaheadsValid(false);
 		elem->InvalidateForwardLookaheads();
 	}

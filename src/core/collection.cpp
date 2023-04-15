@@ -548,17 +548,17 @@ std::map<t_state_id, std::string> Collection::HasReduceConflicts() const
 
 		for(const auto& [lookahead, elems] : conflicting_elems)
 		{
-			if(elems.size() > 1)
-			{
-				std::ostringstream ostrelem;
-				for(const ElementPtr& elem : elems)
-				{
-					ostrelem << "\t" << "lookahead: " << *lookahead
-						<< ", element: " << *elem << "\n";
-				}
+			if(elems.size() <= 1)
+				continue;
 
-				conflicting_closures.emplace(std::make_pair(closure->GetId(), ostrelem.str()));
+			std::ostringstream ostrelem;
+			for(const ElementPtr& elem : elems)
+			{
+				ostrelem << "\t" << "lookahead: " << *lookahead
+					<< ", element: " << *elem << "\n";
 			}
+
+			conflicting_closures.emplace(std::make_pair(closure->GetId(), ostrelem.str()));
 		} // iterate lookaheads
 	} // iterate closures
 
@@ -601,13 +601,13 @@ std::map<t_state_id, std::string> Collection::HasShiftReduceConflicts() const
 
 			const TerminalPtr termTrans = std::dynamic_pointer_cast<Terminal>(symTrans);
 			bool has_solution = termTrans->GetPrecedence() || termTrans->GetAssociativity();
-			if(reduce_lookaheads.contains(termTrans) && !has_solution)
-			{
-				std::ostringstream ostrtrans;
-				ostrtrans << "\ttransition: " << *termTrans << " from state " << stateFrom->GetId() << "\n";
+			if(!reduce_lookaheads.contains(termTrans) || has_solution)
+				continue;
 
-				conflicting_closures.emplace(std::make_pair(closure->GetId(), ostrtrans.str()));
-			}
+			std::ostringstream ostrtrans;
+			ostrtrans << "\ttransition: " << *termTrans << " from state " << stateFrom->GetId() << "\n";
+
+			conflicting_closures.emplace(std::make_pair(closure->GetId(), ostrtrans.str()));
 		}
 	}
 
@@ -774,7 +774,7 @@ bool Collection::SolveShiftReduceConflict(
  * write out the transitions graph to an ostream
  * @see https://graphviz.org/doc/info/shapes.html#html
  */
-bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll, bool write_elem_wise) const
+bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_closure, bool write_elem_wise) const
 {
 	const std::string& shift_col = g_options.GetShiftColour();
 	const std::string& reduce_col = g_options.GetReduceColour();
@@ -787,95 +787,97 @@ bool Collection::SaveGraph(std::ostream& ofstr, bool write_full_coll, bool write
 	for(const ClosurePtr& closure : GetClosures())
 	{
 		ofstr << "\t" << closure->GetId() << " [label=";
-		if(write_full_coll)
+		if(!write_full_closure)
 		{
-			ofstr << "<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"0\">";
-			ofstr << "<tr><td colspan=\"3\" sides=\"b\"><b>" << "State "
-				<< closure->GetId() << "</b></td></tr>";
-
-			for(const ElementPtr& elem : closure->GetElements())
-			{
-				ofstr << "<tr>";
-				// closure core
-				bool at_end = elem->IsCursorAtEnd();
-				const WordPtr& rhs = elem->GetRhs();
-
-				auto set_colour = [&ofstr, &elem, &at_end, &shift_col, &reduce_col, &jump_col]()
-				{
-					if(at_end)
-					{
-						ofstr << "<font color=\"" << reduce_col << "\">";
-					}
-					else
-					{
-						if(elem->GetSymbolAtCursor()->IsTerminal())
-							ofstr << "<font color=\"" << shift_col << "\">";
-						else
-							ofstr << "<font color=\"" << jump_col << "\">";
-					}
-				};
-
-				ofstr << "<td align=\"left\" sides=\"r\" port=\"elem_"
-					<< std::hex << elem->hash() << std::dec << "\">";
-				if(use_colour)
-					set_colour();
-
-				ofstr << elem->GetLhs()->GetStrId();
-				ofstr << " &#8594; ";
-
-				for(t_index rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
-				{
-					// write cursor symbol
-					if(elem->GetCursor() == rhs_idx)
-						ofstr << "&#8226;";
-
-					ofstr << (*rhs)[rhs_idx]->GetStrId();
-					if(rhs_idx < rhs->size()-1)
-						ofstr << " ";
-				}
-				if(at_end)
-					ofstr << "&#8226;";
-				if(use_colour)
-					ofstr << "</font>";
-				ofstr << " </td>";
-
-				// lookaheads
-				ofstr << "<td align=\"left\" sides=\"l\"> ";
-				if(use_colour)
-					set_colour();
-
-				const Terminal::t_terminalset& lookaheads =
-					elem->GetLookaheads();
-				std::size_t lookahead_num = 0;
-				for(const auto& la : lookaheads)
-				{
-					ofstr << la->GetStrId();
-					if(lookahead_num < lookaheads.size()-1)
-						ofstr << " ";
-					++lookahead_num;
-				}
-				if(use_colour)
-					ofstr << "</font>";
-				ofstr << " </td>";
-
-				// semantic rule
-				ofstr << "<td align=\"left\" sides=\"l\"> ";
-				if(use_colour)
-					set_colour();
-
-				if(std::optional<t_semantic_id> rule = elem->GetSemanticRule(); rule)
-					ofstr << *rule;
-
-				if(use_colour)
-					ofstr << "</font>";
-				ofstr << "</td></tr>";
-			}
-			ofstr << "</table>>";
-		}
-		else
-		{
+			// only write the closure ids
 			ofstr << "\"" << closure->GetId() << "\"";
+			continue;
 		}
+
+		// write the full closure with all elements
+		ofstr << "<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"0\">";
+		ofstr << "<tr><td colspan=\"3\" sides=\"b\"><b>" << "State "
+			<< closure->GetId() << "</b></td></tr>";
+
+		for(const ElementPtr& elem : closure->GetElements())
+		{
+			ofstr << "<tr>";
+			// closure core
+			bool at_end = elem->IsCursorAtEnd();
+			const WordPtr& rhs = elem->GetRhs();
+
+			auto set_colour = [&ofstr, &elem, &at_end, &shift_col, &reduce_col, &jump_col]()
+			{
+				if(at_end)
+				{
+					ofstr << "<font color=\"" << reduce_col << "\">";
+				}
+				else
+				{
+					if(elem->GetSymbolAtCursor()->IsTerminal())
+						ofstr << "<font color=\"" << shift_col << "\">";
+					else
+						ofstr << "<font color=\"" << jump_col << "\">";
+				}
+			};
+
+			ofstr << "<td align=\"left\" sides=\"r\" port=\"elem_"
+				<< std::hex << elem->hash() << std::dec << "\">";
+			if(use_colour)
+				set_colour();
+
+			ofstr << elem->GetLhs()->GetStrId();
+			ofstr << " &#8594; ";
+
+			for(t_index rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
+			{
+				// write cursor symbol
+				if(elem->GetCursor() == rhs_idx)
+					ofstr << "&#8226;";
+
+				ofstr << (*rhs)[rhs_idx]->GetStrId();
+				if(rhs_idx < rhs->size()-1)
+					ofstr << " ";
+			}
+			if(at_end)
+				ofstr << "&#8226;";
+			if(use_colour)
+				ofstr << "</font>";
+			ofstr << " </td>";
+
+			// lookaheads
+			ofstr << "<td align=\"left\" sides=\"l\"> ";
+			if(use_colour)
+				set_colour();
+
+			const Terminal::t_terminalset& lookaheads =
+				elem->GetLookaheads();
+			std::size_t lookahead_num = 0;
+			for(const auto& la : lookaheads)
+			{
+				ofstr << la->GetStrId();
+				if(lookahead_num < lookaheads.size()-1)
+					ofstr << " ";
+				++lookahead_num;
+			}
+			if(use_colour)
+				ofstr << "</font>";
+			ofstr << " </td>";
+
+			// semantic rule
+			ofstr << "<td align=\"left\" sides=\"l\"> ";
+			if(use_colour)
+				set_colour();
+
+			if(std::optional<t_semantic_id> rule = elem->GetSemanticRule(); rule)
+				ofstr << *rule;
+
+			if(use_colour)
+				ofstr << "</font>";
+			ofstr << "</td></tr>";
+		}
+		ofstr << "</table>>";
+
 		ofstr << "];\n";
 	}
 
