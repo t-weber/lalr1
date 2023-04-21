@@ -75,7 +75,7 @@ public:
 	// @see https://en.wikipedia.org/wiki/JSON
 	bool SaveParseTablesJSON(const std::string& file) const;
 
-	// save the parsing tables to rust code
+	// save the parsing tables to rs code
 	bool SaveParseTablesRS(const std::string& file) const;
 
 

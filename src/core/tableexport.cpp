@@ -648,7 +648,7 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 			ofstr << ",";
 		ofstr << "\n";
 	}
-	ofstr << "}};\n\n";
+	ofstr << "],\n";
 
 	// terminal operator associativities
 	const t_mapIdAssoc& mapTermAssoc = GetTermAssocMap();
@@ -664,7 +664,7 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 			ofstr << ",";
 		ofstr << "\n";
 	}
-	ofstr << "}};\n\n";
+	ofstr << "],\n";
 
 	// semantic rule indices
 	const t_mapIdIdx& mapSemanticIdx = GetSemanticIndexMap();
@@ -710,7 +710,7 @@ bool TableGen::SaveParseTablesJSON(const std::string& file) const
 
 
 /**
- * save the parsing tables to rust code
+ * save the parsing tables to rs code
  */
 bool TableGen::SaveParseTablesRS(const std::string& file) const
 {

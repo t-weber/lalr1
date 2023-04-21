@@ -26,7 +26,7 @@ using t_associativity = char;
 
 
 /**
- * get the rust equivalent name of the given type
+ * get the rs equivalent name of the given type
  */
 template<typename T>
 constexpr const char* get_rs_typename()

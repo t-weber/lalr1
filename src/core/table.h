@@ -278,7 +278,7 @@ public:
 
 
 	/**
-	 * export table to rust
+	 * export table to rs
 	 */
 	void SaveRS(std::ostream& ostr, const std::string& var,
 		const std::string& row_label = "",
