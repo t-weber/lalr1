@@ -75,7 +75,7 @@ semantics = {
 
 	# unary arithmetic operations
 	sem_uadd_id: lambda args, done, retval : +args[1]["val"] if done else None,
-	sem_usub_id: lambda args, done, retval : -args[2]["val"] if done else None,
+	sem_usub_id: lambda args, done, retval : -args[1]["val"] if done else None,
 
 	# function calls
 	sem_call0_id: lambda args, done, retval :
