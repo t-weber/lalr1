@@ -96,8 +96,8 @@ def semantics_uminus(args, done, retval):
 	if not done:
 		return None
 
-	arg = args[0]["val"][0]
-	diffarg = args[0]["val"][1]
+	arg = args[1]["val"][0]
+	diffarg = args[1]["val"][1]
 
 	return [ -arg, -diffarg ]
 
@@ -290,7 +290,7 @@ semantics = {
 
 	# unary arithmetic operations
 	sem_uadd_id: lambda args, done, retval : args[1]["val"] if done else None,
-	sem_usub_id: lambda args, done, retval : semantic_uminus,
+	sem_usub_id: semantics_uminus,
 
 	# function calls
 	sem_call0_id: semantics_func0,
