@@ -24,7 +24,7 @@ import lexer
 
 from ids import *
 from lalr1_py import parser
-#import expr_parser
+#import diff_parser
 
 
 
@@ -322,7 +322,7 @@ def main(args):
 			tablesfile = open("diff.json")
 			tables = json.load(tablesfile)
 			theparser = parser.Parser(tables)
-			#theparser = expr_parser.Parser()
+			#theparser = diff_parser.Parser()
 
 			theparser.debug = False
 			theparser.use_partials = True
