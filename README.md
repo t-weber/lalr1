@@ -16,7 +16,7 @@ Forked on 30 July 2022 from https://github.com/t-weber/lr1 [![DOI: 10.5281/zenod
 ### Script Compiler
 - After building the libraries (see "Installation" above), run `./script_parsergen` from the build directory to create the script compiler's parser component.
 - Re-run `cmake -DCMAKE_BUILD_TYPE=Release .. && make -j$(($(nproc)/2+1))` to build the script compiler.
-- Run an example script using `./script_compiler -r ../src/examples/script_tests/fac.scr`.
+- Run an example script using `./script_compiler -r ../examples/script_tests/fac.scr`.
 
 ### Expression Parser
 - After building the libraries (see "Installation" above), run `./expr_parsergen` from the build directory to create the expression parser.

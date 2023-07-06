@@ -19,7 +19,7 @@ const ids = require("./ids.js");
 
 
 // load table-based parser
-const parser = require("../../modules/lalr1_js/parser.js");
+const parser = require("../../src/modules/lalr1_js/parser.js");
 const tables_file = "./expr.json";
 if(process.argv.length >= 3)
 	tables_file = process.argv[2];

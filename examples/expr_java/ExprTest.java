@@ -6,8 +6,8 @@
  * @license see 'LICENSE' file
  */
 
-// javac -classpath "../../modules/java:." ../../modules/java/*.java ExprTest.java ExprTab.java Ids.java
-// java -classpath "../../modules/java:." ExprTest
+// javac -classpath "../../src/modules/java:." ../../src/modules/java/*.java ExprTest.java ExprTab.java Ids.java
+// java -classpath "../../src/modules/java:." ExprTest
 
 import java.util.Vector;
 import java.util.HashMap;

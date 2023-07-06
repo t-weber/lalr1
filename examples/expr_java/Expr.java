@@ -7,13 +7,13 @@
  */
 
 // table-based version:
-// javac -classpath "../../modules:." Expr.java Lexer.java Ids.java ExprTab.java -Xlint:unchecked
-// java -classpath "../../modules:." Expr
+// javac -classpath "../../src/modules:." Expr.java Lexer.java Ids.java ExprTab.java -Xlint:unchecked
+// java -classpath "../../src/modules:." Expr
 
 // recursive-ascent version
-// java -classpath "../../modules:." lalr1_java.ParserGen ExprTab
-// javac -classpath "../../modules:." Expr.java Lexer.java Ids.java ExprParser.java -Xlint:unchecked
-// java -classpath "../../modules:." Expr
+// java -classpath "../../src/modules:." lalr1_java.ParserGen ExprTab
+// javac -classpath "../../src/modules:." Expr.java Lexer.java Ids.java ExprParser.java -Xlint:unchecked
+// java -classpath "../../src/modules:." Expr
 
 
 import java.util.Vector;

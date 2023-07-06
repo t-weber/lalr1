@@ -17,7 +17,7 @@ import math
 import random
 
 sys.path.append(".")
-sys.path.append("../../modules")
+sys.path.append("../../src/modules")
 sys.path.append("../src/modules")
 
 import lexer
@@ -262,7 +262,7 @@ def semantics_diff(args, done, retval):
 	else:
 		if len(args) == 3:
 			var = args[0]["val"]
-			val = args[2]["val"]
+			val = args[2]["val"][0]
 
 			symtab[var] = val
 			symtab["__diffvar__"] = var
@@ -277,8 +277,7 @@ semantics = {
 	sem_start_id: lambda args, done, retval : args[0]["val"] if done else None,
 	sem_brackets_id: lambda args, done, retval : args[1]["val"] if done else None,
 
-	sem_diff_id_real: semantics_diff,
-	sem_diff_id_int: semantics_diff,
+	sem_diff_id: semantics_diff,
 
 	# binary arithmetic operations
 	sem_add_id: semantics_add,

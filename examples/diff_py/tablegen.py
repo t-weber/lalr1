@@ -48,9 +48,10 @@ op_pow.SetPrecedence(110, 'r')
 # rules
 # start -> diff_expr
 start.AddARule(lalr1.make_word([ diff_expr ]), sem_start_id)
+
 # diff_expr -> variable = value, expr
-diff_expr.AddARule(lalr1.make_word([ ident, op_equ, sym_real, comma, expr ]), sem_diff_id_real)
-diff_expr.AddARule(lalr1.make_word([ ident, op_equ, sym_int, comma, expr ]), sem_diff_id_int)
+diff_expr.AddARule(lalr1.make_word([ ident, op_equ, expr, comma, expr ]), sem_diff_id)
+
 # expr -> expr + expr
 expr.AddARule(lalr1.make_word([ expr, op_plus, expr ]), sem_add_id)
 # expr -> expr - expr

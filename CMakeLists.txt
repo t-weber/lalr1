@@ -40,7 +40,7 @@ include(GNUInstallDirs)
 include_directories(
 	${PROJECT_SOURCE_DIR}
 	${PROJECT_SOURCE_DIR}/src
-	${PROJECT_SOURCE_DIR}/src/examples
+	${PROJECT_SOURCE_DIR}/examples
 	${CMAKE_CURRENT_BINARY_DIR}
 	${Boost_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/..
 )
@@ -214,13 +214,13 @@ if(BUILD_EXAMPLES)
 		src/core/symbol.cpp src/core/symbol.h
 		src/core/options.cpp src/core/options.h
 		src/core/genoptions.cpp src/core/genoptions.h
-		src/examples/script/lexer.cpp src/examples/script/lexer.h
-		src/examples/script/ast_printer.cpp src/examples/script/ast_printer.h
-		src/examples/script/ast_asm.cpp src/examples/script/ast_asm.h
-		src/examples/script_vm/opcodes.h
-		src/examples/script_vm/types.h
-		src/examples/script/sym.cpp src/examples/script/sym.h
-		src/examples/script/ast.h
+		examples/script/lexer.cpp examples/script/lexer.h
+		examples/script/ast_printer.cpp examples/script/ast_printer.h
+		examples/script/ast_asm.cpp examples/script/ast_asm.h
+		examples/script_vm/opcodes.h
+		examples/script_vm/types.h
+		examples/script/sym.cpp examples/script/sym.h
+		examples/script/ast.h
 	)
 
 	target_link_libraries(script ${Boost_LIBRARIES})
@@ -228,12 +228,12 @@ if(BUILD_EXAMPLES)
 
 	# script vm library
 	add_library(script-vm STATIC
-		src/examples/script_vm/vm.cpp
-		src/examples/script_vm/vm.h
-		src/examples/script_vm/vm_extfuncs.cpp
-		src/examples/script_vm/vm_memdump.cpp
-		src/examples/script_vm/opcodes.h
-		src/examples/script_vm/helpers.h
+		examples/script_vm/vm.cpp
+		examples/script_vm/vm.h
+		examples/script_vm/vm_extfuncs.cpp
+		examples/script_vm/vm_memdump.cpp
+		examples/script_vm/opcodes.h
+		examples/script_vm/helpers.h
 	)
 
 	target_link_libraries(script-vm ${Boost_LIBRARIES}
@@ -242,22 +242,22 @@ if(BUILD_EXAMPLES)
 
 
 	# vm
-	add_executable(script_vm src/examples/script_vm/main.cpp)
+	add_executable(script_vm examples/script_vm/main.cpp)
 	target_link_libraries(script_vm script-vm)
 
 
 	# script compiler generator
 	add_executable(script_parsergen
-		src/examples/script/script_parsergen.cpp
-		src/examples/script/script_grammar.cpp src/examples/script/script_grammar.h
+		examples/script/script_parsergen.cpp
+		examples/script/script_grammar.cpp examples/script/script_grammar.h
 	)
 	target_link_libraries(script_parsergen lalr1)
 
 	# script compiler
 	if(EXISTS "${CMAKE_BINARY_DIR}/script_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/script.tab")
 		add_executable(script_compiler
-			src/examples/script/script.cpp
-			src/examples/script/script_grammar.cpp src/examples/script/script_grammar.h
+			examples/script/script.cpp
+			examples/script/script_grammar.cpp examples/script/script_grammar.h
 		)
 	endif()
 
@@ -269,15 +269,15 @@ if(BUILD_EXAMPLES)
 
 
 	# expression compiler generator
-	add_executable(expr_parsergen src/examples/expr/expr_parsergen.cpp
-		src/examples/expr/expr_grammar.cpp src/examples/expr/expr_grammar.h
+	add_executable(expr_parsergen examples/expr/expr_parsergen.cpp
+		examples/expr/expr_grammar.cpp examples/expr/expr_grammar.h
 	)
 	target_link_libraries(expr_parsergen lalr1)
 
 	# expression compiler
 	if(EXISTS "${CMAKE_BINARY_DIR}/expr_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/expr.tab")
-		add_executable(expr_compiler src/examples/expr/expr.cpp
-			src/examples/expr/expr_grammar.cpp src/examples/expr/expr_grammar.h
+		add_executable(expr_compiler examples/expr/expr.cpp
+			examples/expr/expr_grammar.cpp examples/expr/expr_grammar.h
 		)
 	endif()
 	if(EXISTS "${CMAKE_BINARY_DIR}/expr_parser.cpp")
@@ -288,12 +288,12 @@ if(BUILD_EXAMPLES)
 
 
 	# simple expression compiler generator
-	add_executable(expr_simple_parsergen src/examples/expr/expr_simple.cpp)
+	add_executable(expr_simple_parsergen examples/expr/expr_simple.cpp)
 	target_compile_definitions(expr_simple_parsergen PUBLIC -DCREATE_PARSER)
 	target_link_libraries(expr_simple_parsergen lalr1)
 
 	# simple expression compiler
-	add_executable(expr_simple_compiler src/examples/expr/expr_simple.cpp)
+	add_executable(expr_simple_compiler examples/expr/expr_simple.cpp)
 	target_compile_definitions(expr_simple_compiler PUBLIC -DRUN_PARSER)
 	target_link_libraries(expr_simple_compiler script lalr1-parser script-vm)
 endif()

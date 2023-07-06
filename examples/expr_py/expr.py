@@ -16,7 +16,7 @@ import math
 import random
 
 sys.path.append(".")
-sys.path.append("../../modules")
+sys.path.append("../../src/modules")
 sys.path.append("../src/modules")
 
 import lexer
