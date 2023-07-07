@@ -34,6 +34,7 @@ bracket_open = lalr1.make_terminal('(', "(")
 bracket_close = lalr1.make_terminal(')', ")")
 comma = lalr1.make_terminal(',', ",")
 sym_real = lalr1.make_terminal(tok_real_id, "real")
+sym_real_array = lalr1.make_terminal(tok_real_range_id, "real_array")
 sym_int = lalr1.make_terminal(tok_int_id, "integer")
 ident = lalr1.make_terminal(tok_ident_id, "ident")
 
@@ -74,6 +75,8 @@ expr.AddARule(lalr1.make_word([ ident, bracket_open, expr, bracket_close ]), sem
 expr.AddARule(lalr1.make_word([ ident, bracket_open, expr, comma, expr, bracket_close ]), sem_call2_id)
 # expr -> real symbol
 expr.AddARule(lalr1.make_word([ sym_real ]), sem_real_id)
+# expr -> real array symbol
+expr.AddARule(lalr1.make_word([ sym_real_array ]), sem_real_array_id)
 # expr -> int symbol
 expr.AddARule(lalr1.make_word([ sym_int ]), sem_int_id)
 # expr -> int symbol

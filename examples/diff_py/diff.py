@@ -13,7 +13,7 @@
 
 import os
 import sys
-import math
+import numpy
 import random
 
 sys.path.append(".")
@@ -35,7 +35,7 @@ elif os.path.isfile(parsing_tables):
 	from lalr1_py import parser
 	use_recasc = False
 else:
-	print("No parsing tables found. Please generate them using ./tablegen.py.")
+	print("No parsing tables were found, please generate them using ./tablegen.py.")
 	print("Optionally create a recursive-ascent parser using ../../src/modules/lalr1_py/parsergen.py {}.".format(parsing_tables))
 	exit(-1)
 
@@ -44,7 +44,7 @@ else:
 # symbol table
 #
 symtab = {
-	"pi" : math.pi,
+	"pi" : numpy.pi,
 	"__diffvar__" : "x"  # default variable for differentiation
 }
 
@@ -62,41 +62,41 @@ functab_0args_diff = {
 }
 
 functab_1arg = {
-	"sqrt" : math.sqrt,
-	"sin" : math.sin,
-	"cos" : math.cos,
-	"tan" : math.tan,
-	"asin" : math.asin,
-	"acos" : math.acos,
-	"atan" : math.atan,
+	"sqrt" : numpy.sqrt,
+	"sin" : numpy.sin,
+	"cos" : numpy.cos,
+	"tan" : numpy.tan,
+	"asin" : numpy.arcsin,
+	"acos" : numpy.arccos,
+	"atan" : numpy.arctan,
 }
 
 functab_1arg_diff = {
-	"sqrt" : lambda x : 1. / (2.*math.sqrt(x)),
-	"sin" : math.cos,
-	"cos" : lambda x : -math.sin(x),
-	"tan" : lambda x : 1. / math.cos(x)**2.,
-	"asin" : lambda x : 1. / math.sqrt(1. - x**2.),
-	"acos" : lambda x : -1. / math.sqrt(1. - x**2.),
+	"sqrt" : lambda x : 1. / (2.*numpy.sqrt(x)),
+	"sin" : numpy.cos,
+	"cos" : lambda x : -numpy.sin(x),
+	"tan" : lambda x : 1. / numpy.cos(x)**2.,
+	"asin" : lambda x : 1. / numpy.sqrt(1. - x**2.),
+	"acos" : lambda x : -1. / numpy.sqrt(1. - x**2.),
 	"atan" : lambda x : 1. / (1. + x**2.),
 }
 
 functab_2args = {
-	"pow" : math.pow,
-	"atan2" : math.atan2,
-	"log" : lambda b, x : math.log(x) / math.log(b)
+	"pow" : numpy.power,
+	"atan2" : numpy.arctan2,
+	"log" : lambda b, x : numpy.log(x) / numpy.log(b)
 }
 
 functab_2args_diff1 = {
-	"pow" : lambda x, y : y * math.pow(x, y - 1.),
+	"pow" : lambda x, y : y * numpy.power(x, y - 1.),
 	"atan2" : None,  # TODO
-	"log" : lambda b, x : - math.log(x) / (b * math.log(b)**2.),
+	"log" : lambda b, x : - numpy.log(x) / (b * numpy.log(b)**2.),
 }
 
 functab_2args_diff2 = {
-	"pow" : lambda x, y : math.log(x) * math.pow(x, y),
+	"pow" : lambda x, y : numpy.log(x) * numpy.power(x, y),
 	"atan2" : None,  # TODO
-	"log" : lambda b, x : 1. / (x * math.log(b)),
+	"log" : lambda b, x : 1. / (x * numpy.log(b)),
 }
 
 
@@ -199,8 +199,11 @@ def semantics_pow(args, done, retval):
 	diffarg2 = args[2]["val"][1]
 
 	val = arg1 ** arg2
-	diffval = diffarg1 * arg2 * arg1**(arg2 - 1.) + \
-		diffarg2 * arg1**arg2 * math.log(arg1)
+	diffval = 0
+	if diffarg1 != 0:
+		diffval += diffarg1 * arg2 * arg1**(arg2 - 1.)
+	if diffarg2 != 0:
+		diffval += diffarg2 * arg1**arg2 * numpy.log(arg1)
 
 	return [ val, diffval ]
 
@@ -211,6 +214,14 @@ def semantics_sym(args, done, retval):
 
 	val = args[0]["val"]
 	return [ val, 0. ]
+
+
+def semantics_sym_arr(args, done, retval):
+	if not done:
+		return None
+
+	val = args[0]["val"]
+	return [ val, [ 0. ] ]
 
 
 def semantics_ident(args, done, retval):
@@ -262,8 +273,11 @@ def semantics_func2(args, done, retval):
 	diffarg2 = args[4]["val"][1]
 
 	val = functab_2args[funcname](arg1, arg2)
-	diffval = diffarg1 * functab_2args_diff1[funcname](arg1, arg2) + \
-		diffarg2 * functab_2args_diff2[funcname](arg1, arg2)
+	diffval = 0
+	if diffarg1 != 0:
+		diffval += diffarg1 * functab_2args_diff1[funcname](arg1, arg2)
+	if diffarg2 != 0:
+		diffval += diffarg2 * functab_2args_diff2[funcname](arg1, arg2)
 
 	return [ val, diffval ]
 
@@ -278,7 +292,7 @@ def semantics_diff(args, done, retval):
 
 			symtab[var] = val
 			symtab["__diffvar__"] = var
-			print("{} = {}".format(var, val))
+			#print("{} = {}".format(var, val))
 
 
 
@@ -312,6 +326,7 @@ semantics = {
 	sem_real_id: semantics_sym,
 	sem_int_id: semantics_sym,
 	sem_ident_id: semantics_ident,
+	sem_real_array_id: semantics_sym_arr,
 }
 
 
@@ -320,7 +335,9 @@ semantics = {
 # load tables from a json file and run parser
 #
 def main(args):
-	print("Enter expression to differentiate, e.g. x = 5, x^2.")
+	print("Enter expression to differentiate, e.g.:" \
+		"\n\tx = 5, x^2 for a single value, or" \
+		"\n\tx = {0, 10, 11}, x^3 for a range.")
 
 	try:
 		while True:
@@ -350,10 +367,18 @@ def main(args):
 			result = theparser.parse()
 			if result != None:
 				diffvar = symtab["__diffvar__"]
+				inval = symtab[diffvar]
 				val, diffval = result["val"]
 
-				print("f({}) = {}".format(diffvar, val))
-				print("∂f({0})/∂{0} = {1}".format(diffvar, diffval))
+				is_scalar = numpy.isscalar(inval)
+				if is_scalar:
+					print("{} = {}".format(diffvar, inval))
+					print("f({}) = {}".format(diffvar, val))
+					print("∂f({0})/∂{0} = {1}".format(diffvar, diffval))
+				else:
+					print("{0:<20} f({0}) {1:<15} ∂f({0})/∂{0}".format(diffvar, ""))
+					for [x, y, dy] in zip(inval, val, diffval):
+						print("{:<20} {:<20} {:<20}".format(x, y, dy))
 			else:
 				print("Error while parsing.")
 				return -1

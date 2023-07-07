@@ -28,6 +28,7 @@ sem_call2_id      = 302
 sem_real_id       = 400
 sem_int_id        = 401
 sem_ident_id      = 410
+sem_real_array_id = 420
 sem_assign_id     = 500
 sem_diff_id       = 600
 
@@ -38,7 +39,8 @@ sem_diff_id       = 600
 tok_real_id       = 1000
 tok_int_id        = 1001
 tok_str_id        = 1002
-tok_ident_id      = 1003
+tok_ident_id      = 1010
+tok_real_range_id = 1020
 
 
 #

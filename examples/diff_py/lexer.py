@@ -10,6 +10,7 @@
 #
 
 import re
+import numpy as np
 from ids import *
 
 
@@ -19,12 +20,23 @@ from ids import *
 re_int   = re.compile("[0-9]+")
 re_real  = re.compile("[0-9]+(\.[0-9]*)?")
 re_ident = re.compile("[A-Za-z]+[A-Za-z0-9]*")
+re_real_range = re.compile("\{[+-]?[0-9]+(\.[0-9]*)?,[ \t]*[+-]?[0-9]+(\.[0-9]*)?,[ \t]*[0-9]+\}")
+
+def str_to_real_range(str):
+	toks = str.strip().split(",")
+
+	from_val = float(toks[0][1:])
+	to_val = float(toks[1])
+	count_val = int(toks[2][0:-1])
+
+	return np.linspace(from_val, to_val, count_val)
 
 # [ regex parser, token id, converter function from lvalue string to lvalue ]
 token_regexes = [
 	[ re_int, tok_int_id, lambda str : int(str) ],
 	[ re_real, tok_real_id, lambda str : float(str) ],
 	[ re_ident, tok_ident_id, lambda str : str ],
+	[ re_real_range, tok_real_range_id, str_to_real_range ],
 ]
 
 
