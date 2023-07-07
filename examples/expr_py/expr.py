@@ -10,8 +10,8 @@
 #	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
 #
 
+import os
 import sys
-import json
 import math
 import random
 
@@ -20,10 +20,23 @@ sys.path.append("../../src/modules")
 sys.path.append("../src/modules")
 
 import lexer
-
 from ids import *
-from lalr1_py import parser
-#import expr_parser
+
+
+# select parser backend
+parsing_tables = "expr.json"
+
+if os.path.isfile("diff_parser.py"):
+	import expr_parser
+	use_recasc = True
+elif os.path.isfile(parsing_tables):
+	import json
+	from lalr1_py import parser
+	use_recasc = False
+else:
+	print("No parsing tables found. Please generate them using ./tablegen.py.")
+	print("Optionally create a recursive-ascent parser using ../../src/modules/lalr1_py/parsergen.py {}.".format(parsing_tables))
+	exit(-1)
 
 
 #
@@ -105,11 +118,12 @@ def main(args):
 			if len(input_str) == 0:
 				continue
 
-			tablesfile = open("expr.json")
-			tables = json.load(tablesfile)
-			theparser = parser.Parser(tables)
-
-			#theparser = expr_parser.Parser()
+			if use_recasc:
+				theparser = expr_parser.Parser()
+			else:
+				tablesfile = open(parsing_tables)
+				tables = json.load(tablesfile)
+				theparser = parser.Parser(tables)
 
 			theparser.debug = False
 			theparser.use_partials = False

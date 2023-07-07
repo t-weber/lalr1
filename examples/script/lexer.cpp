@@ -58,7 +58,7 @@ Lexer::GetMatchingTokens(const std::string& str, std::size_t line)
 				using t_bits = std::bitset<sizeof(t_int)*8>;
 				t_bits bits(smatch.str(2));
 
-				using t_ulong = std::result_of_t<decltype(&t_bits::to_ulong)(t_bits*)>;
+				using t_ulong = std::invoke_result_t<decltype(&t_bits::to_ulong)(t_bits*), t_bits*>;
 				if constexpr(sizeof(t_ulong) >= sizeof(t_int))
 					val = static_cast<t_int>(bits.to_ulong());
 				else
