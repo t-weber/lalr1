@@ -1,5 +1,5 @@
 #
-# expression lexer
+# differentiating expression lexer
 # @author Tobias Weber (orcid: 0000-0002-7230-1932)
 # @date 1-oct-2022
 # @license see 'LICENSE' file
@@ -14,6 +14,7 @@ import numpy as np
 from ids import *
 
 
+
 #
 # pre-compiled regexes
 #
@@ -21,6 +22,7 @@ re_int   = re.compile("[0-9]+")
 re_real  = re.compile("[0-9]+(\.[0-9]*)?")
 re_ident = re.compile("[A-Za-z]+[A-Za-z0-9]*")
 re_real_range = re.compile("\{[+-]?[0-9]+(\.[0-9]*)?,[ \t]*[+-]?[0-9]+(\.[0-9]*)?,[ \t]*[0-9]+\}")
+
 
 def str_to_real_range(str):
 	toks = str.strip().split(",")
@@ -31,6 +33,7 @@ def str_to_real_range(str):
 
 	return np.linspace(from_val, to_val, count_val)
 
+
 # [ regex parser, token id, converter function from lvalue string to lvalue ]
 token_regexes = [
 	[ re_int, tok_int_id, lambda str : int(str) ],
@@ -38,6 +41,7 @@ token_regexes = [
 	[ re_ident, tok_ident_id, lambda str : str ],
 	[ re_real_range, tok_real_range_id, str_to_real_range ],
 ]
+
 
 
 #
@@ -63,6 +67,7 @@ def get_matches(str):
 	return matches
 
 
+
 #
 # get the next token in a string
 #
@@ -84,6 +89,7 @@ def get_token(str):
 		return [ str[0], str[1:] ]
 
 	return [ None, str ]
+
 
 
 #

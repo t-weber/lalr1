@@ -24,6 +24,7 @@ import lexer
 from ids import *
 
 
+
 # select parser backend
 parsing_tables = "diff.json"
 
@@ -38,6 +39,7 @@ else:
 	print("No parsing tables were found, please generate them using ./tablegen.py.")
 	print("Optionally create a recursive-ascent parser using ../../src/modules/lalr1_py/parsergen.py {}.".format(parsing_tables))
 	exit(-1)
+
 
 
 #
@@ -62,23 +64,51 @@ functab_0args_diff = {
 }
 
 functab_1arg = {
+	"exp" : numpy.exp,
 	"sqrt" : numpy.sqrt,
+	"abs" : numpy.abs,
+
+	"log10" : numpy.log10,
+	"log2" : numpy.log2,
+	"ln" : numpy.log,
+
 	"sin" : numpy.sin,
 	"cos" : numpy.cos,
 	"tan" : numpy.tan,
 	"asin" : numpy.arcsin,
 	"acos" : numpy.arccos,
 	"atan" : numpy.arctan,
+
+	"sinh" : numpy.sinh,
+	"cosh" : numpy.cosh,
+	"tanh" : numpy.tanh,
+	"asinh" : numpy.arcsinh,
+	"acosh" : numpy.arccosh,
+	"atanh" : numpy.arctanh,
 }
 
 functab_1arg_diff = {
+	"exp" : numpy.exp,
 	"sqrt" : lambda x : 1. / (2.*numpy.sqrt(x)),
+	"abs" : lambda x : x / numpy.abs(x),
+
+	"log10" : lambda x : 1. / (x * numpy.log(10.)),
+	"log2" : lambda x : 1. / (x * numpy.log(2.)),
+	"ln" : lambda x : 1. / x,
+
 	"sin" : numpy.cos,
 	"cos" : lambda x : -numpy.sin(x),
-	"tan" : lambda x : 1. / numpy.cos(x)**2.,
-	"asin" : lambda x : 1. / numpy.sqrt(1. - x**2.),
-	"acos" : lambda x : -1. / numpy.sqrt(1. - x**2.),
-	"atan" : lambda x : 1. / (1. + x**2.),
+	"tan" : lambda x : numpy.cos(x)**(-2.),
+	"asin" : lambda x : 1. / numpy.sqrt(1. - x*x),
+	"acos" : lambda x : -1. / numpy.sqrt(1. - x*x),
+	"atan" : lambda x : 1. / (1. + x*x),
+
+	"sinh" : numpy.cosh,
+	"cosh" : numpy.sinh,
+	"tanh" : lambda x : numpy.cosh(x)**(-2.),
+	"asinh" : lambda x : 1 / numpy.sqrt(x*x + 1.),
+	"acosh" : lambda x : 1 / numpy.sqrt(x*x - 1.),
+	"atanh" : lambda x : 1 / (1. - x*x),
 }
 
 functab_2args = {
@@ -89,13 +119,13 @@ functab_2args = {
 
 functab_2args_diff1 = {
 	"pow" : lambda x, y : y * numpy.power(x, y - 1.),
-	"atan2" : None,  # TODO
+	"atan2" : lambda y, x : x / (x*x + y*y),
 	"log" : lambda b, x : - numpy.log(x) / (b * numpy.log(b)**2.),
 }
 
 functab_2args_diff2 = {
 	"pow" : lambda x, y : numpy.log(x) * numpy.power(x, y),
-	"atan2" : None,  # TODO
+	"atan2" : lambda y, x : -y / (x*x + y*y),
 	"log" : lambda b, x : 1. / (x * numpy.log(b)),
 }
 
@@ -169,7 +199,7 @@ def semantics_div(args, done, retval):
 	diffarg2 = args[2]["val"][1]
 
 	val = arg1 / arg2
-	diffval = (diffarg1*arg2 - arg1*diffarg2) / arg2**2.
+	diffval = diffarg1/arg2 - diffarg2*arg1/(arg2*arg2)
 
 	return [ val, diffval ]
 
@@ -184,7 +214,8 @@ def semantics_mod(args, done, retval):
 	diffarg2 = args[2]["val"][1]
 
 	val = arg1 % arg2
-	diffval = 0.  # TODO
+	#val = arg1 - arg2 * numpy.floor(arg1/arg2)
+	diffval = diffarg1 - diffarg2 * numpy.floor(arg1/arg2)  # TODO: check
 
 	return [ val, diffval ]
 
@@ -199,11 +230,10 @@ def semantics_pow(args, done, retval):
 	diffarg2 = args[2]["val"][1]
 
 	val = arg1 ** arg2
-	diffval = 0
-	if diffarg1 != 0:
-		diffval += diffarg1 * arg2 * arg1**(arg2 - 1.)
-	if diffarg2 != 0:
-		diffval += diffarg2 * arg1**arg2 * numpy.log(arg1)
+
+	diffval1 = diffarg1 * arg2 * arg1**(arg2 - 1.)
+	diffval2 = diffarg2 * arg1**arg2 * numpy.log(arg1)
+	diffval = numpy.nan_to_num(diffval1) + numpy.nan_to_num(diffval2)
 
 	return [ val, diffval ]
 
@@ -213,7 +243,12 @@ def semantics_sym(args, done, retval):
 		return None
 
 	val = args[0]["val"]
-	return [ val, 0. ]
+	diffval = 0.
+
+	if not numpy.isscalar(val):
+		diffval = numpy.full(len(val), diffval, dtype=val.dtype)
+
+	return [ val, diffval ]
 
 
 def semantics_sym_arr(args, done, retval):
@@ -221,7 +256,8 @@ def semantics_sym_arr(args, done, retval):
 		return None
 
 	val = args[0]["val"]
-	return [ val, [ 0. ] ]
+	diffval = numpy.full(len(val), 0, dtype=val.dtype)
+	return [ val, diffval ]
 
 
 def semantics_ident(args, done, retval):
@@ -233,6 +269,9 @@ def semantics_ident(args, done, retval):
 	diffval = 0.
 	if ident == symtab["__diffvar__"]:
 		diffval = 1.
+
+	if not numpy.isscalar(val):
+		diffval = numpy.full(len(val), diffval, dtype=val.dtype)
 
 	return [ val, diffval ]
 
@@ -273,11 +312,10 @@ def semantics_func2(args, done, retval):
 	diffarg2 = args[4]["val"][1]
 
 	val = functab_2args[funcname](arg1, arg2)
-	diffval = 0
-	if diffarg1 != 0:
-		diffval += diffarg1 * functab_2args_diff1[funcname](arg1, arg2)
-	if diffarg2 != 0:
-		diffval += diffarg2 * functab_2args_diff2[funcname](arg1, arg2)
+
+	diffval1 = diffarg1 * functab_2args_diff1[funcname](arg1, arg2)
+	diffval2 = diffarg2 * functab_2args_diff2[funcname](arg1, arg2)
+	diffval = numpy.nan_to_num(diffval1) + numpy.nan_to_num(diffval2)
 
 	return [ val, diffval ]
 
@@ -346,6 +384,8 @@ def main(args):
 			input_str = sys.stdin.readline().strip()
 			if len(input_str) == 0:
 				continue
+			if input_str == "exit" or input_str == "quit":
+				break
 
 			if use_recasc:
 				theparser = diff_parser.Parser()
@@ -370,8 +410,7 @@ def main(args):
 				inval = symtab[diffvar]
 				val, diffval = result["val"]
 
-				is_scalar = numpy.isscalar(inval)
-				if is_scalar:
+				if numpy.isscalar(val) or numpy.isscalar(diffval):
 					print("{} = {}".format(diffvar, inval))
 					print("f({}) = {}".format(diffvar, val))
 					print("∂f({0})/∂{0} = {1}".format(diffvar, diffval))
