@@ -9,7 +9,7 @@
 #include "core/tablegen.h"
 #include "core/parsergen.h"
 #include "core/options.h"
-#include "expr_grammar.h"
+#include "grammar.h"
 #include "script/lexer.h"
 #include "script/ast.h"
 #include "script/ast_printer.h"

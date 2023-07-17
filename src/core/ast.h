@@ -22,6 +22,12 @@
 namespace lalr1 {
 
 
+class ASTBase;
+
+// symbol type for semantic rules
+using t_astbaseptr = std::shared_ptr<ASTBase>;
+
+
 /**
  * syntax tree base
  */
@@ -32,7 +38,7 @@ public:
 
 
 public:
-	ASTBase(t_symbol_id id=t_symbol_id{},
+	ASTBase(t_symbol_id id = t_symbol_id{},
 		std::optional<t_index> tableidx=std::nullopt)
 		: m_id{id}, m_tableidx{tableidx}
 	{}
@@ -73,6 +79,19 @@ public:
 	virtual void SetLineRange(const std::optional<t_line_range>& lines)
 	{ m_line_range = lines; }
 
+	std::size_t NumSubASTs() const { return m_subasts.size(); }
+	t_astbaseptr GetSubAST(std::size_t idx) const
+	{
+		if(idx >= NumSubASTs())
+			return nullptr;
+		return m_subasts[idx];
+	}
+	std::size_t AddSubAST(const t_astbaseptr& ast)
+	{
+		m_subasts.push_back(ast);
+		return m_subasts.size() - 1;
+	}
+
 
 private:
 	// symbol id (from symbol.h)
@@ -86,11 +105,11 @@ private:
 
 	// override terminal info
 	std::optional<bool> m_isterminal{std::nullopt};
+
+	// optional sub-asts
+	std::vector<t_astbaseptr> m_subasts{};
 };
 
-
-// symbol type for semantic rules
-using t_astbaseptr = std::shared_ptr<ASTBase>;
 
 // argument vector type to pass to semantic rules
 using t_semanticargs = std::deque<t_astbaseptr>;

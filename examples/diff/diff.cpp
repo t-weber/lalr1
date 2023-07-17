@@ -1,7 +1,7 @@
 /**
- * expression parser example
+ * differentiating expression parser example
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
- * @date 06-jun-2022
+ * @date 16-jul-2023
  * @license see 'LICENSE' file
  */
 
@@ -27,15 +27,15 @@ using namespace lalr1;
 #define WRITE_BINFILE     0
 
 
-#if __has_include("expr_parser.h")
-	#include "expr_parser.h"
-	#include "expr_parser.cpp"
+#if __has_include("diff_parser.h")
+	#include "diff_parser.h"
+	#include "diff_parser.cpp"
 
 	#define USE_RECASC 1
 
-#elif __has_include("expr.tab")
+#elif __has_include("diff.tab")
 	#include "core/parser.h"
-	#include "expr.tab"
+	#include "diff.tab"
 
 	#define USE_RECASC 0
 
@@ -43,7 +43,7 @@ using namespace lalr1;
 	static std::tuple<bool, std::string> lalr1_run_parser()
 	{
 		std::cerr << "No parsing tables available, please\n"
-			"\t- run \"./expr_parsergen\" first,\n"
+			"\t- run \"./diff_parsergen\" first,\n"
 			"\t- \"touch " __FILE__ "\", and\n"
 			"\t- rebuild using \"make\"."
 			<< std::endl;
@@ -62,12 +62,12 @@ static void lalr1_run_parser()
 {
 	try
 	{
-		ExprGrammar grammar;
+		DiffGrammar grammar;
 		grammar.CreateGrammar(false, true);
 		const auto& rules = grammar.GetSemanticRules();
 
 #if USE_RECASC != 0
-		ExprParser parser;
+		DiffParser parser;
 #else
 		// get created parsing tables
 		auto [shift_tab, reduce_tab, jump_tab, num_rhs, lhs_idx] = get_lalr1_tables();
@@ -161,7 +161,7 @@ static void lalr1_run_parser()
 			std::string strAsmBin = ostrAsmBin.str();
 
 #if WRITE_BINFILE != 0
-			std::string binfile{"expr.bin"};
+			std::string binfile{"diff.bin"};
 			std::ofstream ofstrAsmBin(binfile, std::ios_base::out
 				| std::ios_base::trunc | std::ios_base::binary);
 			if(!ofstrAsmBin)

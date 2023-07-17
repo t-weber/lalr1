@@ -5,7 +5,7 @@
  * @license see 'LICENSE' file
  */
 
-#include "expr_grammar.h"
+#include "grammar.h"
 #include "script/lexer.h"
 
 

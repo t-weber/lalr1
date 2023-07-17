@@ -269,21 +269,40 @@ if(BUILD_EXAMPLES)
 
 
 	# expression compiler generator
-	add_executable(expr_parsergen examples/expr/expr_parsergen.cpp
-		examples/expr/expr_grammar.cpp examples/expr/expr_grammar.h
+	add_executable(expr_parsergen examples/expr/parsergen.cpp
+		examples/expr/grammar.cpp examples/expr/grammar.h
 	)
 	target_link_libraries(expr_parsergen lalr1)
 
 	# expression compiler
 	if(EXISTS "${CMAKE_BINARY_DIR}/expr_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/expr.tab")
 		add_executable(expr_compiler examples/expr/expr.cpp
-			examples/expr/expr_grammar.cpp examples/expr/expr_grammar.h
+			examples/expr/grammar.cpp examples/expr/grammar.h
 		)
 	endif()
 	if(EXISTS "${CMAKE_BINARY_DIR}/expr_parser.cpp")
 		target_link_libraries(expr_compiler script script-vm)
 	elseif(EXISTS "${CMAKE_BINARY_DIR}/expr.tab")
 		target_link_libraries(expr_compiler script lalr1-parser script-vm)
+	endif()
+
+
+	# differentiating expression compiler generator
+	add_executable(diff_parsergen examples/diff/parsergen.cpp
+		examples/diff/grammar.cpp examples/diff/grammar.h
+	)
+	target_link_libraries(diff_parsergen lalr1)
+
+	# differentiating expression compiler
+	if(EXISTS "${CMAKE_BINARY_DIR}/diff_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/diff.tab")
+		add_executable(diff_compiler examples/diff/diff.cpp
+			examples/diff/grammar.cpp examples/diff/grammar.h
+		)
+	endif()
+	if(EXISTS "${CMAKE_BINARY_DIR}/diff_parser.cpp")
+		target_link_libraries(diff_compiler script script-vm)
+	elseif(EXISTS "${CMAKE_BINARY_DIR}/diff.tab")
+		target_link_libraries(diff_compiler script lalr1-parser script-vm)
 	endif()
 
 
