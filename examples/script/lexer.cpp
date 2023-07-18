@@ -343,7 +343,9 @@ t_lexer_match Lexer::GetNextToken(std::size_t* _line)
 }
 
 
-
+/**
+ * create a token with a given attribute
+ */
 template<std::size_t IDX> struct _Lval_LoopFunc
 {
 	void operator()(
@@ -370,7 +372,7 @@ std::vector<t_toknode> Lexer::GetAllTokens()
 	std::vector<t_toknode> vec;
 	std::size_t line = 1;
 
-	while(1)
+	while(true)
 	{
 		auto tup = GetNextToken(&line);
 		t_symbol_id id = std::get<0>(tup);
@@ -398,7 +400,8 @@ std::vector<t_toknode> Lexer::GetAllTokens()
 		}
 		else
 		{
-			vec.emplace_back(std::make_shared<ASTToken<void*>>(id, tableidx, line));
+			vec.emplace_back(std::make_shared<ASTToken<void*>>(
+				id, tableidx, line));
 		}
 
 		if(id == (t_symbol_id)Token::END)

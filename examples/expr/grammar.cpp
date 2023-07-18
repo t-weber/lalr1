@@ -327,7 +327,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		{
 			if(!full_match) return nullptr;
 
-			t_astbaseptr ident = std::dynamic_pointer_cast<ASTBase>(args[0]);
+			auto ident = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+			ident->SetIdent(true);
 			ident->SetDataType(VMType::INT);
 			ident->SetId(expr->GetId());
 			ident->SetTerminalOverride(false);  // expression, no terminal any more

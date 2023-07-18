@@ -331,6 +331,14 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			sym->SetDataType(VMType::REAL);
 			sym->SetId(expr->GetId());
 			sym->SetTerminalOverride(false);  // expression, no terminal any more
+
+			auto diffsym = std::make_shared<ASTToken<t_real>>(
+				expr->GetId(), sym->GetTableIndex(),
+				t_real(0), sym->GetLineRange()->first);
+			diffsym->SetDataType(VMType::REAL);
+			diffsym->SetTerminalOverride(false);
+			sym->AddSubAST(diffsym);
+
 			return sym;
 		}));
 	}
@@ -352,6 +360,14 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			sym->SetDataType(VMType::INT);
 			sym->SetId(expr->GetId());
 			sym->SetTerminalOverride(false);  // expression, no terminal any more
+
+			auto diffsym = std::make_shared<ASTToken<t_int>>(
+				expr->GetId(), sym->GetTableIndex(),
+				t_int(0), sym->GetLineRange()->first);
+			diffsym->SetDataType(VMType::INT);
+			diffsym->SetTerminalOverride(false);
+			sym->AddSubAST(diffsym);
+
 			return sym;
 		}));
 	}
@@ -369,10 +385,23 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 		{
 			if(!full_match) return nullptr;
 
-			t_astbaseptr ident = std::dynamic_pointer_cast<ASTBase>(args[0]);
-			ident->SetDataType(VMType::INT);
+			auto ident = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+			ident->SetIdent(true);
+			//ident->SetDataType(VMType::INT);
 			ident->SetId(expr->GetId());
 			ident->SetTerminalOverride(false);  // expression, no terminal any more
+
+			const std::string& varname = ident->GetLexerValue();
+			std::string diffvarname = "x";  // TODO: make configurable
+
+			auto diffident = std::make_shared<ASTToken<t_int>>(
+				expr->GetId(), ident->GetTableIndex(),
+				t_int(varname == diffvarname ? 1 : 0),
+				ident->GetLineRange()->first);
+			diffident->SetDataType(VMType::INT);
+			diffident->SetTerminalOverride(false);
+			ident->AddSubAST(diffident);
+
 			return ident;
 		}));
 	}
@@ -415,7 +444,13 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			if(!full_match) return nullptr;
 
 			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[1]);
-			return std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_plus->GetId());
+			t_astbaseptr diffarg = std::dynamic_pointer_cast<ASTBase>(arg->GetSubAST(0));
+
+			auto newast = std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_plus->GetId());
+			auto diffast = std::make_shared<ASTUnary>(expr->GetId(), 0, diffarg, op_plus->GetId());
+			newast->AddSubAST(diffast);
+
+			return newast;
 		}));
 	}
 }
