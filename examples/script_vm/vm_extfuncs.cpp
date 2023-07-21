@@ -63,6 +63,22 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 		retval = t_data{std::in_place_index<m_realidx>,
 			std::tan(arg)};
 	}
+	else if(func_name == "log")
+	{
+		OpCast<m_realidx>();
+		t_real arg = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>,
+			std::log(arg)};
+	}
+	else if(func_name == "exp")
+	{
+		OpCast<m_realidx>();
+		t_real arg = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>,
+			std::exp(arg)};
+	}
 	else if(func_name == "set_eps")
 	{
 		OpCast<m_realidx>();

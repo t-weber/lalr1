@@ -78,8 +78,10 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(arg1->GetSubAST(0));
 			t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(arg2->GetSubAST(0));
 
-			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_plus->GetId());
-			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0, diffarg1, diffarg2, op_plus->GetId());
+			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg1, arg2, op_plus->GetId());
+			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffarg1, diffarg2, op_plus->GetId());
 			newast->AddSubAST(diffast);
 
 			return newast;
@@ -104,8 +106,10 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(arg1->GetSubAST(0));
 			t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(arg2->GetSubAST(0));
 
-			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_minus->GetId());
-			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0, diffarg1, diffarg2, op_minus->GetId());
+			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg1, arg2, op_minus->GetId());
+			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffarg1, diffarg2, op_minus->GetId());
 			newast->AddSubAST(diffast);
 
 			return newast;
@@ -131,10 +135,14 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(arg1->GetSubAST(0));
 			t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(arg2->GetSubAST(0));
 
-			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mult->GetId());
-			auto diffast1 = std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, diffarg2, op_mult->GetId());
-			auto diffast2 = std::make_shared<ASTBinary>(expr->GetId(), 0, arg2, diffarg1, op_mult->GetId());
-			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0, diffast1, diffast2, op_plus->GetId());
+			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg1, arg2, op_mult->GetId());
+			auto diffast1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg1, diffarg2, op_mult->GetId());
+			auto diffast2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg2, diffarg1, op_mult->GetId());
+			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffast1, diffast2, op_plus->GetId());
 			newast->AddSubAST(diffast);
 
 			return newast;
@@ -159,12 +167,18 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(arg1->GetSubAST(0));
 			t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(arg2->GetSubAST(0));
 
-			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_div->GetId());
-			auto diffast1 = std::make_shared<ASTBinary>(expr->GetId(), 0, diffarg1, arg2, op_div->GetId());
-			auto diffast2a = std::make_shared<ASTBinary>(expr->GetId(), 0, diffarg2, arg1, op_mult->GetId());
-			auto diffast2b = std::make_shared<ASTBinary>(expr->GetId(), 0, arg2, arg2, op_mult->GetId());
-			auto diffast2 = std::make_shared<ASTBinary>(expr->GetId(), 0, diffast2a, diffast2b, op_div->GetId());
-			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0, diffast1, diffast2, op_minus->GetId());
+			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg1, arg2, op_div->GetId());
+			auto diffast1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffarg1, arg2, op_div->GetId());
+			auto diffast2a = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffarg2, arg1, op_mult->GetId());
+			auto diffast2b = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg2, arg2, op_mult->GetId());
+			auto diffast2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffast2a, diffast2b, op_div->GetId());
+			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffast1, diffast2, op_minus->GetId());
 			newast->AddSubAST(diffast);
 
 			return newast;
@@ -189,7 +203,8 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(arg1->GetSubAST(0));
 			t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(arg2->GetSubAST(0));
 
-			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0, arg1, arg2, op_mod->GetId());
+			auto newast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg1, arg2, op_mod->GetId());
 			// TODO: diffast
 			return newast;
 		}));
@@ -215,7 +230,39 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 			auto newast = std::make_shared<ASTBinary>(
 				expr->GetId(), 0, arg1, arg2, op_pow->GetId());
-			// TODO: diffast
+
+			auto one = std::make_shared<ASTToken<t_int>>(
+				expr->GetId(), arg2->GetTableIndex(),
+				t_int(1), arg2->GetLineRange()->first);
+			one->SetDataType(VMType::INT);
+			one->SetTerminalOverride(false);
+
+			auto diffast1_1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffarg1, arg2, op_mult->GetId());
+			auto diffast1_2a = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg2, one, op_minus->GetId());
+			auto diffast1_2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg1, diffast1_2a, op_pow->GetId());
+			auto diffast1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffarg1, diffast1_2, op_mult->GetId());
+
+			auto diffast2_1a = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				arg1, arg2, op_pow->GetId());
+			auto diffast2_1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffarg2, diffast2_1a, op_mult->GetId());
+
+			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
+			funcargs->AddChild(arg1, false);
+			auto diffast2_2 = std::make_shared<ASTFuncCall>(expr->GetId(), 0,
+				"log", funcargs);
+			auto diffast2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffast2_1, diffast2_2, op_mult->GetId());
+
+			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+				diffast1, diffast2, op_plus->GetId());
+
+			newast->AddSubAST(diffast);
+
 			return newast;
 		}));
 	}
@@ -422,8 +469,10 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			t_astbaseptr diffarg = std::dynamic_pointer_cast<ASTBase>(arg->GetSubAST(0));
 
-			auto newast = std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_minus->GetId());
-			auto diffast = std::make_shared<ASTUnary>(expr->GetId(), 0, diffarg, op_minus->GetId());
+			auto newast = std::make_shared<ASTUnary>(expr->GetId(), 0,
+				arg, op_minus->GetId());
+			auto diffast = std::make_shared<ASTUnary>(expr->GetId(), 0,
+				diffarg, op_minus->GetId());
 			newast->AddSubAST(diffast);
 
 			return newast;
@@ -446,8 +495,10 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[1]);
 			t_astbaseptr diffarg = std::dynamic_pointer_cast<ASTBase>(arg->GetSubAST(0));
 
-			auto newast = std::make_shared<ASTUnary>(expr->GetId(), 0, arg, op_plus->GetId());
-			auto diffast = std::make_shared<ASTUnary>(expr->GetId(), 0, diffarg, op_plus->GetId());
+			auto newast = std::make_shared<ASTUnary>(expr->GetId(), 0,
+				arg, op_plus->GetId());
+			auto diffast = std::make_shared<ASTUnary>(expr->GetId(), 0,
+				diffarg, op_plus->GetId());
 			newast->AddSubAST(diffast);
 
 			return newast;
