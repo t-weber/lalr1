@@ -16,6 +16,62 @@ using lalr1::t_semanticargs;
 using lalr1::g_eps;
 
 
+
+/**
+ * create the differential of a function with 0 arguments
+ */
+t_astbaseptr DiffGrammar::MakeDiffFunc0(const std::string& ident) const
+{
+	auto zero = std::make_shared<ASTToken<t_int>>(
+		expr->GetId(), GetTerminalIndex(sym_int->GetId()), t_int(0));
+	zero->SetDataType(VMType::INT);
+	zero->SetTerminalOverride(false);
+
+	return zero;
+}
+
+
+/**
+ * create the differential of a function with 1 argument
+ */
+t_astbaseptr DiffGrammar::MakeDiffFunc1(const std::string& ident,
+	const t_astbaseptr& arg, const t_astbaseptr& diffarg) const
+{
+	// TODO
+	return nullptr;
+}
+
+
+/**
+ * create the differential of a function with 2 arguments
+ */
+t_astbaseptr DiffGrammar::MakeDiffFunc2(const std::string& ident,
+	const t_astbaseptr& arg1, const t_astbaseptr& diffarg1,
+	const t_astbaseptr& arg2, const t_astbaseptr& diffarg2) const
+{
+	// TODO
+	return nullptr;
+}
+
+
+/**
+ * get index into parse tables
+ */
+t_index DiffGrammar::GetTerminalIndex(t_symbol_id id) const
+{
+	t_index tableidx = 0;
+
+	if(m_mapTermIdx)
+	{
+		auto iter = m_mapTermIdx->find(id);
+		if(iter != m_mapTermIdx->end())
+			tableidx = iter->second;
+	}
+
+	return tableidx;
+}
+
+
 void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 {
 	// non-terminals
@@ -232,7 +288,7 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 				expr->GetId(), 0, arg1, arg2, op_pow->GetId());
 
 			auto one = std::make_shared<ASTToken<t_int>>(
-				expr->GetId(), arg2->GetTableIndex(),
+				expr->GetId(), GetTerminalIndex(sym_int->GetId()),
 				t_int(1), arg2->GetLineRange()->first);
 			one->SetDataType(VMType::INT);
 			one->SetTerminalOverride(false);
@@ -303,7 +359,11 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 
-			return std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
+			auto newast = std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
+			auto diffast = MakeDiffFunc0(ident);
+			newast->AddSubAST(diffast);
+
+			return newast;
 		}));
 	}
 
@@ -327,9 +387,14 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 			t_astbaseptr funcarg = std::dynamic_pointer_cast<ASTBase>(args[2]);
+			t_astbaseptr diffarg = std::dynamic_pointer_cast<ASTBase>(args[2]->GetSubAST(0));
 			funcargs->AddChild(funcarg, false);
 
-			return std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
+			auto newast = std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
+			auto diffast = MakeDiffFunc1(ident, funcarg, diffarg);
+			newast->AddSubAST(diffast);
+
+			return newast;
 		}));
 	}
 
@@ -353,11 +418,18 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 			t_astbaseptr funcarg1 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			t_astbaseptr funcarg2 = std::dynamic_pointer_cast<ASTBase>(args[4]);
+			t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(funcarg1->GetSubAST(0));
+			t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(funcarg2->GetSubAST(0));
+
 			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 			funcargs->AddChild(funcarg2, false);
 			funcargs->AddChild(funcarg1, false);
 
-			return std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
+			auto newast = std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
+			auto diffast = MakeDiffFunc2(ident, funcarg1, diffarg1, funcarg2, diffarg2);
+			newast->AddSubAST(diffast);
+
+			return newast;
 		}));
 	}
 

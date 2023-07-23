@@ -62,10 +62,6 @@ static void lalr1_run_parser()
 {
 	try
 	{
-		DiffGrammar grammar;
-		grammar.CreateGrammar(false, true);
-		const auto& rules = grammar.GetSemanticRules();
-
 #if USE_RECASC != 0
 		DiffParser parser;
 #else
@@ -95,6 +91,14 @@ static void lalr1_run_parser()
 		parser.SetStartingState(start_idx);
 		parser.SetAcceptingRule(acc_rule_idx);
 #endif
+
+		DiffGrammar grammar;
+#if USE_RECASC == 0
+		grammar.SetTermIdxMap(term_idx);
+#endif
+		grammar.CreateGrammar(false, true);
+		const auto& rules = grammar.GetSemanticRules();
+
 		parser.SetSemanticRules(&rules);
 		parser.SetDebug(true);
 

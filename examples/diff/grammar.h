@@ -8,14 +8,17 @@
 #define __LALR1_EXPR_GRAMMAR_H__
 
 #include "core/symbol.h"
+#include "core/common.h"
 #include "script/ast.h"
 
 
 using lalr1::NonTerminalPtr;
 using lalr1::TerminalPtr;
+using lalr1::t_index;
 using lalr1::t_symbol_id;
 using lalr1::t_semantic_id;
 using lalr1::t_semanticrules;
+using lalr1::t_mapIdIdx;
 
 
 /**
@@ -67,6 +70,17 @@ public:
 	const NonTerminalPtr& GetStartNonTerminal() const { return start; }
 	const t_semanticrules& GetSemanticRules() const { return rules; }
 
+	void SetTermIdxMap(const t_mapIdIdx* map) { m_mapTermIdx = map; }
+
+protected:
+	t_index GetTerminalIndex(t_symbol_id id) const;
+
+	t_astbaseptr MakeDiffFunc0(const std::string& ident) const;
+	t_astbaseptr MakeDiffFunc1(const std::string& ident,
+		const t_astbaseptr& arg, const t_astbaseptr& diffarg) const;
+	t_astbaseptr MakeDiffFunc2(const std::string& ident,
+		const t_astbaseptr& arg1, const t_astbaseptr& diffarg1,
+		const t_astbaseptr& arg2, const t_astbaseptr& diffarg2) const;
 
 private:
 	// non-terminals
@@ -79,6 +93,9 @@ private:
 	TerminalPtr bracket_open{}, bracket_close{};
 	TerminalPtr comma{};
 	TerminalPtr sym_real{}, sym_int{}, ident{};
+
+	// terminal indices
+	const t_mapIdIdx* m_mapTermIdx{nullptr};
 
 	// semantic rules
 	t_semanticrules rules{};
