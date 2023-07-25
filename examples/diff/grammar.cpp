@@ -20,13 +20,14 @@ using lalr1::g_eps;
 /**
  * create the differential of a function with 0 arguments
  */
-t_astbaseptr DiffGrammar::MakeDiffFunc0(const std::string& ident) const
+t_astbaseptr DiffGrammar::MakeDiffFunc0([[__maybe_unused__]] const std::string& ident) const
 {
 	auto zero = std::make_shared<ASTToken<t_int>>(
 		expr->GetId(), GetTerminalIndex(sym_int->GetId()), t_int(0));
 	zero->SetDataType(VMType::INT);
 	zero->SetTerminalOverride(false);
 
+	// always 0 because it doesn't depend on any variable
 	return zero;
 }
 
@@ -37,7 +38,59 @@ t_astbaseptr DiffGrammar::MakeDiffFunc0(const std::string& ident) const
 t_astbaseptr DiffGrammar::MakeDiffFunc1(const std::string& ident,
 	const t_astbaseptr& arg, const t_astbaseptr& diffarg) const
 {
-	// TODO
+	if(ident == "sin")
+	{
+		auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
+		funcargs->AddChild(arg, false);
+		auto diffast_func = std::make_shared<ASTFuncCall>(
+			expr->GetId(), 0, "cos", funcargs);
+
+		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			diffarg, diffast_func, op_mult->GetId());
+		return diffast_mult;
+	}
+	else if(ident == "cos")
+	{
+		auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
+		funcargs->AddChild(arg, false);
+		auto diffast_func = std::make_shared<ASTFuncCall>(
+			expr->GetId(), 0, "sin", funcargs);
+
+		auto diffast_umin = std::make_shared<ASTUnary>(expr->GetId(), 0,
+			diffast_func, op_minus->GetId());
+
+		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			diffarg, diffast_umin, op_mult->GetId());
+		return diffast_mult;
+	}
+	else if(ident == "tan")
+	{
+		auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
+		funcargs->AddChild(arg, false);
+		auto diffast_func = std::make_shared<ASTFuncCall>(
+			expr->GetId(), 0, "cos", funcargs);
+
+		auto minus2 = std::make_shared<ASTToken<t_int>>(
+			expr->GetId(), GetTerminalIndex(sym_int->GetId()), t_int(-2));
+		minus2->SetDataType(VMType::INT);
+		minus2->SetTerminalOverride(false);
+		auto diffast_pow = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			diffast_func, minus2, op_pow->GetId());
+
+		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			diffarg, diffast_pow, op_mult->GetId());
+		return diffast_mult;
+	}
+	else
+	{
+		// return 0 for unknown functions
+		auto zero = std::make_shared<ASTToken<t_int>>(
+			expr->GetId(), GetTerminalIndex(sym_int->GetId()), t_int(0));
+		zero->SetDataType(VMType::INT);
+		zero->SetTerminalOverride(false);
+		return zero;
+	}
+
 	return nullptr;
 }
 
