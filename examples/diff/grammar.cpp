@@ -369,7 +369,6 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0,
 				diffast1, diffast2, op_plus->GetId());
-
 			newast->AddSubAST(diffast);
 
 			return newast;
@@ -564,7 +563,7 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			ident->SetTerminalOverride(false);  // expression, no terminal any more
 
 			const std::string& varname = ident->GetLexerValue();
-			std::string diffvarname = "x";  // TODO: make configurable
+			const std::string& diffvarname = this->GetDiffVar();
 
 			auto diffident = std::make_shared<ASTToken<t_int>>(
 				expr->GetId(), ident->GetTableIndex(),

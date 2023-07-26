@@ -72,6 +72,9 @@ public:
 
 	void SetTermIdxMap(const t_mapIdIdx* map) { m_mapTermIdx = map; }
 
+	void SetDiffVar(const std::string& var) { m_diffvar = var; }
+	const std::string& GetDiffVar() const { return m_diffvar; }
+
 protected:
 	t_index GetTerminalIndex(t_symbol_id id) const;
 
@@ -99,6 +102,9 @@ private:
 
 	// semantic rules
 	t_semanticrules rules{};
+
+	// variable with respect to which we differentiate
+	std::string m_diffvar{"x"};
 };
 
 #endif

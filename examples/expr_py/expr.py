@@ -26,7 +26,7 @@ from ids import *
 # select parser backend
 parsing_tables = "expr.json"
 
-if os.path.isfile("diff_parser.py"):
+if os.path.isfile("expr_parser.py"):
 	import expr_parser
 	use_recasc = True
 elif os.path.isfile(parsing_tables):

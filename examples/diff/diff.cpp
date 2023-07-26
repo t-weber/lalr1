@@ -96,6 +96,7 @@ static void lalr1_run_parser()
 #if USE_RECASC == 0
 		grammar.SetTermIdxMap(term_idx);
 #endif
+		grammar.SetDiffVar("x");
 		grammar.CreateGrammar(false, true);
 		const auto& rules = grammar.GetSemanticRules();
 
@@ -129,14 +130,24 @@ static void lalr1_run_parser()
 			std::cout << "\n";
 #endif
 
-			::t_astbaseptr ast = std::dynamic_pointer_cast<::ASTBase>(parser.Parse(tokens));
+			::t_astbaseptr ast = std::dynamic_pointer_cast<::ASTBase>(
+				parser.Parse(tokens));
 			ast->AssignLineNumbers();
 			ast->DeriveDataType();
 
 #if DEBUG_CODEGEN != 0
-			std::cout << "\nAST:\n";
+			std::cout << "\nExpression AST:\n";
 			ASTPrinter printer{std::cout};
 			ast->accept(&printer);
+
+			ASTPrinter diff_printer{std::cout};
+			if(ast->NumSubASTs() != 0)
+			{
+				std::cout << "\nDifferential AST:\n";
+				auto diffast = std::dynamic_pointer_cast<::ASTBase>(
+					ast->GetSubAST(0));
+				diffast->accept(&diff_printer);
+			}
 #endif
 
 			std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> ops
