@@ -5,16 +5,16 @@
  * @license see 'LICENSE' file
  */
 
-#include "script_grammar.h"
+#include "script/grammar.h"
 #include "core/collection.h"
 #include "core/tablegen.h"
 #include "core/parsergen.h"
 #include "core/timer.h"
 #include "core/options.h"
-#include "lexer.h"
-#include "ast.h"
-#include "ast_printer.h"
-#include "ast_asm.h"
+#include "script/lexer.h"
+#include "script/ast.h"
+#include "script/ast_printer.h"
+#include "script/ast_asm.h"
 #include "script_vm/vm.h"
 
 #include <unordered_map>

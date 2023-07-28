@@ -5,14 +5,14 @@
  * @license see 'LICENSE' file
  */
 
-#include "script_grammar.h"
+#include "script/grammar.h"
 #include "core/collection.h"
 #include "core/timer.h"
-#include "lexer.h"
-#include "ast.h"
-#include "ast_printer.h"
-#include "ast_asm.h"
-#include "ast_opt.h"
+#include "script/lexer.h"
+#include "script/ast.h"
+#include "script/ast_printer.h"
+#include "script/ast_asm.h"
+#include "script/ast_opt.h"
 #include "script_vm/vm.h"
 
 #include <unordered_map>
@@ -175,7 +175,8 @@ lalr1_run_parser(const std::string& script_file,
 				std::cout << std::endl;
 			}
 
-			::t_astbaseptr ast = std::dynamic_pointer_cast<::ASTBase>(parser.Parse(tokens));
+			::t_astbaseptr ast = std::dynamic_pointer_cast<::ASTBase>(
+				parser.Parse(tokens));
 			ast->AssignLineNumbers();
 			ast->DeriveDataType();
 

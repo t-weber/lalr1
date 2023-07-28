@@ -235,7 +235,7 @@ template<class t_ast_sub>
 class ASTBaseAcceptor : public ASTBase
 {
 public:
-	ASTBaseAcceptor(std::size_t id, std::optional<std::size_t> tableidx=std::nullopt)
+	ASTBaseAcceptor(std::size_t id, std::optional<std::size_t> tableidx = std::nullopt)
 		: ASTBase{id, tableidx}
 	{}
 

@@ -50,7 +50,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 0: start -> expr
 	if(add_rules)
 	{
-		start->AddRule({ expr }, static_cast<t_semantic_id>(Semantics::START));
+		start->AddRule({ expr },
+			static_cast<t_semantic_id>(Semantics::START));
 	}
 	if(add_semantics)
 	{
@@ -66,7 +67,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 1: expr -> expr + expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_plus, expr }, static_cast<t_semantic_id>(Semantics::ADD));
+		expr->AddRule({ expr, op_plus, expr },
+			static_cast<t_semantic_id>(Semantics::ADD));
 	}
 	if(add_semantics)
 	{
@@ -85,7 +87,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 2: expr -> expr - expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_minus, expr }, static_cast<t_semantic_id>(Semantics::SUB));
+		expr->AddRule({ expr, op_minus, expr },
+			static_cast<t_semantic_id>(Semantics::SUB));
 	}
 	if(add_semantics)
 	{
@@ -124,7 +127,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 4: expr -> expr / expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_div, expr }, static_cast<t_semantic_id>(Semantics::DIV));
+		expr->AddRule({ expr, op_div, expr },
+			static_cast<t_semantic_id>(Semantics::DIV));
 	}
 	if(add_semantics)
 	{
@@ -143,7 +147,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 5: expr -> expr % expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_mod, expr }, static_cast<t_semantic_id>(Semantics::MOD));
+		expr->AddRule({ expr, op_mod, expr },
+			static_cast<t_semantic_id>(Semantics::MOD));
 	}
 	if(add_semantics)
 	{
@@ -162,7 +167,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 6: expr -> expr ^ expr
 	if(add_rules)
 	{
-		expr->AddRule({ expr, op_pow, expr }, static_cast<t_semantic_id>(Semantics::POW));
+		expr->AddRule({ expr, op_pow, expr },
+			static_cast<t_semantic_id>(Semantics::POW));
 	}
 	if(add_semantics)
 	{
@@ -182,7 +188,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 7: expr -> ( expr )
 	if(add_rules)
 	{
-		expr->AddRule({ bracket_open, expr, bracket_close }, static_cast<t_semantic_id>(Semantics::BRACKETS));
+		expr->AddRule({ bracket_open, expr, bracket_close },
+			static_cast<t_semantic_id>(Semantics::BRACKETS));
 	}
 	if(add_semantics)
 	{
@@ -199,7 +206,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 8: expr -> ident()
 	if(add_rules)
 	{
-		expr->AddRule({ ident, bracket_open, bracket_close }, static_cast<t_semantic_id>(Semantics::CALL0));
+		expr->AddRule({ ident, bracket_open, bracket_close },
+			static_cast<t_semantic_id>(Semantics::CALL0));
 	}
 	if(add_semantics)
 	{
@@ -276,7 +284,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 11: expr -> real symbol
 	if(add_rules)
 	{
-		expr->AddRule({ sym_real }, static_cast<t_semantic_id>(Semantics::REAL));
+		expr->AddRule({ sym_real },
+			static_cast<t_semantic_id>(Semantics::REAL));
 	}
 	if(add_semantics)
 	{
@@ -297,7 +306,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 12: expr -> int symbol
 	if(add_rules)
 	{
-		expr->AddRule({ sym_int }, static_cast<t_semantic_id>(Semantics::INT));
+		expr->AddRule({ sym_int },
+			static_cast<t_semantic_id>(Semantics::INT));
 	}
 	if(add_semantics)
 	{
@@ -318,7 +328,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 13: expr -> ident
 	if(add_rules)
 	{
-		expr->AddRule({ ident }, static_cast<t_semantic_id>(Semantics::IDENT));
+		expr->AddRule({ ident },
+			static_cast<t_semantic_id>(Semantics::IDENT));
 	}
 	if(add_semantics)
 	{
@@ -340,7 +351,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 14, unary-: expr -> -expr
 	if(add_rules)
 	{
-		expr->AddRule({ op_minus, expr }, static_cast<t_semantic_id>(Semantics::USUB));
+		expr->AddRule({ op_minus, expr },
+			static_cast<t_semantic_id>(Semantics::USUB));
 	}
 	if(add_semantics)
 	{
@@ -358,7 +370,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 15, unary+: expr -> +expr
 	if(add_rules)
 	{
-		expr->AddRule({ op_plus, expr }, static_cast<t_semantic_id>(Semantics::UADD));
+		expr->AddRule({ op_plus, expr },
+			static_cast<t_semantic_id>(Semantics::UADD));
 	}
 	if(add_semantics)
 	{
@@ -376,7 +389,8 @@ void ExprGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	// rule 16, assignment: expr -> ident = expr
 	/*if(add_rules)
 	{
-		expr->AddRule({ ident, op_assign, expr }, static_cast<t_semantic_id>(Semantics::ASSIGN));
+		expr->AddRule({ ident, op_assign, expr },
+			static_cast<t_semantic_id>(Semantics::ASSIGN));
 	}
 	if(add_semantics)
 	{

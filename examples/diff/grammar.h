@@ -10,6 +10,7 @@
 #include "core/symbol.h"
 #include "core/common.h"
 #include "script/ast.h"
+#include "script/grammar_common.h"
 
 
 using lalr1::NonTerminalPtr;
@@ -56,7 +57,7 @@ enum class Semantics : t_semantic_id
 };
 
 
-class DiffGrammar
+class DiffGrammar : public GrammarCommon
 {
 public:
 	void CreateGrammar(bool add_rules = true, bool add_semantics = true);
@@ -70,20 +71,22 @@ public:
 	const NonTerminalPtr& GetStartNonTerminal() const { return start; }
 	const t_semanticrules& GetSemanticRules() const { return rules; }
 
-	void SetTermIdxMap(const t_mapIdIdx* map) { m_mapTermIdx = map; }
-
 	void SetDiffVar(const std::string& var) { m_diffvar = var; }
 	const std::string& GetDiffVar() const { return m_diffvar; }
 
-protected:
-	t_index GetTerminalIndex(t_symbol_id id) const;
+        virtual t_symbol_id GetIntId() const override { return sym_int->GetId(); }
+        virtual t_symbol_id GetRealId() const override { return sym_real->GetId(); }
+        virtual t_symbol_id GetExprId() const override { return expr->GetId(); }
 
+
+protected:
 	t_astbaseptr MakeDiffFunc0(const std::string& ident) const;
 	t_astbaseptr MakeDiffFunc1(const std::string& ident,
 		const t_astbaseptr& arg, const t_astbaseptr& diffarg) const;
 	t_astbaseptr MakeDiffFunc2(const std::string& ident,
 		const t_astbaseptr& arg1, const t_astbaseptr& diffarg1,
 		const t_astbaseptr& arg2, const t_astbaseptr& diffarg2) const;
+
 
 private:
 	// non-terminals
@@ -96,9 +99,6 @@ private:
 	TerminalPtr bracket_open{}, bracket_close{};
 	TerminalPtr comma{};
 	TerminalPtr sym_real{}, sym_int{}, ident{};
-
-	// terminal indices
-	const t_mapIdIdx* m_mapTermIdx{nullptr};
 
 	// semantic rules
 	t_semanticrules rules{};

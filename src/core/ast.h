@@ -39,7 +39,7 @@ public:
 
 public:
 	ASTBase(t_symbol_id id = t_symbol_id{},
-		std::optional<t_index> tableidx=std::nullopt)
+		std::optional<t_index> tableidx = std::nullopt)
 		: m_id{id}, m_tableidx{tableidx}
 	{}
 

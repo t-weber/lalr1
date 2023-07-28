@@ -5,8 +5,8 @@
  * @license see 'LICENSE' file
  */
 
-#include "script_grammar.h"
-#include "lexer.h"
+#include "script/grammar.h"
+#include "script/lexer.h"
 
 using t_lalrastbaseptr = lalr1::t_astbaseptr;
 using lalr1::Terminal;
@@ -18,6 +18,8 @@ using lalr1::g_eps;
 
 void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 {
+	using lalr1::t_symbol_id;
+
 	// non-terminals
 	start = std::make_shared<NonTerminal>(START, "start");
 	stmts = std::make_shared<NonTerminal>(STMTS, "stmts");
@@ -36,22 +38,22 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	op_mod = std::make_shared<Terminal>('%', "%");
 	op_pow = std::make_shared<Terminal>('^', "^");
 
-	op_equ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::EQU), "==");
-	op_nequ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::NEQU), "!=");
-	op_gequ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::GEQU), ">=");
-	op_lequ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::LEQU), "<=");
-	op_and = std::make_shared<Terminal>(static_cast<std::size_t>(Token::AND), "&&");
-	op_or = std::make_shared<Terminal>(static_cast<std::size_t>(Token::OR), "||");
+	op_equ = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::EQU), "==");
+	op_nequ = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::NEQU), "!=");
+	op_gequ = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::GEQU), ">=");
+	op_lequ = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::LEQU), "<=");
+	op_and = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::AND), "&&");
+	op_or = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::OR), "||");
 	op_gt = std::make_shared<Terminal>('>', ">");
 	op_lt = std::make_shared<Terminal>('<', "<");
 	op_not = std::make_shared<Terminal>('!', "!");
 	op_binand = std::make_shared<Terminal>('&', "&");
 	op_binor = std::make_shared<Terminal>('|', "|");
 	op_binnot = std::make_shared<Terminal>('~', "~");
-	op_binxor = std::make_shared<Terminal>(static_cast<std::size_t>(Token::BIN_XOR), "xor");
+	op_binxor = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::BIN_XOR), "xor");
 
-	op_shift_left = std::make_shared<Terminal>(static_cast<std::size_t>(Token::SHIFT_LEFT), "<<");
-	op_shift_right = std::make_shared<Terminal>(static_cast<std::size_t>(Token::SHIFT_RIGHT), ">>");
+	op_shift_left = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::SHIFT_LEFT), "<<");
+	op_shift_right = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::SHIFT_RIGHT), ">>");
 
 	bracket_open = std::make_shared<Terminal>('(', "(");
 	bracket_close = std::make_shared<Terminal>(')', ")");
@@ -61,19 +63,19 @@ void ScriptGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	comma = std::make_shared<Terminal>(',', ",");
 	stmt_end = std::make_shared<Terminal>(';', ";");
 
-	sym_real = std::make_shared<Terminal>(static_cast<std::size_t>(Token::REAL), "real");
-	sym_int = std::make_shared<Terminal>(static_cast<std::size_t>(Token::INT), "integer");
-	sym_str = std::make_shared<Terminal>(static_cast<std::size_t>(Token::STR), "string");
-	ident = std::make_shared<Terminal>(static_cast<std::size_t>(Token::IDENT), "ident");
+	sym_real = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::REAL), "real");
+	sym_int = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::INT), "integer");
+	sym_str = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::STR), "string");
+	ident = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::IDENT), "ident");
 
-	keyword_if = std::make_shared<Terminal>(static_cast<std::size_t>(Token::IF), "if");
-	keyword_else = std::make_shared<Terminal>(static_cast<std::size_t>(Token::ELSE), "else");
-	keyword_loop = std::make_shared<Terminal>(static_cast<std::size_t>(Token::LOOP), "loop");
-	keyword_func = std::make_shared<Terminal>(static_cast<std::size_t>(Token::FUNC), "func");
-	keyword_extern = std::make_shared<Terminal>(static_cast<std::size_t>(Token::EXTERN), "extern");
-	keyword_return = std::make_shared<Terminal>(static_cast<std::size_t>(Token::RETURN), "return");
-	keyword_continue = std::make_shared<Terminal>(static_cast<std::size_t>(Token::CONTINUE), "continue");
-	keyword_break = std::make_shared<Terminal>(static_cast<std::size_t>(Token::BREAK), "break");
+	keyword_if = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::IF), "if");
+	keyword_else = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::ELSE), "else");
+	keyword_loop = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::LOOP), "loop");
+	keyword_func = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::FUNC), "func");
+	keyword_extern = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::EXTERN), "extern");
+	keyword_return = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::RETURN), "return");
+	keyword_continue = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::CONTINUE), "continue");
+	keyword_break = std::make_shared<Terminal>(static_cast<t_symbol_id>(Token::BREAK), "break");
 
 
 	// operator precedences and associativities

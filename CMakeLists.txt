@@ -249,8 +249,9 @@ if(BUILD_EXAMPLES)
 
 	# script compiler generator
 	add_executable(script_parsergen
-		examples/script/script_parsergen.cpp
-		examples/script/script_grammar.cpp examples/script/script_grammar.h
+		examples/script/parsergen.cpp
+		examples/script/grammar.cpp examples/script/grammar.h
+		examples/script/grammar_common.cpp examples/script/grammar_common.h
 	)
 	target_link_libraries(script_parsergen lalr1)
 
@@ -258,7 +259,8 @@ if(BUILD_EXAMPLES)
 	if(EXISTS "${CMAKE_BINARY_DIR}/script_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/script.tab")
 		add_executable(script_compiler
 			examples/script/script.cpp
-			examples/script/script_grammar.cpp examples/script/script_grammar.h
+			examples/script/grammar.cpp examples/script/grammar.h
+			examples/script/grammar_common.cpp examples/script/grammar_common.h
 		)
 	endif()
 
@@ -272,6 +274,7 @@ if(BUILD_EXAMPLES)
 	# expression compiler generator
 	add_executable(expr_parsergen examples/expr/parsergen.cpp
 		examples/expr/grammar.cpp examples/expr/grammar.h
+		examples/script/grammar_common.cpp examples/script/grammar_common.h
 	)
 	target_link_libraries(expr_parsergen lalr1)
 
@@ -279,6 +282,7 @@ if(BUILD_EXAMPLES)
 	if(EXISTS "${CMAKE_BINARY_DIR}/expr_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/expr.tab")
 		add_executable(expr_compiler examples/expr/expr.cpp
 			examples/expr/grammar.cpp examples/expr/grammar.h
+			examples/script/grammar_common.cpp examples/script/grammar_common.h
 		)
 	endif()
 	if(EXISTS "${CMAKE_BINARY_DIR}/expr_parser.cpp")
@@ -291,6 +295,7 @@ if(BUILD_EXAMPLES)
 	# differentiating expression compiler generator
 	add_executable(diff_parsergen examples/diff/parsergen.cpp
 		examples/diff/grammar.cpp examples/diff/grammar.h
+		examples/script/grammar_common.cpp examples/script/grammar_common.h
 	)
 	target_link_libraries(diff_parsergen lalr1)
 
@@ -298,6 +303,7 @@ if(BUILD_EXAMPLES)
 	if(EXISTS "${CMAKE_BINARY_DIR}/diff_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/diff.tab")
 		add_executable(diff_compiler examples/diff/diff.cpp
 			examples/diff/grammar.cpp examples/diff/grammar.h
+			examples/script/grammar_common.cpp examples/script/grammar_common.h
 		)
 	endif()
 	if(EXISTS "${CMAKE_BINARY_DIR}/diff_parser.cpp")

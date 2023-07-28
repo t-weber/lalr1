@@ -7,8 +7,10 @@
 #ifndef __LALR1_EXPR_GRAMMAR_H__
 #define __LALR1_EXPR_GRAMMAR_H__
 
+
 #include "core/symbol.h"
 #include "script/ast.h"
+#include "script/grammar_common.h"
 
 
 using lalr1::NonTerminalPtr;
@@ -53,7 +55,7 @@ enum class Semantics : t_semantic_id
 };
 
 
-class ExprGrammar
+class ExprGrammar : public GrammarCommon
 {
 public:
 	void CreateGrammar(bool add_rules = true, bool add_semantics = true);
@@ -66,6 +68,10 @@ public:
 
 	const NonTerminalPtr& GetStartNonTerminal() const { return start; }
 	const t_semanticrules& GetSemanticRules() const { return rules; }
+
+	virtual t_symbol_id GetIntId() const override { return sym_int->GetId(); }
+	virtual t_symbol_id GetRealId() const override { return sym_real->GetId(); }
+	virtual t_symbol_id GetExprId() const override { return expr->GetId(); }
 
 
 private:

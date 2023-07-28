@@ -8,17 +8,20 @@
 #define __LALR1_SCRIPT_GRAMMAR_H__
 
 #include "core/symbol.h"
-#include "ast.h"
+#include "script/ast.h"
+#include "script/grammar_common.h"
+
 
 using lalr1::NonTerminalPtr;
 using lalr1::TerminalPtr;
 using lalr1::t_semanticrules;
+using lalr1::t_symbol_id;
 
 
 /**
  * non-terminals identifiers
  */
-enum : std::size_t
+enum : lalr1::t_symbol_id
 {
 	START,      // start
 	STMTS,      // list of statements
@@ -30,7 +33,7 @@ enum : std::size_t
 };
 
 
-class ScriptGrammar
+class ScriptGrammar : public GrammarCommon
 {
 public:
 	void CreateGrammar(bool add_rules = true, bool add_semantics = true);
@@ -44,6 +47,10 @@ public:
 
 	const NonTerminalPtr& GetStartNonTerminal() const { return start; }
 	const t_semanticrules& GetSemanticRules() const { return rules; }
+
+        virtual t_symbol_id GetIntId() const override { return sym_int->GetId(); }
+        virtual t_symbol_id GetRealId() const override { return sym_real->GetId(); }
+        virtual t_symbol_id GetExprId() const override { return expr->GetId(); }
 
 
 private:

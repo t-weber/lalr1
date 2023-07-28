@@ -22,13 +22,8 @@ using lalr1::g_eps;
  */
 t_astbaseptr DiffGrammar::MakeDiffFunc0([[__maybe_unused__]] const std::string& ident) const
 {
-	auto zero = std::make_shared<ASTToken<t_int>>(
-		expr->GetId(), GetTerminalIndex(sym_int->GetId()), t_int(0));
-	zero->SetDataType(VMType::INT);
-	zero->SetTerminalOverride(false);
-
 	// always 0 because it doesn't depend on any variable
-	return zero;
+	return this->CreateIntConst(0);
 }
 
 
@@ -70,10 +65,7 @@ t_astbaseptr DiffGrammar::MakeDiffFunc1(const std::string& ident,
 		auto diffast_func = std::make_shared<ASTFuncCall>(
 			expr->GetId(), 0, "cos", funcargs);
 
-		auto minus2 = std::make_shared<ASTToken<t_int>>(
-			expr->GetId(), GetTerminalIndex(sym_int->GetId()), t_int(-2));
-		minus2->SetDataType(VMType::INT);
-		minus2->SetTerminalOverride(false);
+		auto minus2 = this->CreateIntConst(-2);
 		auto diffast_pow = std::make_shared<ASTBinary>(expr->GetId(), 0,
 			diffast_func, minus2, op_pow->GetId());
 
@@ -84,11 +76,7 @@ t_astbaseptr DiffGrammar::MakeDiffFunc1(const std::string& ident,
 	else
 	{
 		// return 0 for unknown functions
-		auto zero = std::make_shared<ASTToken<t_int>>(
-			expr->GetId(), GetTerminalIndex(sym_int->GetId()), t_int(0));
-		zero->SetDataType(VMType::INT);
-		zero->SetTerminalOverride(false);
-		return zero;
+		return this->CreateIntConst(0);
 	}
 
 	return nullptr;
@@ -104,24 +92,6 @@ t_astbaseptr DiffGrammar::MakeDiffFunc2(const std::string& ident,
 {
 	// TODO
 	return nullptr;
-}
-
-
-/**
- * get index into parse tables
- */
-t_index DiffGrammar::GetTerminalIndex(t_symbol_id id) const
-{
-	t_index tableidx = 0;
-
-	if(m_mapTermIdx)
-	{
-		auto iter = m_mapTermIdx->find(id);
-		if(iter != m_mapTermIdx->end())
-			tableidx = iter->second;
-	}
-
-	return tableidx;
 }
 
 
@@ -340,11 +310,8 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			auto newast = std::make_shared<ASTBinary>(
 				expr->GetId(), 0, arg1, arg2, op_pow->GetId());
 
-			auto one = std::make_shared<ASTToken<t_int>>(
-				expr->GetId(), GetTerminalIndex(sym_int->GetId()),
-				t_int(1), arg2->GetLineRange()->first);
-			one->SetDataType(VMType::INT);
-			one->SetTerminalOverride(false);
+			auto one = this->CreateIntConst(1);
+			one->SetLineRange(arg2->GetLineRange());
 
 			auto diffast1_1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
 				diffarg1, arg2, op_mult->GetId());
@@ -503,11 +470,9 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			sym->SetId(expr->GetId());
 			sym->SetTerminalOverride(false);  // expression, no terminal any more
 
-			auto diffsym = std::make_shared<ASTToken<t_real>>(
-				expr->GetId(), sym->GetTableIndex(),
-				t_real(0), sym->GetLineRange()->first);
-			diffsym->SetDataType(VMType::REAL);
-			diffsym->SetTerminalOverride(false);
+			auto diffsym = this->CreateRealConst(0);
+			diffsym->SetTableIndex(sym->GetTableIndex());
+			diffsym->SetLineRange(sym->GetLineRange());
 			sym->AddSubAST(diffsym);
 
 			return sym;
@@ -532,11 +497,9 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			sym->SetId(expr->GetId());
 			sym->SetTerminalOverride(false);  // expression, no terminal any more
 
-			auto diffsym = std::make_shared<ASTToken<t_int>>(
-				expr->GetId(), sym->GetTableIndex(),
-				t_int(0), sym->GetLineRange()->first);
-			diffsym->SetDataType(VMType::INT);
-			diffsym->SetTerminalOverride(false);
+			auto diffsym = this->CreateIntConst(0);
+			diffsym->SetTableIndex(sym->GetTableIndex());
+			diffsym->SetLineRange(sym->GetLineRange());
 			sym->AddSubAST(diffsym);
 
 			return sym;
@@ -565,12 +528,9 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			const std::string& varname = ident->GetLexerValue();
 			const std::string& diffvarname = this->GetDiffVar();
 
-			auto diffident = std::make_shared<ASTToken<t_int>>(
-				expr->GetId(), ident->GetTableIndex(),
-				t_int(varname == diffvarname ? 1 : 0),
-				ident->GetLineRange()->first);
-			diffident->SetDataType(VMType::INT);
-			diffident->SetTerminalOverride(false);
+			auto diffident = this->CreateIntConst(varname == diffvarname ? 1 : 0);
+			diffident->SetTableIndex(ident->GetTableIndex());
+			diffident->SetLineRange(ident->GetLineRange());
 			ident->AddSubAST(diffident);
 
 			return ident;
