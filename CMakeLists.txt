@@ -217,6 +217,7 @@ if(BUILD_EXAMPLES)
 		examples/script/lexer.cpp examples/script/lexer.h
 		examples/script/ast_printer.cpp examples/script/ast_printer.h
 		examples/script/ast_asm.cpp examples/script/ast_asm.h
+		examples/script/ast_opt.cpp examples/script/ast_opt.h
 		examples/script_vm/opcodes.h
 		examples/script_vm/types.h
 		examples/script/sym.cpp examples/script/sym.h

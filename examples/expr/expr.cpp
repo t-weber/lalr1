@@ -11,6 +11,7 @@
 #include "script/ast.h"
 #include "script/ast_printer.h"
 #include "script/ast_asm.h"
+#include "script/ast_opt.h"
 #include "script_vm/vm.h"
 
 #include <unordered_map>
@@ -128,6 +129,10 @@ static void lalr1_run_parser()
 			::t_astbaseptr ast = std::dynamic_pointer_cast<::ASTBase>(parser.Parse(tokens));
 			ast->AssignLineNumbers();
 			ast->DeriveDataType();
+
+			// optimise tree
+			ASTOpt astopt;
+			ast->accept(&astopt);
 
 #if DEBUG_CODEGEN != 0
 			std::cout << "\nAST:\n";

@@ -59,7 +59,7 @@ enum class ASTType
 
 
 /**
- * visitor for easier extensibility
+ * const visitor for easier extensibility
  */
 class ASTVisitor
 {
@@ -80,6 +80,31 @@ public:
 	virtual void visit(const ASTFuncCall* ast, std::size_t level) = 0;
 	virtual void visit(const ASTJump* ast, std::size_t level) = 0;
 	virtual void visit(const ASTDeclare* ast, std::size_t level) = 0;
+};
+
+
+/**
+ * modifying visitor for easier extensibility
+ */
+class ASTModifyingVisitor
+{
+public:
+	virtual ~ASTModifyingVisitor() = default;
+
+	virtual t_astbaseptr visit(ASTToken<t_lval>* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTToken<std::string>* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTToken<t_real>* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTToken<t_int>* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTToken<void*>* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTUnary* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTBinary* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTList* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTCondition* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTLoop* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTFunc* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTFuncCall* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTJump* ast, std::size_t level) = 0;
+	virtual t_astbaseptr visit(ASTDeclare* ast, std::size_t level) = 0;
 };
 
 
@@ -194,6 +219,7 @@ public:
 	virtual void SetChild(std::size_t, const t_astbaseptr&) { }
 
 	virtual void accept(ASTVisitor* visitor, std::size_t level = 0) const = 0;
+	virtual t_astbaseptr accept(ASTModifyingVisitor* visitor, std::size_t level = 0) = 0;
 
 
 private:
@@ -217,6 +243,12 @@ public:
 	{
 		const t_ast_sub *sub = static_cast<const t_ast_sub*>(this);
 		visitor->visit(sub, level);
+	}
+
+	virtual t_astbaseptr accept(ASTModifyingVisitor* visitor, std::size_t level = 0) override
+	{
+		t_ast_sub *sub = static_cast<t_ast_sub*>(this);
+		return visitor->visit(sub, level);
 	}
 };
 

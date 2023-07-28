@@ -353,7 +353,7 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			auto diffast1_2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
 				arg1, diffast1_2a, op_pow->GetId());
 			auto diffast1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
-				diffarg1, diffast1_2, op_mult->GetId());
+				diffast1_1, diffast1_2, op_mult->GetId());
 
 			auto diffast2_1a = std::make_shared<ASTBinary>(expr->GetId(), 0,
 				arg1, arg2, op_pow->GetId());
