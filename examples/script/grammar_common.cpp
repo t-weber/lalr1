@@ -48,3 +48,43 @@ t_astbaseptr GrammarCommon::CreateRealConst(t_real val) const
 
 	return node;
 }
+
+
+/**
+ * is it a token node with lexical value of zero?
+ */
+bool GrammarCommon::is_zero_token(const t_astbaseptr& node)
+{
+	if(node->GetType() != ASTType::TOKEN)
+		return false;
+
+	auto int_node = std::dynamic_pointer_cast<ASTToken<t_int>>(node);
+	auto real_node = std::dynamic_pointer_cast<ASTToken<t_real>>(node);
+
+	if(int_node)
+		return int_node->GetLexerValue() == t_int(0);
+	else if(real_node)
+		return real_node->GetLexerValue() == t_real(0);
+
+	return false;
+}
+
+
+/**
+ * is it a token node with lexical value of one?
+ */
+bool GrammarCommon::is_one_token(const t_astbaseptr& node)
+{
+	if(node->GetType() != ASTType::TOKEN)
+		return false;
+
+	auto int_node = std::dynamic_pointer_cast<ASTToken<t_int>>(node);
+	auto real_node = std::dynamic_pointer_cast<ASTToken<t_real>>(node);
+
+	if(int_node)
+		return int_node->GetLexerValue() == t_int(1);
+	else if(real_node)
+		return real_node->GetLexerValue() == t_real(1);
+
+	return false;
+}

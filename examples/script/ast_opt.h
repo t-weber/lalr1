@@ -9,14 +9,15 @@
 #define __LR1_AST_OPT_H__
 
 
-#include "lval.h"
-#include "ast.h"
+#include "script/lval.h"
+#include "script/ast.h"
+#include "script/grammar_common.h"
 
 
 class ASTOpt : public ASTModifyingVisitor
 {
 public:
-	ASTOpt();
+	ASTOpt(const GrammarCommon* grammar = nullptr);
 
 	virtual t_astbaseptr visit(ASTToken<t_lval>* ast, std::size_t level) override;
 	virtual t_astbaseptr visit(ASTToken<t_real>* ast, std::size_t level) override;
@@ -37,8 +38,9 @@ public:
 protected:
 	void recurse(::ASTBase* ast, std::size_t level);
 
-	static bool is_zero_token(const t_astbaseptr& node);
-	static bool is_one_token(const t_astbaseptr& node);
+
+private:
+	const GrammarCommon* m_grammar{nullptr};
 };
 
 

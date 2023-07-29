@@ -58,7 +58,8 @@ using namespace lalr1;
 		[[maybe_unused]] bool debug_codegen = false,
 		[[maybe_unused]] bool debug_parser = false,
 		[[maybe_unused]] bool direct_consts = false,
-		[[maybe_unused]] bool no_reloc = false)
+		[[maybe_unused]] bool no_reloc = false,
+		[[maybe_unused]] bool optimise = false)
 	{
 		std::cerr << "No parsing tables available, please\n"
 			"\t- run \"./script_parsergen\" first,\n"
@@ -82,7 +83,8 @@ lalr1_run_parser(const std::string& script_file,
 	bool debug_codegen = false,
 	bool debug_parser = false,
 	bool direct_consts = false,
-	bool no_reloc = false)
+	bool no_reloc = false,
+	bool optimise = false)
 {
 	try
 	{
@@ -180,9 +182,12 @@ lalr1_run_parser(const std::string& script_file,
 			ast->AssignLineNumbers();
 			ast->DeriveDataType();
 
-			// optimise tree
-			ASTOpt astopt;
-			ast->accept(&astopt);
+			if(optimise)
+			{
+				// optimise tree
+				ASTOpt astopt{&grammar};
+				ast->accept(&astopt);
+			}
 
 			if(debug_codegen)
 			{
@@ -340,6 +345,7 @@ int main(int argc, char** argv)
 	bool runvm = false;
 	bool direct_consts = false;
 	bool no_reloc = false;
+	bool optimise = false;
 
 	args::options_description arg_descr("Script compiler arguments");
 	arg_descr.add_options()
@@ -348,6 +354,7 @@ int main(int argc, char** argv)
 	("debugparser,p", args::bool_switch(&debug_parser), "enable debug output for parser")
 	("direct_consts", args::bool_switch(&direct_consts), "do not create a constants table")
 	("non_relocatable", args::bool_switch(&no_reloc), "create non-relocatable code")
+	("optimise,O", args::bool_switch(&optimise), "optimise code generation")
 	("prog", args::value<decltype(progs)>(&progs), "input program to run");
 
 	args::positional_options_description posarg_descr;
@@ -384,7 +391,8 @@ int main(int argc, char** argv)
 	fs::path script_file = progs[0];
 
 	if(auto [code_ok, prog] = lalr1_run_parser(
-		script_file.string(), debug_codegen, debug_parser, direct_consts, no_reloc);
+		script_file.string(), debug_codegen, debug_parser,
+		direct_consts, no_reloc, optimise);
 		code_ok)
 	{
 		auto [run_time, time_unit] = get_elapsed_time<

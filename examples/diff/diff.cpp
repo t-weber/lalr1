@@ -137,7 +137,7 @@ static void lalr1_run_parser()
 			ast->DeriveDataType();
 
 			// optimise tree
-			ASTOpt astopt;
+			ASTOpt astopt{&grammar};
 			ast->accept(&astopt);
 
 			// optimise subtrees

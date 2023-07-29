@@ -29,6 +29,9 @@ public:
 	t_astbaseptr CreateIntConst(t_int val) const;
 	t_astbaseptr CreateRealConst(t_real val) const;
 
+	static bool is_zero_token(const t_astbaseptr& node);
+	static bool is_one_token(const t_astbaseptr& node);
+
 
 protected:
 	// terminal index map

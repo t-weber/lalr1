@@ -8,49 +8,9 @@
 #include "ast_opt.h"
 
 
-ASTOpt::ASTOpt()
-{
-}
-
-
-/**
- * is it a token node with lexical value of zero?
- */
-bool ASTOpt::is_zero_token(const t_astbaseptr& node)
-{
-	if(node->GetType() != ASTType::TOKEN)
-		return false;
-
-	auto int_node = std::dynamic_pointer_cast<ASTToken<t_int>>(node);
-	auto real_node = std::dynamic_pointer_cast<ASTToken<t_real>>(node);
-
-	if(int_node)
-		return int_node->GetLexerValue() == t_int(0);
-	else if(real_node)
-		return real_node->GetLexerValue() == t_real(0);
-
-	return false;
-}
-
-
-/**
- * is it a token node with lexical value of one?
- */
-bool ASTOpt::is_one_token(const t_astbaseptr& node)
-{
-	if(node->GetType() != ASTType::TOKEN)
-		return false;
-
-	auto int_node = std::dynamic_pointer_cast<ASTToken<t_int>>(node);
-	auto real_node = std::dynamic_pointer_cast<ASTToken<t_real>>(node);
-
-	if(int_node)
-		return int_node->GetLexerValue() == t_int(1);
-	else if(real_node)
-		return real_node->GetLexerValue() == t_real(1);
-
-	return false;
-}
+ASTOpt::ASTOpt(const GrammarCommon* grammar)
+	: m_grammar{grammar}
+{ }
 
 
 /**
@@ -125,51 +85,59 @@ t_astbaseptr ASTOpt::visit(ASTBinary* ast, std::size_t level)
 	if(ast->GetOpId() == '+')
 	{
 		// 0 + x = x
-		if(is_zero_token(ast->GetChild(0)))
+		if(GrammarCommon::is_zero_token(ast->GetChild(0)))
 			return ast->GetChild(1);
 
 		// x + 0 = x
-		if(is_zero_token(ast->GetChild(1)))
+		if(GrammarCommon::is_zero_token(ast->GetChild(1)))
 			return ast->GetChild(0);
 	}
 	else if(ast->GetOpId() == '-')
 	{
 		// x - 0 = x
-		if(is_zero_token(ast->GetChild(1)))
+		if(GrammarCommon::is_zero_token(ast->GetChild(1)))
 			return ast->GetChild(0);
 	}
 	else if(ast->GetOpId() == '*')
 	{
 		// 0 * x = 0
-		if(is_zero_token(ast->GetChild(0)))
+		if(GrammarCommon::is_zero_token(ast->GetChild(0)))
 			return ast->GetChild(0);
 
 		// x * 0 = 0
-		if(is_zero_token(ast->GetChild(1)))
+		if(GrammarCommon::is_zero_token(ast->GetChild(1)))
 			return ast->GetChild(1);
 
 		// 1 * x = x
-		if(is_one_token(ast->GetChild(0)))
+		if(GrammarCommon::is_one_token(ast->GetChild(0)))
 			return ast->GetChild(1);
 
 		// x * 1 = x
-		if(is_one_token(ast->GetChild(1)))
+		if(GrammarCommon::is_one_token(ast->GetChild(1)))
 			return ast->GetChild(0);
 	}
 	else if(ast->GetOpId() == '/')
 	{
 		// 0 / x = 0
-		if(is_zero_token(ast->GetChild(0)))
+		if(GrammarCommon::is_zero_token(ast->GetChild(0)))
 			return ast->GetChild(0);
 
 		// x / 1 = x
-		if(is_one_token(ast->GetChild(1)))
+		if(GrammarCommon::is_one_token(ast->GetChild(1)))
 			return ast->GetChild(0);
 	}
 	else if(ast->GetOpId() == '^')
 	{
 		// x^1 = x
-		if(is_one_token(ast->GetChild(1)))
+		if(GrammarCommon::is_one_token(ast->GetChild(1)))
+			return ast->GetChild(0);
+
+		// x^0 = 1;
+		if(GrammarCommon::is_zero_token(ast->GetChild(1)))
+			return m_grammar->CreateIntConst(1);
+
+		// 1^x = 1
+		if(GrammarCommon::is_one_token(ast->GetChild(0)))
 			return ast->GetChild(0);
 	}
 
