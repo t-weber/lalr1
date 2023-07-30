@@ -82,10 +82,12 @@ public:
 protected:
 	t_astbaseptr MakeDiffFunc0(const std::string& ident) const;
 	t_astbaseptr MakeDiffFunc1(const std::string& ident,
-		const t_astbaseptr& arg, const t_astbaseptr& diffarg) const;
+		const t_astbaseptr& arg) const;
 	t_astbaseptr MakeDiffFunc2(const std::string& ident,
-		const t_astbaseptr& arg1, const t_astbaseptr& diffarg1,
-		const t_astbaseptr& arg2, const t_astbaseptr& diffarg2) const;
+		const t_astbaseptr& arg1, const t_astbaseptr& arg2) const;
+
+	t_astbaseptr MakePowFunc(const t_astbaseptr& arg1, const t_astbaseptr& arg2,
+		bool only_diff_ast = false) const;
 
 
 private:

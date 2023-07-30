@@ -282,6 +282,7 @@ if(BUILD_EXAMPLES)
 	if(EXISTS "${CMAKE_BINARY_DIR}/expr_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/expr.tab")
 		add_executable(expr_compiler examples/expr/expr.cpp
 			examples/expr/grammar.cpp examples/expr/grammar.h
+			examples/expr/printer.cpp examples/expr/printer.h
 			examples/script/grammar_common.cpp examples/script/grammar_common.h
 		)
 	endif()
@@ -303,6 +304,7 @@ if(BUILD_EXAMPLES)
 	if(EXISTS "${CMAKE_BINARY_DIR}/diff_parser.cpp" OR EXISTS "${CMAKE_BINARY_DIR}/diff.tab")
 		add_executable(diff_compiler examples/diff/diff.cpp
 			examples/diff/grammar.cpp examples/diff/grammar.h
+			examples/expr/printer.cpp examples/expr/printer.h
 			examples/script/grammar_common.cpp examples/script/grammar_common.h
 		)
 	endif()

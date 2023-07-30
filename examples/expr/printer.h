@@ -1,12 +1,12 @@
 /**
- * ast printer
+ * expression printer
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
- * @date 14-jun-2022
+ * @date 29-jul-2022
  * @license see 'LICENSE' file
  */
 
-#ifndef __LR1_AST_PRINTER_H__
-#define __LR1_AST_PRINTER_H__
+#ifndef __LALR1_EXPR_PRINTER_H__
+#define __LALR1_EXPR_PRINTER_H__
 
 #include <iostream>
 
@@ -15,10 +15,10 @@
 
 
 
-class ASTPrinter : public ASTVisitor
+class ExprPrinter : public ASTVisitor
 {
 public:
-	ASTPrinter(std::ostream& ostr = std::cout);
+	ExprPrinter(std::ostream& ostr = std::cout);
 
 	virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) override;
 	virtual void visit(const ASTToken<t_real>* ast, std::size_t level) override;
@@ -35,13 +35,9 @@ public:
 	virtual void visit(const ASTJump* ast, std::size_t level) override;
 	virtual void visit(const ASTDeclare* ast, std::size_t level) override;
 
-	static std::string get_ast_typename(const ::ASTBase* ast);
-	static std::string get_jump_typename(const ASTJump* ast);
-
 
 protected:
-	void print_base(const ::ASTBase* ast, std::size_t level,
-		const char *extrainfo = nullptr);
+	void print_children(const ::ASTBase* ast, std::size_t level);
 
 
 private:

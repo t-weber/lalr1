@@ -13,6 +13,7 @@
 #include "script/ast_asm.h"
 #include "script/ast_opt.h"
 #include "script_vm/vm.h"
+#include "expr/printer.h"
 
 #include <unordered_map>
 #include <iostream>
@@ -138,6 +139,11 @@ static void lalr1_run_parser()
 			std::cout << "\nAST:\n";
 			ASTPrinter printer{std::cout};
 			ast->accept(&printer);
+
+			ExprPrinter expr_printer{std::cout};
+			std::cout << "\nFunc: ";
+			ast->accept(&expr_printer);
+			std::cout << std::endl;
 #endif
 
 			std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> ops
@@ -161,6 +167,7 @@ static void lalr1_run_parser()
 			ASTAsm astasmbin{ostrAsmBin, &ops};
 			astasmbin.AlwaysCallExternal(true);
 			astasmbin.SetBinary(true);
+			astasmbin.SetAllowUnknownVars(false);
 			ast->accept(&astasmbin);
 			astasmbin.FinishCodegen();
 			std::string strAsmBin = ostrAsmBin.str();

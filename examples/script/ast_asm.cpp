@@ -129,6 +129,8 @@ void ASTAsm::visit(const ASTToken<t_str>* ast,
 			if(!sym)
 			{
 				VMType symty = ast->GetDataType();
+				if(!m_allow_unknowns && symty == VMType::UNKNOWN)
+					throw_err(ast, "Unknown variable type for \"" + varname + + "\".");
 
 				// in global scope
 				if(m_cur_func == "")

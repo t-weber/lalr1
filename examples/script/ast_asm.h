@@ -55,6 +55,7 @@ public:
 	const SymTab& GetSymbolTable() const { return m_symtab; }
 	void SetRelocatable(bool b) { m_relocatable = b; }
 	void SetCollectConsts(bool b) { m_collect_consts = b; }
+	void SetAllowUnknownVars(bool b) { m_allow_unknowns = b; }
 
 
 private:
@@ -86,6 +87,7 @@ private:
 
 	bool m_relocatable{true};              // create relocatable code
 	bool m_collect_consts{true};           // collect constants into a table
+	bool m_allow_unknowns{true};           // allow variables of unknown type
 };
 
 

@@ -5,7 +5,7 @@
  * @license see 'LICENSE' file
  */
 
-#include "ast_printer.h"
+#include "script/ast_printer.h"
 #include "script_vm/types.h"
 
 
@@ -146,21 +146,21 @@ void ASTPrinter::visit(const ASTToken<void*>* ast, std::size_t level)
 
 void ASTPrinter::visit(const ASTUnary* ast, std::size_t level)
 {
-	std::ostringstream _ostr;
-	_ostr << ", op = " << ast->GetOpId();
+	std::ostringstream ostr;
+	ostr << ", op = " << ast->GetOpId();
 	if(ast->GetOpId() < 256)
-		_ostr << " (" << (char)ast->GetOpId() << ")";
-	print_base(ast, level, _ostr.str().c_str());
+		ostr << " (" << (char)ast->GetOpId() << ")";
+	print_base(ast, level, ostr.str().c_str());
 }
 
 
 void ASTPrinter::visit(const ASTBinary* ast, std::size_t level)
 {
-	std::ostringstream _ostr;
-	_ostr << ", op = " << ast->GetOpId();
+	std::ostringstream ostr;
+	ostr << ", op = " << ast->GetOpId();
 	if(ast->GetOpId() < 256)
-		_ostr << " (" << (char)ast->GetOpId() << ")";
-	print_base(ast, level, _ostr.str().c_str());
+		ostr << " (" << (char)ast->GetOpId() << ")";
+	print_base(ast, level, ostr.str().c_str());
 }
 
 
@@ -184,13 +184,17 @@ void ASTPrinter::visit(const ASTLoop* ast, std::size_t level)
 
 void ASTPrinter::visit(const ASTFunc* ast, std::size_t level)
 {
-	print_base(ast, level);
+	std::ostringstream ostr;
+	ostr << ", func = \"" << ast->GetName() << "\"";
+	print_base(ast, level, ostr.str().c_str());
 }
 
 
 void ASTPrinter::visit(const ASTFuncCall* ast, std::size_t level)
 {
-	print_base(ast, level);
+	std::ostringstream ostr;
+	ostr << ", func = \"" << ast->GetName() << "\"";
+	print_base(ast, level, ostr.str().c_str());
 }
 
 

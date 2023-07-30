@@ -543,7 +543,7 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 			print_active_state(std::cout);
 
 		bool accepted = false;
-		t_toknode accepted_topnode;
+		t_toknode accepted_topnode{};
 
 
 		// neither a shift nor a reduce defined
@@ -759,7 +759,11 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 			}
 
 			// no more needed if the grammar has already been accepted
-			if(!accepted)
+			if(accepted)
+			{
+				accepted_topnode = std::move(reducedSym);
+			}
+			else
 			{
 				topstate = states.top();
 				if(m_debug)

@@ -30,9 +30,10 @@ t_astbaseptr DiffGrammar::MakeDiffFunc0([[__maybe_unused__]] const std::string& 
 /**
  * create the differential of a function with 1 argument
  */
-t_astbaseptr DiffGrammar::MakeDiffFunc1(const std::string& ident,
-	const t_astbaseptr& arg, const t_astbaseptr& diffarg) const
+t_astbaseptr DiffGrammar::MakeDiffFunc1(const std::string& ident, const t_astbaseptr& arg) const
 {
+	t_astbaseptr diffarg = std::dynamic_pointer_cast<ASTBase>(arg->GetSubAST(0));
+
 	if(ident == "sin")
 	{
 		auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
@@ -73,6 +74,17 @@ t_astbaseptr DiffGrammar::MakeDiffFunc1(const std::string& ident,
 			diffarg, diffast_pow, op_mult->GetId());
 		return diffast_mult;
 	}
+	if(ident == "sqrt")
+	{
+		auto half = this->CreateRealConst(0.5);
+		half->SetLineRange(arg->GetLineRange());
+
+		auto zero = this->CreateRealConst(0);
+		zero->SetLineRange(arg->GetLineRange());
+		half->AddSubAST(zero);
+
+		return MakePowFunc(arg, half, true);
+	}
 	else
 	{
 		// return 0 for unknown functions
@@ -87,10 +99,21 @@ t_astbaseptr DiffGrammar::MakeDiffFunc1(const std::string& ident,
  * create the differential of a function with 2 arguments
  */
 t_astbaseptr DiffGrammar::MakeDiffFunc2(const std::string& ident,
-	const t_astbaseptr& arg1, const t_astbaseptr& diffarg1,
-	const t_astbaseptr& arg2, const t_astbaseptr& diffarg2) const
+	const t_astbaseptr& arg1, const t_astbaseptr& arg2) const
 {
-	// TODO
+	//t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(arg1->GetSubAST(0));
+	//t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(arg2->GetSubAST(0));
+
+	if(ident == "pow")
+	{
+		return MakePowFunc(arg1, arg2, true);
+	}
+	else
+	{
+		// return 0 for unknown functions
+		return CreateIntConst(0);
+	}
+
 	return nullptr;
 }
 
@@ -132,10 +155,21 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 	if(add_semantics)
 	{
 		rules.emplace(std::make_pair(static_cast<t_semantic_id>(Semantics::START),
-		[](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
+		[this](bool full_match, const t_semanticargs& args, [[maybe_unused]] t_lalrastbaseptr retval) -> t_lalrastbaseptr
 		{
 			if(!full_match) return nullptr;
-			return args[0];
+			//return args[0];
+
+			// add a dummy unary node to allow optimisation on the root node
+			t_astbaseptr arg = std::dynamic_pointer_cast<ASTBase>(args[0]);
+			t_astbaseptr diffarg = std::dynamic_pointer_cast<ASTBase>(arg->GetSubAST(0));
+
+			auto newast = std::make_shared<ASTUnary>(expr->GetId(), 0,
+				arg, op_plus->GetId());
+			auto diffast = std::make_shared<ASTUnary>(expr->GetId(), 0,
+				diffarg, op_plus->GetId());
+			newast->AddSubAST(diffast);
+			return newast;
 		}));
 	}
 
@@ -304,41 +338,8 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 			t_astbaseptr arg1 = std::dynamic_pointer_cast<ASTBase>(args[0]);
 			t_astbaseptr arg2 = std::dynamic_pointer_cast<ASTBase>(args[2]);
-			t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(arg1->GetSubAST(0));
-			t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(arg2->GetSubAST(0));
 
-			auto newast = std::make_shared<ASTBinary>(
-				expr->GetId(), 0, arg1, arg2, op_pow->GetId());
-
-			auto one = this->CreateIntConst(1);
-			one->SetLineRange(arg2->GetLineRange());
-
-			auto diffast1_1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
-				diffarg1, arg2, op_mult->GetId());
-			auto diffast1_2a = std::make_shared<ASTBinary>(expr->GetId(), 0,
-				arg2, one, op_minus->GetId());
-			auto diffast1_2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
-				arg1, diffast1_2a, op_pow->GetId());
-			auto diffast1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
-				diffast1_1, diffast1_2, op_mult->GetId());
-
-			auto diffast2_1a = std::make_shared<ASTBinary>(expr->GetId(), 0,
-				arg1, arg2, op_pow->GetId());
-			auto diffast2_1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
-				diffarg2, diffast2_1a, op_mult->GetId());
-
-			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
-			funcargs->AddChild(arg1, false);
-			auto diffast2_2 = std::make_shared<ASTFuncCall>(expr->GetId(), 0,
-				"log", funcargs);
-			auto diffast2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
-				diffast2_1, diffast2_2, op_mult->GetId());
-
-			auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0,
-				diffast1, diffast2, op_plus->GetId());
-			newast->AddSubAST(diffast);
-
-			return newast;
+			return MakePowFunc(arg1, arg2, false);
 		}));
 	}
 
@@ -379,8 +380,7 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 
 			auto newast = std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
-			auto diffast = MakeDiffFunc0(ident);
-			newast->AddSubAST(diffast);
+			newast->AddSubAST(MakeDiffFunc0(ident));
 
 			return newast;
 		}));
@@ -406,12 +406,10 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 			t_astbaseptr funcarg = std::dynamic_pointer_cast<ASTBase>(args[2]);
-			t_astbaseptr diffarg = std::dynamic_pointer_cast<ASTBase>(args[2]->GetSubAST(0));
 			funcargs->AddChild(funcarg, false);
 
 			auto newast = std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
-			auto diffast = MakeDiffFunc1(ident, funcarg, diffarg);
-			newast->AddSubAST(diffast);
+			newast->AddSubAST(MakeDiffFunc1(ident, funcarg));
 
 			return newast;
 		}));
@@ -437,16 +435,13 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 			t_astbaseptr funcarg1 = std::dynamic_pointer_cast<ASTBase>(args[2]);
 			t_astbaseptr funcarg2 = std::dynamic_pointer_cast<ASTBase>(args[4]);
-			t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(funcarg1->GetSubAST(0));
-			t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(funcarg2->GetSubAST(0));
 
 			auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 			funcargs->AddChild(funcarg2, false);
 			funcargs->AddChild(funcarg1, false);
 
 			auto newast = std::make_shared<ASTFuncCall>(expr->GetId(), 0, ident, funcargs);
-			auto diffast = MakeDiffFunc2(ident, funcarg1, diffarg1, funcarg2, diffarg2);
-			newast->AddSubAST(diffast);
+			newast->AddSubAST(MakeDiffFunc2(ident, funcarg1, funcarg2));
 
 			return newast;
 		}));
@@ -588,4 +583,56 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 			return newast;
 		}));
 	}
+}
+
+
+
+t_astbaseptr DiffGrammar::MakePowFunc(const t_astbaseptr& arg1, const t_astbaseptr& arg2,
+	bool only_diff_ast) const
+{
+	t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(arg1->GetSubAST(0));
+	t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(arg2->GetSubAST(0));
+
+	auto one = this->CreateIntConst(1);
+	one->SetLineRange(arg2->GetLineRange());
+
+	auto diffast1_1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+		diffarg1, arg2, op_mult->GetId());
+	auto diffast1_2a = std::make_shared<ASTBinary>(expr->GetId(), 0,
+		arg2, one, op_minus->GetId());
+	auto diffast1_2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+		arg1, diffast1_2a, op_pow->GetId());
+	auto diffast1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+		diffast1_1, diffast1_2, op_mult->GetId());
+
+	auto diffast2_1a = std::make_shared<ASTBinary>(expr->GetId(), 0,
+		arg1, arg2, op_pow->GetId());
+	auto diffast2_1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+		diffarg2, diffast2_1a, op_mult->GetId());
+
+	auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
+	funcargs->AddChild(arg1, false);
+	auto diffast2_2 = std::make_shared<ASTFuncCall>(expr->GetId(), 0,
+				"log", funcargs);
+	auto diffast2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
+		diffast2_1, diffast2_2, op_mult->GetId());
+
+	auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0,
+		diffast1, diffast2, op_plus->GetId());
+
+	if(only_diff_ast)
+	{
+		// directly return differential ast
+		return diffast;
+	}
+	else
+	{
+		// attach differential ast as a sub-ast
+		auto newast = std::make_shared<ASTBinary>(
+			expr->GetId(), 0, arg1, arg2, op_pow->GetId());
+		newast->AddSubAST(diffast);
+		return newast;
+	}
+
+	return nullptr;
 }

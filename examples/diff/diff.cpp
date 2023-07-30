@@ -13,6 +13,7 @@
 #include "script/ast_asm.h"
 #include "script/ast_opt.h"
 #include "script_vm/vm.h"
+#include "expr/printer.h"
 
 #include <unordered_map>
 #include <iostream>
@@ -26,6 +27,8 @@ using namespace lalr1;
 
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
+#define GEN_CODE          0
+#define RUN_VM            0
 
 
 #if __has_include("diff_parser.h")
@@ -61,6 +64,8 @@ using namespace lalr1;
 
 static void lalr1_run_parser()
 {
+	std::string diffvar = "x";
+
 	try
 	{
 #if USE_RECASC != 0
@@ -97,7 +102,7 @@ static void lalr1_run_parser()
 #if USE_RECASC == 0
 		grammar.SetTermIdxMap(term_idx);
 #endif
-		grammar.SetDiffVar("x");
+		grammar.SetDiffVar(diffvar);
 		grammar.CreateGrammar(false, true);
 		const auto& rules = grammar.GetSemanticRules();
 
@@ -153,16 +158,25 @@ static void lalr1_run_parser()
 			ASTPrinter printer{std::cout};
 			ast->accept(&printer);
 
-			ASTPrinter diff_printer{std::cout};
 			if(ast->NumSubASTs() != 0)
 			{
+				ASTPrinter diff_printer{std::cout};
 				std::cout << "\nDifferential AST:\n";
 				auto diffast = std::dynamic_pointer_cast<::ASTBase>(
 					ast->GetSubAST(0));
 				diffast->accept(&diff_printer);
+
+				ExprPrinter expr_printer{std::cout};
+				std::cout << "\nf(" << diffvar << ")" << " = ";
+				ast->accept(&expr_printer);
+				std::cout << "\n∂f(" << diffvar << ")/∂" << diffvar << " = ";
+				diffast->accept(&expr_printer);
+				std::cout << std::endl;
 			}
+
 #endif
 
+#if GEN_CODE != 0
 			std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> ops
 			{{
 				std::make_pair('+', std::make_tuple("add", OpCode::ADD)),
@@ -184,6 +198,7 @@ static void lalr1_run_parser()
 			ASTAsm astasmbin{ostrAsmBin, &ops};
 			astasmbin.AlwaysCallExternal(true);
 			astasmbin.SetBinary(true);
+			astasmbin.SetAllowUnknownVars(false);
 			ast->accept(&astasmbin);
 			astasmbin.FinishCodegen();
 			std::string strAsmBin = ostrAsmBin.str();
@@ -210,7 +225,10 @@ static void lalr1_run_parser()
 				<< strAsmBin.size() << " bytes):\n"
 				<< ostrAsm.str();
 #endif
+#endif  // GEN_CODE
 
+
+#if RUN_VM != 0
 			VM vm(1024);
 			//vm.SetDebug(true);
 			vm.SetMem(0, strAsmBin);
@@ -224,6 +242,7 @@ static void lalr1_run_parser()
 					std::cout << val;
 			}, vm.TopData());
 			std::cout << std::endl;
+#endif
 		}
 	}
 	catch(const std::exception& err)
