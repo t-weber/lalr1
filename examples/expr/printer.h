@@ -1,7 +1,7 @@
 /**
  * expression printer
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
- * @date 29-jul-2022
+ * @date 29-jul-2023
  * @license see 'LICENSE' file
  */
 
