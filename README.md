@@ -23,3 +23,8 @@ Forked on 30 July 2022 from https://github.com/t-weber/lr1 [![DOI: 10.5281/zenod
 - A graph of the LALR(1) closures is written to the file "expr.svg".
 - Re-run `cmake -DCMAKE_BUILD_TYPE=Release .. && make -j$(($(nproc)/2+1))` to build the expression parser.
 - Run the expression parser using `./expr_compiler`.
+
+### Symbolic Differentiation
+- After building the libraries (see "Installation" above), run `./diff_parsergen` from the build directory to create the differentiation parser.
+- Re-run `cmake -DCMAKE_BUILD_TYPE=Release .. && make -j$(($(nproc)/2+1))` to build the parser.
+- Run the parser using `./diff_compiler`.
