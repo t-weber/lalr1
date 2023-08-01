@@ -18,6 +18,9 @@ class ASTOpt : public ASTModifyingVisitor
 {
 public:
 	ASTOpt(const GrammarCommon* grammar = nullptr);
+	ASTOpt(const ASTOpt& other);
+
+	ASTOpt& operator=(const ASTOpt& other);
 
 	virtual t_astbaseptr visit(ASTToken<t_lval>* ast, std::size_t level) override;
 	virtual t_astbaseptr visit(ASTToken<t_real>* ast, std::size_t level) override;

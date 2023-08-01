@@ -13,6 +13,18 @@ ASTOpt::ASTOpt(const GrammarCommon* grammar)
 { }
 
 
+ASTOpt::ASTOpt(const ASTOpt& other)
+	: m_grammar(other.m_grammar)
+{ }
+
+
+ASTOpt& ASTOpt::operator=(const ASTOpt& other)
+{
+	this->m_grammar = other.m_grammar;
+	return *this;
+}
+
+
 /**
  * call optimiser for child nodes
  */
