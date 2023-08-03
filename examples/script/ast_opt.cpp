@@ -109,6 +109,10 @@ t_astbaseptr ASTOpt::visit(ASTBinary* ast, std::size_t level)
 		// x - 0 = x
 		if(GrammarCommon::is_zero_token(ast->GetChild(1)))
 			return ast->GetChild(0);
+
+		// 0 - x = -x
+		if(GrammarCommon::is_zero_token(ast->GetChild(0)))
+			return std::make_shared<ASTUnary>(m_grammar->GetExprId(), 0, ast->GetChild(1), '-');
 	}
 	else if(ast->GetOpId() == '*')
 	{
