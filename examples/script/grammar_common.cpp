@@ -55,17 +55,10 @@ t_astbaseptr GrammarCommon::CreateRealConst(t_real val) const
  */
 bool GrammarCommon::is_zero_token(const t_astbaseptr& node)
 {
-	if(node->GetType() != ASTType::TOKEN)
-		return false;
-
-	auto int_node = std::dynamic_pointer_cast<ASTToken<t_int>>(node);
-	auto real_node = std::dynamic_pointer_cast<ASTToken<t_real>>(node);
-
-	if(int_node)
-		return int_node->GetLexerValue() == t_int(0);
-	else if(real_node)
-		return real_node->GetLexerValue() == t_real(0);
-
+	if(auto [is_int, int_val] = is_int_const(node); is_int)
+		return int_val == t_int(0);
+	else if(auto [is_real, real_val] = is_real_const(node); is_real)
+		return real_val == t_real(0);
 	return false;
 }
 
@@ -75,16 +68,42 @@ bool GrammarCommon::is_zero_token(const t_astbaseptr& node)
  */
 bool GrammarCommon::is_one_token(const t_astbaseptr& node)
 {
+	if(auto [is_int, int_val] = is_int_const(node); is_int)
+		return int_val == t_int(1);
+	else if(auto [is_real, real_val] = is_real_const(node); is_real)
+		return real_val == t_real(1);
+	return false;
+}
+
+
+/**
+ * is the node an integer token?
+ */
+std::pair<bool, t_int> GrammarCommon::is_int_const(const t_astbaseptr& node)
+{
 	if(node->GetType() != ASTType::TOKEN)
-		return false;
+		return std::make_pair(false, t_int(0));
 
 	auto int_node = std::dynamic_pointer_cast<ASTToken<t_int>>(node);
+	if(!int_node)
+		return std::make_pair(false, t_int(0));
+
+	return std::make_pair(true, int_node->GetLexerValue());
+}
+
+
+/**
+ * is the node a real token?
+ */
+std::pair<bool, t_real> GrammarCommon::is_real_const(const t_astbaseptr& node)
+{
+	if(node->GetType() != ASTType::TOKEN)
+		return std::make_pair(false, t_real(0));
+
 	auto real_node = std::dynamic_pointer_cast<ASTToken<t_real>>(node);
+	if(!real_node)
+		return std::make_pair(false, t_real(0));
 
-	if(int_node)
-		return int_node->GetLexerValue() == t_int(1);
-	else if(real_node)
-		return real_node->GetLexerValue() == t_real(1);
 
-	return false;
+	return std::make_pair(true, real_node->GetLexerValue());
 }

@@ -27,6 +27,7 @@ using namespace lalr1;
 
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
+#define OPTIMISE_TREE     0
 
 
 #if __has_include("expr_parser.h")
@@ -131,9 +132,11 @@ static void lalr1_run_parser()
 			ast->AssignLineNumbers();
 			ast->DeriveDataType();
 
+#if OPTIMISE_TREE != 0
 			// optimise tree
 			ASTOpt astopt{&grammar};
 			ast->accept(&astopt);
+#endif
 
 #if DEBUG_CODEGEN != 0
 			std::cout << "\nAST:\n";

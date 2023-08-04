@@ -31,6 +31,8 @@ public:
 
 	static bool is_zero_token(const t_astbaseptr& node);
 	static bool is_one_token(const t_astbaseptr& node);
+	static std::pair<bool, t_int> is_int_const(const t_astbaseptr& node);
+	static std::pair<bool, t_real> is_real_const(const t_astbaseptr& node);
 
 
 protected:
