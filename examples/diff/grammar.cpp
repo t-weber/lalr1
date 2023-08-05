@@ -32,46 +32,152 @@ t_astbaseptr DiffGrammar::MakeDiffFunc0([[__maybe_unused__]] const std::string& 
  */
 t_astbaseptr DiffGrammar::MakeDiffFunc1(const std::string& ident, const t_astbaseptr& arg) const
 {
+	// df(x) / dx
 	t_astbaseptr diffarg = std::dynamic_pointer_cast<ASTBase>(arg->GetSubAST(0));
 
-	if(ident == "sin")
+	if(ident == "exp")
 	{
+		// exp(f(x))
+		auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
+		funcargs->AddChild(arg, false);
+		auto diffast_func = std::make_shared<ASTFuncCall>(
+			expr->GetId(), 0, "exp", funcargs);
+
+		// exp(f(x)) * df(x)/dx
+		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			diffarg, diffast_func, op_mult->GetId());
+		return diffast_mult;
+	}
+	else if(ident == "log")
+	{
+		// df(x) / (dx * f(x))
+		auto diffast_div = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			diffarg, arg, op_div->GetId());
+		return diffast_div;
+	}
+	else if(ident == "sin")
+	{
+		// cos(f(x))
 		auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 		funcargs->AddChild(arg, false);
 		auto diffast_func = std::make_shared<ASTFuncCall>(
 			expr->GetId(), 0, "cos", funcargs);
 
+		// cos(f(x)) * df(x)/dx
 		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
 			diffarg, diffast_func, op_mult->GetId());
 		return diffast_mult;
 	}
 	else if(ident == "cos")
 	{
+		// sin(f(x))
 		auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 		funcargs->AddChild(arg, false);
 		auto diffast_func = std::make_shared<ASTFuncCall>(
 			expr->GetId(), 0, "sin", funcargs);
 
+		// -sin(f(x))
 		auto diffast_umin = std::make_shared<ASTUnary>(expr->GetId(), 0,
 			diffast_func, op_minus->GetId());
 
+		// -sin(f(x)) * df(x)/dx
 		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
 			diffarg, diffast_umin, op_mult->GetId());
 		return diffast_mult;
 	}
 	else if(ident == "tan")
 	{
+		// cos(f(x))
 		auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 		funcargs->AddChild(arg, false);
 		auto diffast_func = std::make_shared<ASTFuncCall>(
 			expr->GetId(), 0, "cos", funcargs);
 
+		// 1 / cos^2(f(x))
 		auto minus2 = this->CreateIntConst(-2);
 		auto diffast_pow = std::make_shared<ASTBinary>(expr->GetId(), 0,
 			diffast_func, minus2, op_pow->GetId());
 
+		// 1 / cos^2(f(x)) * df(x) / dx
 		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
 			diffarg, diffast_pow, op_mult->GetId());
+		return diffast_mult;
+	}
+	else if(ident == "asin")
+	{
+		auto one = this->CreateRealConst(1.);
+		one->SetLineRange(arg->GetLineRange());
+
+		// f(x)^2
+		auto diffast_square = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			arg, arg, op_mult->GetId());
+		// 1 - f(x)^2
+		auto diffast_minus = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			one, diffast_square, op_minus->GetId());
+
+		// sqrt(1 - f(x)^2)
+		auto sqrtargargs = std::make_shared<ASTList>(expr->GetId(), 0);
+		sqrtargargs->AddChild(diffast_minus, false);
+		auto diffast_sqrt = std::make_shared<ASTFuncCall>(
+			expr->GetId(), 0, "sqrt", sqrtargargs);
+
+		// 1 / sqrt(1 - f(x)^2)
+		auto diffast_div = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			one, diffast_sqrt, op_div->GetId());
+
+		// 1 / sqrt(1 - f(x)^2) * df(x)/dx)
+		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			diffarg, diffast_div, op_mult->GetId());
+		return diffast_mult;
+	}
+	else if(ident == "acos")
+	{
+		auto one = this->CreateRealConst(1.);
+		auto minus_one = this->CreateRealConst(-1.);
+		one->SetLineRange(arg->GetLineRange());
+		minus_one->SetLineRange(arg->GetLineRange());
+
+		// f(x)^2
+		auto diffast_square = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			arg, arg, op_mult->GetId());
+		// 1 - f(x)^2
+		auto diffast_minus = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			one, diffast_square, op_minus->GetId());
+
+		// sqrt(1 - f(x)^2)
+		auto sqrtargargs = std::make_shared<ASTList>(expr->GetId(), 0);
+		sqrtargargs->AddChild(diffast_minus, false);
+		auto diffast_sqrt = std::make_shared<ASTFuncCall>(
+			expr->GetId(), 0, "sqrt", sqrtargargs);
+
+		// -1 / sqrt(1 - f(x)^2)
+		auto diffast_div = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			minus_one, diffast_sqrt, op_div->GetId());
+
+		// -1 / sqrt(1 - f(x)^2) * df(x)/dx)
+		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			diffarg, diffast_div, op_mult->GetId());
+		return diffast_mult;
+	}
+	else if(ident == "atan")
+	{
+		auto one = this->CreateRealConst(1.);
+		one->SetLineRange(arg->GetLineRange());
+
+		// f(x)^2
+		auto diffast_square = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			arg, arg, op_mult->GetId());
+		// 1 + f(x)^2
+		auto diffast_plus = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			one, diffast_square, op_plus->GetId());
+
+		// 1 / (1 + f(x)^2)
+		auto diffast_div = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			one, diffast_plus, op_div->GetId());
+
+		// 1 / (1 + f(x)^2) * df(x)/dx)
+		auto diffast_mult = std::make_shared<ASTBinary>(expr->GetId(), 0,
+			diffarg, diffast_div, op_mult->GetId());
 		return diffast_mult;
 	}
 	if(ident == "sqrt")
@@ -587,36 +693,50 @@ void DiffGrammar::CreateGrammar(bool add_rules, bool add_semantics)
 
 
 
+/**
+ * create the differential of f(x) ^ g(y)
+ */
 t_astbaseptr DiffGrammar::MakePowFunc(const t_astbaseptr& arg1, const t_astbaseptr& arg2,
 	bool only_diff_ast) const
 {
+	// df(x)/dx  and  dg(y)/dy
 	t_astbaseptr diffarg1 = std::dynamic_pointer_cast<ASTBase>(arg1->GetSubAST(0));
 	t_astbaseptr diffarg2 = std::dynamic_pointer_cast<ASTBase>(arg2->GetSubAST(0));
 
 	auto one = this->CreateIntConst(1);
 	one->SetLineRange(arg2->GetLineRange());
 
+	// df(x)/dx * g(y)
 	auto diffast1_1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
 		diffarg1, arg2, op_mult->GetId());
+	// g(y) - 1
 	auto diffast1_2a = std::make_shared<ASTBinary>(expr->GetId(), 0,
 		arg2, one, op_minus->GetId());
+	// f(x)^(g(y) - 1)
 	auto diffast1_2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
 		arg1, diffast1_2a, op_pow->GetId());
+	// f(x)^(g(y) - 1) * df(x)/dx * g(y)
 	auto diffast1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
 		diffast1_1, diffast1_2, op_mult->GetId());
 
+	// f(x)^g(y)
 	auto diffast2_1a = std::make_shared<ASTBinary>(expr->GetId(), 0,
 		arg1, arg2, op_pow->GetId());
+	// dg(y)/dy * f(x)^g(y)
 	auto diffast2_1 = std::make_shared<ASTBinary>(expr->GetId(), 0,
 		diffarg2, diffast2_1a, op_mult->GetId());
 
+	// log(f(x))
 	auto funcargs = std::make_shared<ASTList>(expr->GetId(), 0);
 	funcargs->AddChild(arg1, false);
 	auto diffast2_2 = std::make_shared<ASTFuncCall>(expr->GetId(), 0,
-				"log", funcargs);
+		"log", funcargs);
+
+	// dg(y)/dy * f(x)^g(y) * log(f(x))
 	auto diffast2 = std::make_shared<ASTBinary>(expr->GetId(), 0,
 		diffast2_1, diffast2_2, op_mult->GetId());
 
+	// f(x)^(g(y) - 1) * df(x)/dx * g(y)  +  dg(y)/dy * f(x)^g(y) * log(f(x))
 	auto diffast = std::make_shared<ASTBinary>(expr->GetId(), 0,
 		diffast1, diffast2, op_plus->GetId());
 

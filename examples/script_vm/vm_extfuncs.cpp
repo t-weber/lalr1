@@ -63,6 +63,30 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 		retval = t_data{std::in_place_index<m_realidx>,
 			std::tan(arg)};
 	}
+	else if(func_name == "asin")
+	{
+		OpCast<m_realidx>();
+		t_real arg = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>,
+			std::asin(arg)};
+	}
+	else if(func_name == "acos")
+	{
+		OpCast<m_realidx>();
+		t_real arg = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>,
+			std::acos(arg)};
+	}
+	else if(func_name == "atan")
+	{
+		OpCast<m_realidx>();
+		t_real arg = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>,
+			std::atan(arg)};
+	}
 	else if(func_name == "log")
 	{
 		OpCast<m_realidx>();
