@@ -42,11 +42,10 @@ std::tuple<t_real, std::string>
 get_elapsed_time(const t_timepoint& start_time)
 {
 	using t_duration_ms = std::chrono::duration<t_real, std::ratio<1, 1000>>;
-	using t_clock = typename t_timepoint::clock;
-	t_duration_ms ms = t_clock::now() - start_time;
+	t_duration_ms ms = t_timepoint::clock::now() - start_time;
 	t_real run_time = ms.count();
-
 	std::string time_unit = "ms";
+
 	if(run_time >= t_real(1000.))
 	{
 		using t_duration_s = std::chrono::duration<t_real, std::ratio<1, 1>>;
