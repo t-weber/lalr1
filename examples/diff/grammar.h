@@ -4,6 +4,7 @@
  * @date 16-jul-2023
  * @license see 'LICENSE' file
  */
+
 #ifndef __LALR1_EXPR_GRAMMAR_H__
 #define __LALR1_EXPR_GRAMMAR_H__
 
