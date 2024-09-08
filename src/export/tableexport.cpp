@@ -86,7 +86,7 @@ bool TableExport::SaveParseTables(const TableGen& tab, const std::string& file)
 
 	ofstr << "/*\n";
 	ofstr << " * Parsing tables created on " << get_timestamp();
-	ofstr << " using liblalr1 by Tobias Weber, 2020-2023.\n";
+	ofstr << " using liblalr1 by Tobias Weber, 2020-2024.\n";
 	ofstr << " * DOI: https://doi.org/10.5281/zenodo.6987396\n";
 	ofstr << " */\n\n";
 
@@ -128,32 +128,23 @@ bool TableExport::SaveParseTables(const TableGen& tab, const std::string& file)
 	ofstr << "\n";
 
 	// save lalr(1) tables
-	const t_table& tabActionShift = tab.GetShiftTable();
-	const t_table& tabActionReduce = tab.GetReduceTable();
-	const t_table& tabJump = tab.GetJumpTable();
-
-	SaveParseTable(tabActionShift, ofstr,
+	SaveParseTable(tab.GetShiftTable(), ofstr,
 		"tab_action_shift", "state", "terminal", "state");
-	SaveParseTable(tabActionReduce, ofstr,
+	SaveParseTable(tab.GetReduceTable(), ofstr,
 		"tab_action_reduce", "state", "lookahead", "rule index");
-	SaveParseTable(tabJump, ofstr,
+	SaveParseTable(tab.GetJumpTable(), ofstr,
 		"tab_jump", "state", "nonterminal", "state");
 
 	// save partial match tables
 	if(tab.GetGenPartialMatches())
 	{
-		const t_table& tabPartialRuleTerm = tab.GetPartialsRuleTerm();
-		const t_table& tabPartialRuleNonterm = tab.GetPartialsRuleNonterm();
-		const t_table& tabPartialMatchLenTerm = tab.GetPartialsMatchLengthTerm();
-		const t_table& tabPartialMatchLenNonterm = tab.GetPartialsMatchLengthNonterm();
-
-		SaveParseTable(tabPartialRuleTerm, ofstr,
+		SaveParseTable(tab.GetPartialsRuleTerm(), ofstr,
 			"tab_partials_rule_term", "state", "terminal", "rule index");
-		SaveParseTable(tabPartialMatchLenTerm, ofstr,
+		SaveParseTable(tab.GetPartialsMatchLengthTerm(), ofstr,
 			"tab_partials_matchlen_term", "state", "terminal", "length");
-		SaveParseTable(tabPartialRuleNonterm, ofstr,
+		SaveParseTable(tab.GetPartialsRuleNonterm(), ofstr,
 			"tab_partials_rule_nonterm", "state", "nonterminal", "rule index");
-		SaveParseTable(tabPartialMatchLenNonterm, ofstr,
+		SaveParseTable(tab.GetPartialsMatchLengthNonterm(), ofstr,
 			"tab_partials_matchlen_nonterm", "state", "nonterminal", "length");
 	}
 

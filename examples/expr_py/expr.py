@@ -111,6 +111,10 @@ semantics = {
 #
 def main(args):
 	try:
+		if not use_recasc:
+			tablesfile = open(parsing_tables)
+			tables = json.load(tablesfile)
+
 		while True:
 			sys.stdout.write("> ")
 			sys.stdout.flush()
@@ -121,8 +125,6 @@ def main(args):
 			if use_recasc:
 				theparser = expr_parser.Parser()
 			else:
-				tablesfile = open(parsing_tables)
-				tables = json.load(tablesfile)
 				theparser = parser.Parser(tables)
 
 			theparser.debug = False

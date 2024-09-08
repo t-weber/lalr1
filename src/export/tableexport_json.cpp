@@ -114,7 +114,7 @@ bool TableExportJSON::SaveParseTables(const TableGen& tab, const std::string& fi
 	// meta infos
 	ofstr << "\"infos\" : ";
 	ofstr << "\"Parsing tables created on " << get_timestamp();
-	ofstr << " using liblalr1 by Tobias Weber, 2020-2023";
+	ofstr << " using liblalr1 by Tobias Weber, 2020-2024";
 	ofstr << " (DOI: https://doi.org/10.5281/zenodo.6987396).\",\n";
 
 	// constants
@@ -147,42 +147,32 @@ bool TableExportJSON::SaveParseTables(const TableGen& tab, const std::string& fi
 	ofstr << "},\n\n";
 
 	// lalr(1) tables
-	const t_table& tabActionShift = tab.GetShiftTable();
-	const t_table& tabActionReduce = tab.GetReduceTable();
-	const t_table& tabJump = tab.GetJumpTable();
-
-	SaveParseTable(tabActionShift, ofstr,
+	SaveParseTable(tab.GetShiftTable(), ofstr,
 		"shift", "state", "terminal", "state", &special_values);
 	ofstr << ",\n\n";
-	SaveParseTable(tabActionReduce, ofstr,
+	SaveParseTable(tab.GetReduceTable(), ofstr,
 		"reduce", "state", "lookahead", "rule index", &special_values);
 	ofstr << ",\n\n";
-	SaveParseTable(tabJump, ofstr,
+	SaveParseTable(tab.GetJumpTable(), ofstr,
 		"jump", "state", "nonterminal", "state", &special_values);
 	ofstr << ",\n\n";
 
 	// partial match tables
 	if(tab.GetGenPartialMatches())
 	{
-		const t_table& tabPartialRuleTerm = tab.GetPartialsRuleTerm();
-		const t_table& tabPartialRuleNonterm = tab.GetPartialsRuleNonterm();
-		const t_table& tabPartialMatchLenTerm = tab.GetPartialsMatchLengthTerm();
-		const t_table& tabPartialMatchLenNonterm = tab.GetPartialsMatchLengthNonterm();
-		const t_table& tabPartialNontermLhsId = tab.GetPartialsNontermLhsId();
-
-		SaveParseTable(tabPartialRuleTerm, ofstr,
+		SaveParseTable(tab.GetPartialsRuleTerm(), ofstr,
 			"partials_rule_term", "state", "terminal", "rule index", &special_values);
 		ofstr << ",\n\n";
-		SaveParseTable(tabPartialMatchLenTerm, ofstr,
+		SaveParseTable(tab.GetPartialsMatchLengthTerm(), ofstr,
 			"partials_matchlen_term", "state", "terminal", "length");
 		ofstr << ",\n\n";
-		SaveParseTable(tabPartialRuleNonterm, ofstr,
+		SaveParseTable(tab.GetPartialsRuleNonterm(), ofstr,
 			"partials_rule_nonterm", "state", "nonterminal", "rule index", &special_values);
 		ofstr << ",\n\n";
-		SaveParseTable(tabPartialMatchLenNonterm, ofstr,
+		SaveParseTable(tab.GetPartialsMatchLengthNonterm(), ofstr,
 			"partials_matchlen_nonterm", "state", "nonterminal", "length");
 		ofstr << ",\n\n";
-		SaveParseTable(tabPartialNontermLhsId, ofstr,
+		SaveParseTable(tab.GetPartialsNontermLhsId(), ofstr,
 			"partials_lhs_nonterm", "state", "nonterminal", "lhs nonterminal id", &special_values);
 		ofstr << ",\n";
 	}

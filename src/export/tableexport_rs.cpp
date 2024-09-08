@@ -96,7 +96,7 @@ bool TableExportRS::SaveParseTables(const TableGen& tab, const std::string& file
 	// meta infos
 	ofstr << "/*\n";
 	ofstr << " * Parsing tables created on " << get_timestamp() << "\n";
-	ofstr << " * using liblalr1 by Tobias Weber, 2020-2023\n";
+	ofstr << " * using liblalr1 by Tobias Weber, 2020-2024\n";
 	ofstr << " * (DOI: https://doi.org/10.5281/zenodo.6987396).\n";
 	ofstr << " */\n\n";
 
@@ -130,9 +130,12 @@ bool TableExportRS::SaveParseTables(const TableGen& tab, const std::string& file
 	ofstr << "\n";
 
 	// lalr(1) tables
-	SaveParseTable(tab.GetShiftTable(), ofstr, "SHIFT", "state", "terminal", "state", ty_idx);
-	SaveParseTable(tab.GetReduceTable(), ofstr, "REDUCE", "state", "lookahead", "rule index", ty_idx);
-	SaveParseTable(tab.GetJumpTable(), ofstr, "JUMP", "state", "nonterminal", "state", ty_idx);
+	SaveParseTable(tab.GetShiftTable(), ofstr,
+		"SHIFT", "state", "terminal", "state", ty_idx);
+	SaveParseTable(tab.GetReduceTable(), ofstr,
+		"REDUCE", "state", "lookahead", "rule index", ty_idx);
+	SaveParseTable(tab.GetJumpTable(), ofstr,
+		"JUMP", "state", "nonterminal", "state", ty_idx);
 	ofstr << "\n";
 
 	// partial match tables

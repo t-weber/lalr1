@@ -110,75 +110,65 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 	// meta infos
 	ofstr << "\"infos\" = ";
 	ofstr << "\"Parsing tables created on " << get_timestamp();
-	ofstr << " using liblalr1 by Tobias Weber, 2020-2023";
+	ofstr << " using liblalr1 by Tobias Weber, 2020-2024";
 	ofstr << " (DOI: https://doi.org/10.5281/zenodo.6987396).\"\n";
 
 	// constants
 	ofstr << "\n[consts]\n";
-	//ofstr << "\t\"acc_rule\" : " << m_accepting_rule << ",\n";
+	//ofstr << "\tacc_rule = " << m_accepting_rule << "\n";
 
 	if(tab.GetUseNegativeTableValues())
 	{
-		ofstr << "\t\"err\" : " << special_values[ERROR_VAL] << "\n";
-		ofstr << "\t\"acc\" : " << special_values[ACCEPT_VAL] << "\n";
-		ofstr << "\t\"eps\" : " << special_idents[EPS_IDENT] << "\n";
-		ofstr << "\t\"end\" : " << special_idents[END_IDENT] << "\n";
+		ofstr << "\terr = " << special_values[ERROR_VAL] << "\n";
+		ofstr << "\tacc = " << special_values[ACCEPT_VAL] << "\n";
+		ofstr << "\teps = " << special_idents[EPS_IDENT] << "\n";
+		ofstr << "\tend = " << special_idents[END_IDENT] << "\n";
 	}
 	else
 	{
-		/*ofstr << "\t\"err\" : 0x" << std::hex << ERROR_VAL << std::dec << "\n";
-		ofstr << "\t\"acc\" : 0x" << std::hex << ACCEPT_VAL << std::dec << "\n";
-		ofstr << "\t\"eps\" : 0x" << std::hex << EPS_IDENT << std::dec << "\n";
-		ofstr << "\t\"end\" : 0x" << std::hex << END_IDENT << std::dec << "\n";*/
-		ofstr << "\t\"err\" : " << ERROR_VAL << "\n";
-		ofstr << "\t\"acc\" : " << ACCEPT_VAL << "\n";
-		ofstr << "\t\"eps\" : " << EPS_IDENT << "\n";
-		ofstr << "\t\"end\" : " << END_IDENT << "\n";
+		/*ofstr << "\terr = 0x" << std::hex << ERROR_VAL << std::dec << "\n";
+		ofstr << "\tacc = 0x" << std::hex << ACCEPT_VAL << std::dec << "\n";
+		ofstr << "\teps = 0x" << std::hex << EPS_IDENT << std::dec << "\n";
+		ofstr << "\tend = 0x" << std::hex << END_IDENT << std::dec << "\n";*/
+		ofstr << "\terr = " << ERROR_VAL << "\n";
+		ofstr << "\tacc = " << ACCEPT_VAL << "\n";
+		ofstr << "\teps = " << EPS_IDENT << "\n";
+		ofstr << "\tend = " << END_IDENT << "\n";
 	}
 
 	t_index acc_rule_idx = tab.GetTableIndex(tab.GetAcceptingRule(), IndexTableKind::SEMANTIC);
-	ofstr << "\t\"accept\" : " << acc_rule_idx << "\n";
-	ofstr << "\t\"start\" : " << tab.GetStartingState() << "\n";
+	ofstr << "\taccept = " << acc_rule_idx << "\n";
+	ofstr << "\tstart = " << tab.GetStartingState() << "\n";
 
 	ofstr << "\n\n";
 
 	// lalr(1) tables
-	const t_table& tabActionShift = tab.GetShiftTable();
-	const t_table& tabActionReduce = tab.GetReduceTable();
-	const t_table& tabJump = tab.GetJumpTable();
-
-	SaveParseTable(tabActionShift, ofstr,
+	SaveParseTable(tab.GetShiftTable(), ofstr,
 		"shift", "state", "terminal", "state", &special_values);
 	ofstr << "\n\n";
-	SaveParseTable(tabActionReduce, ofstr,
+	SaveParseTable(tab.GetReduceTable(), ofstr,
 		"reduce", "state", "lookahead", "rule index", &special_values);
 	ofstr << "\n\n";
-	SaveParseTable(tabJump, ofstr,
+	SaveParseTable(tab.GetJumpTable(), ofstr,
 		"jump", "state", "nonterminal", "state", &special_values);
 	ofstr << "\n\n";
 
 	// partial match tables
 	if(tab.GetGenPartialMatches())
 	{
-		const t_table& tabPartialRuleTerm = tab.GetPartialsRuleTerm();
-		const t_table& tabPartialRuleNonterm = tab.GetPartialsRuleNonterm();
-		const t_table& tabPartialMatchLenTerm = tab.GetPartialsMatchLengthTerm();
-		const t_table& tabPartialMatchLenNonterm = tab.GetPartialsMatchLengthNonterm();
-		const t_table& tabPartialNontermLhsId = tab.GetPartialsNontermLhsId();
-
-		SaveParseTable(tabPartialRuleTerm, ofstr,
+		SaveParseTable(tab.GetPartialsRuleTerm(), ofstr,
 			"partials_rule_term", "state", "terminal", "rule index", &special_values);
 		ofstr << "\n\n";
-		SaveParseTable(tabPartialMatchLenTerm, ofstr,
+		SaveParseTable(tab.GetPartialsMatchLengthTerm(), ofstr,
 			"partials_matchlen_term", "state", "terminal", "length");
 		ofstr << "\n\n";
-		SaveParseTable(tabPartialRuleNonterm, ofstr,
+		SaveParseTable(tab.GetPartialsRuleNonterm(), ofstr,
 			"partials_rule_nonterm", "state", "nonterminal", "rule index", &special_values);
 		ofstr << "\n\n";
-		SaveParseTable(tabPartialMatchLenNonterm, ofstr,
+		SaveParseTable(tab.GetPartialsMatchLengthNonterm(), ofstr,
 			"partials_matchlen_nonterm", "state", "nonterminal", "length");
 		ofstr << "\n\n";
-		SaveParseTable(tabPartialNontermLhsId, ofstr,
+		SaveParseTable(tab.GetPartialsNontermLhsId(), ofstr,
 			"partials_lhs_nonterm", "state", "nonterminal", "lhs nonterminal id", &special_values);
 		ofstr << "\n";
 	}
@@ -199,9 +189,9 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 		}
 		else
 		{
-			if(tab.GetUseOpChar() && isprintable(id))
-				ofstr << "\"" << get_escaped_char(char(id)) << "\"";
-			else
+			//if(tab.GetUseOpChar() && isprintable(id))
+			//	ofstr << "\"" << get_escaped_char(char(id)) << "\"";
+			//else
 				ofstr << id;
 		}
 		ofstr << ", " << idx;
@@ -214,6 +204,8 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 
 		if(std::next(iter, 1) != mapTermIdx.end())
 			ofstr << ",";
+		//if(isprintable(id))
+		//	ofstr << " # " << char(id);
 		ofstr << "\n";
 	}
 	ofstr << "\t]\n";

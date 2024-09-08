@@ -9,7 +9,9 @@
 #	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
 #
 
-include("ids.jl")
+module lexer
+
+using ids
 
 
 #
@@ -24,9 +26,9 @@ re_ident = r"[A-Za-z]+[A-Za-z0-9]*"
 # [ regex parser, token id, converter function from lvalue string to lvalue ]
 #
 token_regexes = Any[
-	[ re_int, tok_int_id, str -> parse(Int, str) ],
-	[ re_real, tok_real_id, str -> parse(Float64, str) ],
-	[ re_ident, tok_ident_id, str -> str ],
+	[ re_int, ids.tok_int_id, str -> parse(Int, str) ],
+	[ re_real, ids.tok_real_id, str -> parse(Float64, str) ],
+	[ re_ident, ids.tok_ident_id, str -> str ],
 ]
 
 
@@ -104,4 +106,4 @@ function get_tokens(str)
 end
 
 
-#println(get_tokens("abc + 123.4"))
+end

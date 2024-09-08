@@ -48,7 +48,7 @@ bool ParserGen::SaveParser(const std::string& filename_cpp, const std::string& c
 	// output header file stub
 	// --------------------------------------------------------------------------------
 	std::string outfile_h = R"raw(/**
- * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2023.
+ * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2024.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
 
@@ -151,7 +151,7 @@ private:
 	// output cpp file stub
 	// --------------------------------------------------------------------------------
 	std::string outfile_cpp = R"raw(/**
- * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2023.
+ * Parser created on %%TIME_STAMP%% using liblalr1 by Tobias Weber, 2020-2024.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
 

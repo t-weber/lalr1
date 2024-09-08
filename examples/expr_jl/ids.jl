@@ -5,6 +5,8 @@
 # @license see 'LICENSE' file
 #
 
+module ids
+
 
 #
 # semantic ids
@@ -42,3 +44,6 @@ tok_ident_id    ::Int = 1003
 #
 nonterm_start   ::Int = 10
 nonterm_expr    ::Int = 20
+
+
+end
