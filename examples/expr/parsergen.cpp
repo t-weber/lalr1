@@ -9,6 +9,13 @@
 #include "core/tablegen.h"
 #include "core/parsergen.h"
 #include "core/options.h"
+
+#include "export/tableexport.h"
+#include "export/tableexport_java.h"
+#include "export/tableexport_rs.h"
+#include "export/tableexport_json.h"
+#include "export/tableexport_toml.h"
+
 #include "grammar.h"
 #include "script/lexer.h"
 #include "script/ast.h"
@@ -110,15 +117,16 @@ static void lr1_create_parser()
 		parsergen.SaveParser("expr_parser.cpp", "ExprParser");
 #else
 		bool tables_ok = false;
-		TableGen exporter{collsLALR};
-		exporter.SetAcceptingRule(static_cast<t_semantic_id>(Semantics::START));
+		TableGen tabgen{collsLALR};
+		tabgen.SetAcceptingRule(static_cast<t_semantic_id>(Semantics::START));
 
-		if(exporter.CreateParseTables())
+		if(tabgen.CreateParseTables())
 		{
-			tables_ok = exporter.SaveParseTablesCXX("expr.tab");
-			exporter.SaveParseTablesJSON("expr.json");
-			exporter.SaveParseTablesJava("ExprTab.java");
-			exporter.SaveParseTablesRS("expr.rs");
+			tables_ok = TableExport::SaveParseTables(tabgen, "expr.tab");
+			TableExportJava::SaveParseTables(tabgen, "ExprTab.java");
+			TableExportRS::SaveParseTables(tabgen, "expr.rs");
+			TableExportJSON::SaveParseTables(tabgen, "expr.json");
+			TableExportTOML::SaveParseTables(tabgen, "expr.toml");
 		}
 
 		if(!tables_ok)

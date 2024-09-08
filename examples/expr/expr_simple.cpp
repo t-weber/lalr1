@@ -9,6 +9,7 @@
 #include "core/tablegen.h"
 #include "core/parsergen.h"
 #include "core/options.h"
+#include "export/tableexport.h"
 #include "script/lexer.h"
 #include "script/ast.h"
 #include "script/ast_printer.h"
@@ -203,11 +204,11 @@ static void lr1_create_parser()
 		collsLALR->SaveGraph("expr_simple", graph_full_closure, graph_element_wise_arrows);
 #endif
 
-		lalr1::TableGen exporter{collsLALR};
-		exporter.SetAcceptingRule(static_cast<lalr1::t_semantic_id>(START));
+		lalr1::TableGen tabgen{collsLALR};
+		tabgen.SetAcceptingRule(static_cast<lalr1::t_semantic_id>(START));
 
-		if(exporter.CreateParseTables())
-			exporter.SaveParseTablesCXX("expr_simple.tab");
+		if(tabgen.CreateParseTables())
+			lalr1::TableExport::SaveParseTables(tabgen, "expr_simple.tab");
 
 		lalr1::ParserGen parsergen(collsLALR);
 		parsergen.SetAcceptingRule(static_cast<lalr1::t_semantic_id>(START));

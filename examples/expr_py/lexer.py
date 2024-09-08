@@ -17,7 +17,7 @@ from ids import *
 # pre-compiled regexes
 #
 re_int   = re.compile("[0-9]+")
-re_real  = re.compile("[0-9]+(\.[0-9]*)?")
+re_real  = re.compile("[0-9]+(\\.[0-9]*)?")
 re_ident = re.compile("[A-Za-z]+[A-Za-z0-9]*")
 
 # [ regex parser, token id, converter function from lvalue string to lvalue ]

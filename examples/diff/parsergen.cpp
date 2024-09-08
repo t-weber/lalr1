@@ -9,6 +9,13 @@
 #include "core/tablegen.h"
 #include "core/parsergen.h"
 #include "core/options.h"
+
+#include "export/tableexport.h"
+#include "export/tableexport_java.h"
+#include "export/tableexport_rs.h"
+#include "export/tableexport_json.h"
+#include "export/tableexport_toml.h"
+
 #include "grammar.h"
 #include "script/lexer.h"
 #include "script/ast.h"
@@ -110,15 +117,16 @@ static void lr1_create_parser()
 		parsergen.SaveParser("diff_parser.cpp", "DiffParser");
 #else
 		bool tables_ok = false;
-		TableGen exporter{collsLALR};
-		exporter.SetAcceptingRule(static_cast<t_semantic_id>(Semantics::START));
+		TableGen tabgen{collsLALR};
+		tabgen.SetAcceptingRule(static_cast<t_semantic_id>(Semantics::START));
 
-		if(exporter.CreateParseTables())
+		if(tabgen.CreateParseTables())
 		{
-			tables_ok = exporter.SaveParseTablesCXX("diff.tab");
-			exporter.SaveParseTablesJSON("diff.json");
-			exporter.SaveParseTablesJava("DiffTab.java");
-			exporter.SaveParseTablesRS("diff.rs");
+			tables_ok = TableExport::SaveParseTables(tabgen, "diff.tab");
+			TableExportJava::SaveParseTables(tabgen, "DiffTab.java");
+			TableExportRS::SaveParseTables(tabgen, "diff.rs");
+			TableExportJSON::SaveParseTables(tabgen, "diff.json");
+			TableExportTOML::SaveParseTables(tabgen, "diff.toml");
 		}
 
 		if(!tables_ok)

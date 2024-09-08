@@ -22,8 +22,8 @@
 namespace lalr1 {
 
 template<
-	class T = std::size_t, template<class...>
-		class t_cont = std::vector>
+	class T = std::size_t,
+	template<class...> class t_cont = std::vector>
 class Table
 {
 public:
@@ -122,218 +122,6 @@ public:
 
 
 	/**
-	 * export table to C++ code
-	 */
-	void SaveCXX(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "",
-		const std::string& col_label = "",
-		const std::string& elem_label = "") const
-	{
-		ostr << "const lalr1::t_table " << var << "{";
-		ostr << size1();
-		if(row_label.size())
-			ostr << " /*" << row_label << "*/";
-		ostr << ", " << size2();
-		if(col_label.size())
-			ostr << " /*" << col_label << "*/";
-		ostr << ", " << "err, acc, ";
-		if(m_fillval == m_errorval)
-			ostr << "err, ";
-		else if(m_fillval == m_acceptval)
-			ostr << "acc, ";
-		else
-			ostr << m_fillval << ", ";
-		ostr << "\n";
-
-		ostr << "{ /*" << elem_label << "*/\n";
-		for(std::size_t row=0; row<size1(); ++row)
-		{
-			ostr << "\t";
-			for(std::size_t col=0; col<size2(); ++col)
-			{
-				const value_type& entry = operator()(row, col);
-
-				if(entry == m_errorval)
-					ostr << "err, ";
-				else if(entry == m_acceptval)
-					ostr << "acc, ";
-				else
-					ostr << entry << ", ";
-			}
-			ostr << "// " << row_label << " " << row << "\n";
-		}
-		ostr << "}";
-		ostr << "};\n\n";
-	}
-
-
-	/**
-	 * export table to Java code
-	 */
-	void SaveJava(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "",
-		const std::string& col_label = "",
-		const std::string& elem_label = "",
-		const std::string& acc_level = "public",
-		std::size_t indent = 0) const
-	{
-		auto do_indent = [&ostr, indent]()
-		{
-			for(std::size_t i=0; i<indent; ++i)
-				ostr << "\t";
-		};
-
-		do_indent();
-		ostr << acc_level << " final int[";
-		//ostr << " " << size1();
-		if(row_label != "")
-			ostr << " /*" << row_label << "*/ ";
-		ostr << "][";
-		//ostr << " " << size2();
-		if(col_label != "")
-			ostr << " /*" << col_label << "*/ ";
-		ostr << "] " << var << " =\n";
-
-		do_indent();
-		ostr << "{ /*" << elem_label << "*/\n";
-		for(std::size_t row=0; row<size1(); ++row)
-		{
-			do_indent();
-			ostr << "\t{ ";
-			for(std::size_t col=0; col<size2(); ++col)
-			{
-				const value_type& entry = operator()(row, col);
-
-				if(entry == m_errorval)
-					ostr << "err, ";
-				else if(entry == m_acceptval)
-					ostr << "acc, ";
-				else
-					ostr << entry << ", ";
-			}
-			ostr << "}, // " << row_label << " " << row << "\n";
-		}
-
-		do_indent();
-		ostr << "};\n\n";
-	}
-
-
-	/**
-	 * export table to json
-	 */
-	void SaveJSON(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "",
-		const std::string& col_label = "",
-		const std::string& elem_label = "",
-		const std::unordered_map<T, int>* value_map = nullptr) const
-	{
-		ostr << "\"" << var << "\" : {\n";
-		ostr << "\t\"rows\" : " << size1() << ",\n";
-		ostr << "\t\"cols\" : " << size2() << ",\n";
-		ostr << "\t\"row_label\" : \"" << row_label << "\",\n";
-		ostr << "\t\"col_label\" : \"" << col_label << "\",\n";
-		ostr << "\t\"elem_label\" : \"" << elem_label << "\",\n";
-
-		ostr << "\t\"elems\" : [\n";
-		for(std::size_t row=0; row<size1(); ++row)
-		{
-			ostr << "\t\t[ ";
-			for(std::size_t col=0; col<size2(); ++col)
-			{
-				value_type entry = operator()(row, col);
-				/*if(entry == m_errorval || entry == m_acceptval)
-					ostr << "0x" << std::hex << entry << std::dec;
-				else
-					ostr << entry;*/
-
-				bool has_value = false;
-				if(value_map)
-				{
-					if(auto iter_val = value_map->find(entry); iter_val != value_map->end())
-					{
-						// write mapped value
-						ostr << iter_val->second;
-						has_value = true;
-					}
-				}
-
-				// write unmapped value otherwise
-				if(!has_value)
-					ostr << entry;
-
-				if(col < size2()-1)
-					ostr << ",";
-				ostr << " ";
-			}
-			ostr << "]";
-			if(row < size1()-1)
-				ostr << ",";
-			ostr << "\n";
-		}
-		ostr << "\t]\n";
-
-		ostr << "}";
-	}
-
-
-	/**
-	 * export table to rs
-	 */
-	void SaveRS(std::ostream& ostr, const std::string& var,
-		const std::string& row_label = "",
-		const std::string& col_label = "",
-		const std::string& elem_label = "",
-		std::optional<std::string> ty_override = std::nullopt) const
-	{
-		// get the data type name
-		std::string ty;
-		if(ty_override)
-			ty = *ty_override;
-		else
-			ty = get_rs_typename<value_type>();
-
-		ostr << "pub const " << var;
-		ostr << " : [[" << ty << "; " << size2();
-		if(col_label != "")
-			ostr << " /* " << col_label << " */";
-		ostr << "]; " << size1();
-		if(row_label != "")
-			ostr << " /* " << row_label << " */";
-		ostr << "]";
-		ostr << " =\n[ /* " << elem_label << " */\n";
-
-		for(std::size_t row=0; row<size1(); ++row)
-		{
-			ostr << "\t[ ";
-			for(std::size_t col=0; col<size2(); ++col)
-			{
-				value_type entry = operator()(row, col);
-				if(entry == m_errorval)
-					ostr << "ERR";
-				else if(entry == m_acceptval)
-					ostr << "ACC";
-				else
-					ostr << entry;
-
-				if(col < size2()-1)
-					ostr << ",";
-				ostr << " ";
-			}
-			ostr << "]";
-			if(row < size1()-1)
-				ostr << ",";
-
-			if(row_label != "")
-				ostr << " // " << row_label << " " << row;
-
-			ostr << "\n";
-		}
-		ostr << "];\n";
-	}
-
-
-	/**
 	 * print table
 	 */
 	friend std::ostream& operator<<(std::ostream& ostr, const Table<T, t_cont>& tab)
@@ -355,6 +143,11 @@ public:
 		}
 		return ostr;
 	}
+
+
+	const T& GetErrorVal() const { return m_errorval; }
+	const T& GetAcceptVal() const { return m_acceptval; }
+	const T& GetFillVal() const { return m_fillval; }
 
 
 private:

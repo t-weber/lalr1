@@ -107,7 +107,7 @@ coll.DoTransitions()
 tablesfile_name = "diff.json"
 tablegen = lalr1.make_tablegen(coll, start)
 if tablegen.CreateParseTables():
-	tablegen.SaveParseTablesJSON(tablesfile_name)
+	lalr1.TableExportJSON.SaveParseTables(tablegen, tablesfile_name)
 	print(f"Created parsing tables \"{tablesfile_name}\".")
 else:
 	print(f"Could not create parsing tables \"{tablesfile_name}\".", file=sys.stderr)

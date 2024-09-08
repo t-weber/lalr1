@@ -67,6 +67,11 @@ namespace std
 	#include "src/core/collection.h"
 	#include "src/core/tablegen.h"
 	#include "src/core/parsergen.h"
+	#include "src/export/tableexport.h"
+	#include "src/export/tableexport_java.h"
+	#include "src/export/tableexport_rs.h"
+	#include "src/export/tableexport_json.h"
+	#include "src/export/tableexport_toml.h"
 
 	using namespace lalr1;
 %}
@@ -76,9 +81,14 @@ typedef lalr1::Word Word;
 typedef lalr1::Element Element;
 typedef lalr1::Closure Closure;
 typedef lalr1::Collection Collection;
+typedef lalr1::GenOptions GenOptions;
 typedef lalr1::TableGen TableGen;
 typedef lalr1::ParserGen ParserGen;
-typedef lalr1::GenOptions GenOptions;
+typedef lalr1::TableExport TableExport;
+typedef lalr1::TableExportJava TableExportJava;
+typedef lalr1::TableExportRS TableExportRS;
+typedef lalr1::TableExportJSON TableExportJSON;
+typedef lalr1::TableExportTOML TableExportTOML;
 
 typedef std::shared_ptr<Symbol> SymbolPtr;
 typedef std::shared_ptr<Word> WordPtr;
@@ -125,6 +135,11 @@ typedef std::shared_ptr<GenOptions> GenOptionsPtr;
 %include "src/core/collection.h"
 %include "src/core/tablegen.h"
 %include "src/core/parsergen.h"
+%include "src/export/tableexport.h"
+%include "src/export/tableexport_java.h"
+%include "src/export/tableexport_rs.h"
+%include "src/export/tableexport_json.h"
+%include "src/export/tableexport_toml.h"
 
 using namespace lalr1;
 // --------------------------------------------------------------------------------

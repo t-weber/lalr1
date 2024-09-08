@@ -40,6 +40,7 @@ include(GNUInstallDirs)
 include_directories(
 	${PROJECT_SOURCE_DIR}
 	${PROJECT_SOURCE_DIR}/src
+	${PROJECT_SOURCE_DIR}/src/core
 	${PROJECT_SOURCE_DIR}/examples
 	${CMAKE_CURRENT_BINARY_DIR}
 	${Boost_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/..
@@ -67,6 +68,11 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/core/timer.h
 		${PROJECT_SOURCE_DIR}/src/core/stack.h
 		${PROJECT_SOURCE_DIR}/src/core/conflicts.h
+		${PROJECT_SOURCE_DIR}/src/export/tableexport.h
+		${PROJECT_SOURCE_DIR}/src/export/tableexport_java.h
+		${PROJECT_SOURCE_DIR}/src/export/tableexport_rs.h
+		${PROJECT_SOURCE_DIR}/src/export/tableexport_json.h
+		${PROJECT_SOURCE_DIR}/src/export/tableexport_toml.h
 
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/src/core/symbol.cpp
@@ -77,8 +83,12 @@ target_sources(lalr1
 		${PROJECT_SOURCE_DIR}/src/core/genoptions.cpp
 		${PROJECT_SOURCE_DIR}/src/core/parsergen.cpp
 		${PROJECT_SOURCE_DIR}/src/core/tablegen.cpp
-		${PROJECT_SOURCE_DIR}/src/core/tableexport.cpp
 		${PROJECT_SOURCE_DIR}/src/core/conflicts.cpp
+		${PROJECT_SOURCE_DIR}/src/export/tableexport.cpp
+		${PROJECT_SOURCE_DIR}/src/export/tableexport_java.cpp
+		${PROJECT_SOURCE_DIR}/src/export/tableexport_rs.cpp
+		${PROJECT_SOURCE_DIR}/src/export/tableexport_json.cpp
+		${PROJECT_SOURCE_DIR}/src/export/tableexport_toml.cpp
 )
 
 set_target_properties(lalr1 PROPERTIES PUBLIC_HEADER
@@ -96,7 +106,12 @@ ${PROJECT_SOURCE_DIR}/src/core/common.h;\
 ${PROJECT_SOURCE_DIR}/src/core/types.h;\
 ${PROJECT_SOURCE_DIR}/src/core/stack.h;\
 ${PROJECT_SOURCE_DIR}/src/core/conflicts.h;\
-${PROJECT_SOURCE_DIR}/src/core/timer.h"
+${PROJECT_SOURCE_DIR}/src/core/timer.h;\
+${PROJECT_SOURCE_DIR}/src/export/tableexport.h;\
+${PROJECT_SOURCE_DIR}/src/export/tableexport_java.h;\
+${PROJECT_SOURCE_DIR}/src/export/tableexport_rs.h;\
+${PROJECT_SOURCE_DIR}/src/export/tableexport_json.h;\
+${PROJECT_SOURCE_DIR}/src/export/tableexport_toml.h"
 )
 
 #get_target_property(LALR1_HEADERS lalr1 PUBLIC_HEADER)

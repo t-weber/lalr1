@@ -65,20 +65,6 @@ public:
 	bool GetStopOnConflicts() const;
 
 
-	// save the parsing tables to C++ code
-	bool SaveParseTablesCXX(const std::string& file) const;
-
-	// save the parsing tables to Java code
-	bool SaveParseTablesJava(const std::string& file) const;
-
-	// save the parsing tables to json
-	// @see https://en.wikipedia.org/wiki/JSON
-	bool SaveParseTablesJSON(const std::string& file) const;
-
-	// save the parsing tables to rs code
-	bool SaveParseTablesRS(const std::string& file) const;
-
-
 protected:
 	void CreateTableIndices();
 	void CreateTerminalPrecedences();
