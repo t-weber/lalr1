@@ -101,7 +101,7 @@ static void lalr1_run_parser()
 		parser.SetSemanticRules(&rules);
 		parser.SetDebug(true);
 
-		while(1)
+		while(true)
 		{
 			std::string exprstr;
 			std::cout << "\nExpression: ";

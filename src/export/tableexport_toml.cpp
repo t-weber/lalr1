@@ -142,34 +142,38 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 
 	ofstr << "\n\n";
 
+	const std::unordered_map<t_index, int>* spec_vals = &special_values;
+	if(!tab.GetUseNegativeTableValues())
+		spec_vals = nullptr;
+
 	// lalr(1) tables
 	SaveParseTable(tab.GetShiftTable(), ofstr,
-		"shift", "state", "terminal", "state", &special_values);
+		"shift", "state", "terminal", "state", spec_vals);
 	ofstr << "\n\n";
 	SaveParseTable(tab.GetReduceTable(), ofstr,
-		"reduce", "state", "lookahead", "rule index", &special_values);
+		"reduce", "state", "lookahead", "rule index", spec_vals);
 	ofstr << "\n\n";
 	SaveParseTable(tab.GetJumpTable(), ofstr,
-		"jump", "state", "nonterminal", "state", &special_values);
+		"jump", "state", "nonterminal", "state", spec_vals);
 	ofstr << "\n\n";
 
 	// partial match tables
 	if(tab.GetGenPartialMatches())
 	{
 		SaveParseTable(tab.GetPartialsRuleTerm(), ofstr,
-			"partials_rule_term", "state", "terminal", "rule index", &special_values);
+			"partials_rule_term", "state", "terminal", "rule index", spec_vals);
 		ofstr << "\n\n";
 		SaveParseTable(tab.GetPartialsMatchLengthTerm(), ofstr,
 			"partials_matchlen_term", "state", "terminal", "length");
 		ofstr << "\n\n";
 		SaveParseTable(tab.GetPartialsRuleNonterm(), ofstr,
-			"partials_rule_nonterm", "state", "nonterminal", "rule index", &special_values);
+			"partials_rule_nonterm", "state", "nonterminal", "rule index", spec_vals);
 		ofstr << "\n\n";
 		SaveParseTable(tab.GetPartialsMatchLengthNonterm(), ofstr,
 			"partials_matchlen_nonterm", "state", "nonterminal", "length");
 		ofstr << "\n\n";
 		SaveParseTable(tab.GetPartialsNontermLhsId(), ofstr,
-			"partials_lhs_nonterm", "state", "nonterminal", "lhs nonterminal id", &special_values);
+			"partials_lhs_nonterm", "state", "nonterminal", "lhs nonterminal id", spec_vals);
 		ofstr << "\n";
 	}
 
@@ -183,7 +187,8 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 		const auto& [id, idx] = *iter;
 
 		ofstr << "\t\t[ ";
-		if(auto iter_special = special_idents.find(id); iter_special != special_idents.end())
+		if(auto iter_special = special_idents.find(id);
+			tab.GetUseNegativeTableValues() && iter_special != special_idents.end())
 		{
 			ofstr << iter_special->second;
 		}

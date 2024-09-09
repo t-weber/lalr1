@@ -118,6 +118,7 @@ static void lr1_create_parser()
 #else
 		bool tables_ok = false;
 		TableGen tabgen{collsLALR};
+		//tabgen.SetUseNegativeTableValues(false);
 		tabgen.SetAcceptingRule(static_cast<t_semantic_id>(Semantics::START));
 
 		if(tabgen.CreateParseTables())

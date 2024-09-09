@@ -15,32 +15,39 @@ using Printf
 
 
 #
+# types
+#
+const t_idx = Integer
+const t_id  = Integer
+
+
+#
 # get the internal table index of a token or nonterminal id
 #
-function get_table_index(idx_tab, id)
+function get_table_index(idx_tab, id) :: t_idx
 	for entry in idx_tab
-		if entry[1] == Int(id)
+		if entry[1] == t_id(id)
 			return entry[2] + 1
 		end
 	end
 
 	throw(DomainError(id, "No table index for this id."))
-	return nothing
+	return 0
 end
 
 
 #
 # get the token or terminal id of an internal table index
 #
-function get_table_id(idx_tab, idx)
+function get_table_id(idx_tab, idx :: t_idx) :: t_id
 	for entry in idx_tab
 		if entry[2] == idx
-			return entry[1]
+			return t_id(entry[1])
 		end
 	end
 
 	throw(DomainError(idx, "No id for this table index."))
-	return nothing
+	return 0
 end
 
 
@@ -49,42 +56,45 @@ end
 #
 mutable struct Parser
 	# tables
-	shift_tab
-	reduce_tab
-	jump_tab
-	termidx_tab
-	nontermidx_tab
-	semanticidx_tab
-	numrhs_tab
-	lhsidx_tab
+	shift_tab :: Vector{Vector{t_idx}}
+	reduce_tab :: Vector{Vector{t_idx}}
+	jump_tab :: Vector{Vector{t_idx}}
+	termidx_tab :: Vector{Vector{Union{t_idx, String}}}
+	nontermidx_tab :: Vector{Vector{Union{t_idx, String}}}
+	semanticidx_tab :: Vector{Vector{t_idx}}
+	numrhs_tab :: Vector{t_idx}
+	lhsidx_tab :: Vector{t_idx}
 
 	# partial rule tables
-	part_term
-	part_nonterm
-	part_term_len
-	part_nonterm_len
+	part_term :: Vector{Vector{t_idx}}
+	part_nonterm :: Vector{Vector{t_id}}
+	part_term_len :: Vector{Vector{t_idx}}
+	part_nonterm_len :: Vector{Vector{t_idx}}
 
 	# special values
-	acc_token
-	err_token
-	end_token
-	start_idx
+	acc_token :: t_idx
+	err_token :: t_idx
+	end_token :: t_idx
+	start_idx :: t_idx
 
 	# options
-	use_partials
-	debug
+	use_partials :: Bool
+	debug :: Bool
 
-	input_tokens
-	semantics
+	input_tokens :: Vector{Any}
+	semantics :: Dict{t_id, Function}
 
-	input_idx
-	lookahead
-	lookahead_idx
-	accepted
-	states
-	symbols
-	active_rules
-	cur_rule_handle
+	input_idx :: t_idx           # current token
+	lookahead_idx :: t_idx
+	lookahead :: Dict{String, Any}
+
+	states :: Vector{t_idx}      # parser states
+	symbols :: Vector            # symbol stack
+
+	active_rules :: Dict{t_id, Any}  # active partial rules
+	cur_rule_handle :: t_idx     # global rule counter
+
+	accepted :: Bool             # parsing successful?
 
 
 	#
@@ -116,7 +126,7 @@ mutable struct Parser
 		parser.start_idx = tables["consts"]["start"]
 
 		parser.input_tokens = []
-		parser.semantics = nothing
+		parser.semantics = Dict{t_id, Function}()
 
 		# options
 		parser.use_partials = true
@@ -133,13 +143,13 @@ end
 #
 function reset(parser::Parser)
 	parser.input_idx = 0
-	parser.lookahead = nothing
-	parser.lookahead_idx = nothing
+	parser.lookahead_idx = 0
+	parser.lookahead = Dict{String, Any}()
+	parser.states = [ parser.start_idx ]    # parser states
+	parser.symbols = [ ]                    # symbol stack
+	parser.active_rules = Dict{t_id, Any}() # active partial rules
+	parser.cur_rule_handle = 0              # global rule counter
 	parser.accepted = false
-	parser.states = [ parser.start_idx ]  # parser states
-	parser.symbols = [ ]                  # symbol stack
-	parser.active_rules = Dict()          # active partial rules
-	parser.cur_rule_handle = 0            # global rule counter
 end
 
 
@@ -151,7 +161,7 @@ function get_next_lookahead(parser::Parser)
 	tok = parser.input_tokens[parser.input_idx]
 	tok_lval = length(tok) > 1 ? tok[2] : nothing
 
-	parser.lookahead = Dict( "is_term" => true, "id" => tok[1], "val" => tok_lval )
+	parser.lookahead = Dict{String, Any}( "is_term" => true, "id" => tok[1], "val" => tok_lval )
 	parser.lookahead_idx = get_table_index(parser.termidx_tab, parser.lookahead["id"])
 end
 
@@ -169,21 +179,26 @@ end
 #
 # reduce using a semantic rule
 #
-function apply_rule(parser::Parser, rule_id, num_rhs, lhs_id)
+function apply_rule(parser::Parser, rule_id :: t_id, num_rhs :: t_idx, lhs_id :: t_id)
 	# remove fully reduced rule from active rule stack and get return value
 	rule_ret = nothing
 	handle = -1
 
-	if parser.use_partials && rule_id in parser.active_rules
-		rulestack = parser.active_rules[rule_id]
+	if parser.use_partials
+		rulestack = get!(parser.active_rules, rule_id, nothing)
+
 		if rulestack != nothing && length(rulestack) > 0
-			active_rule = rulestack[length(rulestack)]
+			active_rule = rulestack[end]
 			rule_ret = active_rule["retval"]
 			handle = active_rule["handle"]
 
 			# pop active rule
-			rulestack = rulestack[1 : length(rulestack) - 1]
-			parser.active_rules[rule_id] = rulestack
+			if length(rulestack) == 1
+				delete!(parser.active_rules, rule_id)
+			else
+				pop!(rulestack)
+				parser.active_rules[rule_id] = rulestack
+			end
 		end
 	end
 
@@ -192,27 +207,28 @@ function apply_rule(parser::Parser, rule_id, num_rhs, lhs_id)
 			num_rhs, rule_id, handle)
 	end
 
-	# get argument symbols
-	args = parser.symbols[length(parser.symbols) - num_rhs + 1 : length(parser.symbols)]
+	# get num_rhs argument symbols
+	args = parser.symbols[end - num_rhs + 1 : end]
 
-	# pop symbols and states
-	parser.symbols = parser.symbols[1 : length(parser.symbols) - num_rhs]
-	parser.states = parser.states[1 : length(parser.states) - num_rhs]
+	# pop num_rhs symbols and states
+	deleteat!(parser.symbols, length(parser.symbols) - num_rhs + 1 : length(parser.symbols))
+	deleteat!(parser.states, length(parser.states) - num_rhs + 1 : length(parser.states))
 
 	# apply semantic rule if available
-	if parser.semantics != nothing && rule_id in parser.semantics.keys
+	if rule_id in keys(parser.semantics)
 		rule_ret = parser.semantics[rule_id](args, true, rule_ret)
 	end
 
 	# push reduced nonterminal symbol
-	push!(parser.symbols, Dict( "is_term" => false, "id" => lhs_id, "val" => rule_ret ))
+	push!(parser.symbols,
+		Dict{String, Any}( "is_term" => false, "id" => lhs_id, "val" => rule_ret ))
 end
 
 
 #
 # partially apply a semantic rule
 #
-function apply_partial_rule(parser::Parser, rule_id, rule_len, before_shift)
+function apply_partial_rule(parser::Parser, rule_id :: t_id, rule_len :: t_idx, before_shift :: Bool)
 	arg_len = rule_len
 	if before_shift
 		# directly count the following lookahead terminal
@@ -223,15 +239,11 @@ function apply_partial_rule(parser::Parser, rule_id, rule_len, before_shift)
 	insert_new_active_rule = false
 	seen_tokens_old = -1
 
-	rulestack = nothing
-	try
-		rulestack = parser.active_rules[rule_id]
-	catch
-	end
+	rulestack = get!(parser.active_rules, rule_id, nothing)
 
 	if rulestack != nothing
 		if length(rulestack) > 0
-			active_rule = rulestack[length(rulestack)]
+			active_rule = rulestack[end]
 			seen_tokens_old = active_rule["seen_tokens"]
 
 			if before_shift
@@ -249,7 +261,7 @@ function apply_partial_rule(parser::Parser, rule_id, rule_len, before_shift)
 			end
 
 			# save changed values
-			rulestack[length(rulestack)] = active_rule
+			rulestack[end] = active_rule
 			parser.active_rules[rule_id] = rulestack
 		else
 			# no active rule yet
@@ -265,7 +277,7 @@ function apply_partial_rule(parser::Parser, rule_id, rule_len, before_shift)
 	if insert_new_active_rule
 		seen_tokens_old = -1
 
-		active_rule = Dict()
+		active_rule = Dict{String, Any}()
 		active_rule["seen_tokens"] = rule_len
 		active_rule["retval"] = nothing
 		active_rule["handle"] = parser.cur_rule_handle
@@ -278,13 +290,13 @@ function apply_partial_rule(parser::Parser, rule_id, rule_len, before_shift)
 
 	if !already_seen_active_rule
 		# partially apply semantic rule if available
-		if parser.semantics == nothing || !(rule_id in parser.semantics)
+		if !(rule_id in keys(parser.semantics))
 			return
 		end
-		active_rule = rulestack[length(rulestack)]
+		active_rule = rulestack[end]
 
 		# get arguments for semantic rule
-		args = parser.symbols[length(parser.symbols) - arg_len + 1 : length(parser.symbols)]
+		args = parser.symbols[end - arg_len + 1 : end]
 		save_back = false
 
 		if !before_shift || seen_tokens_old < rule_len - 1
@@ -316,7 +328,7 @@ function apply_partial_rule(parser::Parser, rule_id, rule_len, before_shift)
 
 		# save changed values
 		if save_back
-			rulestack[length(rulestack)] = active_rule
+			rulestack[end] = active_rule
 			parser.active_rules[rule_id] = rulestack
 		end
 	end
@@ -331,14 +343,14 @@ function parse(parser::Parser)
 	get_next_lookahead(parser)
 
 	while true
-		top_state = parser.states[length(parser.states)]
+		top_state = parser.states[end]
 		new_state = parser.shift_tab[top_state + 1][parser.lookahead_idx]
 		rule_idx = parser.reduce_tab[top_state + 1][parser.lookahead_idx]
 
 		if parser.debug
 			@printf("States: %s,\n", parser.states)
-			@printf("symbols: %s},\n", parser.symbols)
-			@printf("new state: %s, rule: %d.\n", new_state, rule_idx)
+			@printf("  symbols: %s},\n", parser.symbols)
+			@printf("  new state: %s, rule: %d.\n", new_state, rule_idx)
 		end
 
 		# errors
@@ -350,10 +362,10 @@ function parse(parser::Parser)
 		# accept
 		elseif rule_idx == parser.acc_token
 			if parser.debug
-				println("Accepting.")
+				printstyled(stdout, "Accepting.\n", color=:green, bold=true)
 			end
 			parser.accepted = true
-			return length(parser.symbols) >= 1 ? parser.symbols[length(parser.symbols)] : nothing
+			return length(parser.symbols) >= 1 ? parser.symbols[end] : nothing
 		end
 
 		# shift
@@ -379,14 +391,14 @@ function parse(parser::Parser)
 			lhs_id = get_table_id(parser.nontermidx_tab, lhs_idx)
 
 			apply_rule(parser, rule_id, num_syms, lhs_id)
-			top_state = parser.states[length(parser.states)]
+			top_state = parser.states[end]
 
 			# partial rules
 			if parser.use_partials && length(parser.symbols) > 0
 				partial_idx = parser.part_nonterm[top_state + 1][lhs_idx + 1]
 
 				if partial_idx != parser.err_token
-					partial_id = get_table_id(parser.semanticidx_tab, partial_idx + 1)
+					partial_id = get_table_id(parser.semanticidx_tab, partial_idx)
 					partial_len = parser.part_nonterm_len[top_state + 1][lhs_idx + 1]
 					apply_partial_rule(parser, partial_id, partial_len, false)
 				end

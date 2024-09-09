@@ -11,10 +11,12 @@
 #
 
 push!(LOAD_PATH, ".")
+push!(LOAD_PATH, @__DIR__)
 push!(LOAD_PATH, "../../src/modules/lalr1_jl")
 push!(LOAD_PATH, "../src/modules/lalr1_jl")
 
 using Random
+using Printf
 using lexer, ids
 
 
@@ -28,7 +30,7 @@ elseif isfile(parsing_tables)
 	using parser
 	use_recasc = false
 else
-	println(stderr, "No parsing tables found.")
+	printstyled(stderr, "No parsing tables found.\n", color=:red, bold=true)
 	exit(-1)
 end
 
@@ -68,7 +70,7 @@ functab_2args = Dict(
 #
 # semantic rules, same as in expr_grammar.cpp
 #
-semantics = Dict(
+semantics = Dict{Integer, Function}(
 	ids.sem_start_id => (args, done, retval) -> done ? args[1]["val"] : nothing,
 	ids.sem_brackets_id => (args, done, retval) -> done ? args[2]["val"] : nothing,
 
@@ -97,7 +99,6 @@ semantics = Dict(
 	ids.sem_int_id => (args, done, retval) -> done ? args[1]["val"] : nothing,
 	ids.sem_ident_id => (args, done, retval) -> done ? symtab[args[1]["val"]] : nothing,
 )
-
 
 
 #
@@ -129,7 +130,9 @@ semantics = Dict(
 		theparser.semantics = semantics
 
 		input_tokens = lexer.get_tokens(input_str)
-		#println(input_tokens)
+		if theparser.debug
+			@printf("Input tokens: %s\n", input_tokens)
+		end
 		push!(input_tokens, [theparser.end_token])
 		theparser.input_tokens = input_tokens
 
@@ -137,9 +140,9 @@ semantics = Dict(
 		if result != nothing
 			println(result["val"])
 		else
-			println(stderr, "Error while parsing.")
+			printstyled(stderr, "Error while parsing.\n", color=:red, bold=true)
 		end
 	end
 #catch err
-#	println(stderr, err)
+#	printstyled(stderr, err, color=:red, bold=true)
 #end
