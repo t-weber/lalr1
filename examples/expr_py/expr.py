@@ -123,8 +123,10 @@ def main(args):
 				continue
 
 			if use_recasc:
+				#print("Using recursive-ascent parser.")
 				theparser = expr_parser.Parser()
 			else:
+				#print("Using table-based parser.")
 				theparser = parser.Parser(tables)
 
 			theparser.debug = False

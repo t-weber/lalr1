@@ -15,60 +15,13 @@ import sys
 import os
 import json
 
+sys.path.append(".")
+
+from tables import get_table_index, get_table_id, \
+	get_table_strid, has_table_entry, id_to_str
+
 
 g_gen_partials = True  # generate code for partial matches
-
-
-#
-# get the internal table index of a token or nonterminal id
-#
-def get_table_index(idx_tab, id):
-	for entry in idx_tab:
-		if entry[0] == id:
-			return entry[1]
-
-	raise IndexError("No table index for id {0}.".format(id))
-	return None
-
-
-#
-# get the token or terminal id of an internal table index
-#
-def get_table_id(idx_tab, idx):
-	for entry in idx_tab:
-		if entry[1] == idx:
-			return entry[0]
-
-	raise IndexError("No id for table index {0}.".format(id))
-	return None
-
-
-#
-# get the token or terminal string id of an internal table index
-#
-def get_table_strid(idx_tab, idx):
-	for entry in idx_tab:
-		if entry[1] == idx:
-			return entry[2]
-
-	raise IndexError("No string id for table index {0}.".format(id))
-	return None
-
-
-def has_table_entry(row, err_token):
-	for elem in row:
-		if elem != err_token:
-			return True
-	return False
-
-
-def id_to_str(id, end_token):
-	if id == end_token and id >= 0:
-		return f"0x{id:x}"
-		#return "end_id"
-	if isinstance(id, str):
-		return "\"" + str(id) + "\""
-	return str(id)
 
 
 def write_parser_class(tables, outfile):

@@ -35,7 +35,7 @@ token_regexes = Any[
 #
 # get the possibly matching tokens in a string
 #
-function get_matches(str)
+function get_matches(str :: AbstractString)
 	matches = []
 
 	# get all possible matches
@@ -61,7 +61,7 @@ end
 #
 # get the next token in a string
 #
-function get_token(str)
+function get_token(str :: AbstractString)
 	str = lstrip(str)
 	if length(str) == 0
 		return [ nothing, str ]
@@ -91,7 +91,7 @@ end
 #
 # get all tokens in a string
 #
-function get_tokens(str)
+function get_tokens(str :: AbstractString)
 	tokens = []
 
 	while true

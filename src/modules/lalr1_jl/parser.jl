@@ -12,43 +12,7 @@
 module parser
 
 using Printf
-
-
-#
-# types
-#
-const t_idx = Integer
-const t_id  = Integer
-
-
-#
-# get the internal table index of a token or nonterminal id
-#
-function get_table_index(idx_tab, id) :: t_idx
-	for entry in idx_tab
-		if entry[1] == t_id(id)
-			return entry[2] + 1
-		end
-	end
-
-	throw(DomainError(id, "No table index for this id."))
-	return 0
-end
-
-
-#
-# get the token or terminal id of an internal table index
-#
-function get_table_id(idx_tab, idx :: t_idx) :: t_id
-	for entry in idx_tab
-		if entry[2] == idx
-			return t_id(entry[1])
-		end
-	end
-
-	throw(DomainError(idx, "No id for this table index."))
-	return 0
-end
+using tables: t_idx, t_id, get_table_index, get_table_id
 
 
 #
@@ -103,17 +67,19 @@ mutable struct Parser
 	function Parser(tables)
 		parser = new()
 
-		# tables
+		# parsing tables
 		parser.shift_tab = tables["shift"]["elems"]
 		parser.reduce_tab = tables["reduce"]["elems"]
 		parser.jump_tab = tables["jump"]["elems"]
+
+		# index tables
 		parser.termidx_tab = tables["indices"]["term_idx"]
 		parser.nontermidx_tab = tables["indices"]["nonterm_idx"]
 		parser.semanticidx_tab = tables["indices"]["semantic_idx"]
 		parser.numrhs_tab = tables["indices"]["num_rhs_syms"]
 		parser.lhsidx_tab = tables["indices"]["lhs_idx"]
 
-		# partial rule tables
+		# partial rules tables
 		parser.part_term = tables["partials_rule_term"]["elems"]
 		parser.part_nonterm = tables["partials_rule_nonterm"]["elems"]
 		parser.part_term_len = tables["partials_matchlen_term"]["elems"]

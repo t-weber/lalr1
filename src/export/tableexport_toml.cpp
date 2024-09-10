@@ -107,12 +107,15 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 	if(!ofstr)
 		return false;
 
+	// --------------------------------------------------------------------
 	// meta infos
 	ofstr << "\"infos\" = ";
 	ofstr << "\"Parsing tables created on " << get_timestamp();
 	ofstr << " using liblalr1 by Tobias Weber, 2020-2024";
 	ofstr << " (DOI: https://doi.org/10.5281/zenodo.6987396).\"\n";
+	// --------------------------------------------------------------------
 
+	// --------------------------------------------------------------------
 	// constants
 	ofstr << "\n[consts]\n";
 	//ofstr << "\tacc_rule = " << m_accepting_rule << "\n";
@@ -141,7 +144,9 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 	ofstr << "\tstart = " << tab.GetStartingState() << "\n";
 
 	ofstr << "\n\n";
+	// --------------------------------------------------------------------
 
+	// --------------------------------------------------------------------
 	const std::unordered_map<t_index, int>* spec_vals = &special_values;
 	if(!tab.GetUseNegativeTableValues())
 		spec_vals = nullptr;
@@ -156,7 +161,9 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 	SaveParseTable(tab.GetJumpTable(), ofstr,
 		"jump", "state", "nonterminal", "state", spec_vals);
 	ofstr << "\n\n";
+	// --------------------------------------------------------------------
 
+	// --------------------------------------------------------------------
 	// partial match tables
 	if(tab.GetGenPartialMatches())
 	{
@@ -176,7 +183,45 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 			"partials_lhs_nonterm", "state", "nonterminal", "lhs nonterminal id", spec_vals);
 		ofstr << "\n";
 	}
+	// --------------------------------------------------------------------
 
+	// --------------------------------------------------------------------
+	ofstr << "\n[precedences]\n";
+
+	// terminal operator precedences
+	const t_mapIdPrec& mapTermPrec = tab.GetTermPrecMap();
+
+	ofstr << "\tterm_prec = [\n";
+	for(auto iter = mapTermPrec.begin(); iter != mapTermPrec.end(); std::advance(iter, 1))
+	{
+		const auto& [id, prec] = *iter;
+
+		ofstr << "\t\t[ " << id << ", " << prec << " ]";
+
+		if(std::next(iter, 1) != mapTermPrec.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "\t]\n";
+
+	// terminal operator associativities
+	const t_mapIdAssoc& mapTermAssoc = tab.GetTermAssocMap();
+
+	ofstr << "\n\tterm_assoc = [\n";
+	for(auto iter = mapTermAssoc.begin(); iter != mapTermAssoc.end(); std::advance(iter, 1))
+	{
+		const auto& [id, assoc] = *iter;
+
+		ofstr << "\t\t[ " << id << ", \"" << assoc << "\" ]";
+
+		if(std::next(iter, 1) != mapTermAssoc.end())
+			ofstr << ",";
+		ofstr << "\n";
+	}
+	ofstr << "\t]\n\n";
+	// --------------------------------------------------------------------
+
+	// --------------------------------------------------------------------
 	ofstr << "\n[indices]\n";
 	// terminal symbol indices
 	const t_mapIdIdx& mapTermIdx = tab.GetTermIndexMap();
@@ -236,37 +281,6 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 	}
 	ofstr << "\t]\n";
 
-	// terminal operator precedences
-	const t_mapIdPrec& mapTermPrec = tab.GetTermPrecMap();
-	ofstr << "\n\tterm_prec = [\n";
-	for(auto iter = mapTermPrec.begin(); iter != mapTermPrec.end(); std::advance(iter, 1))
-	{
-		const auto& [id, prec] = *iter;
-
-		ofstr << "\t\t[ " << id << ", " << prec << " ]";
-
-		if(std::next(iter, 1) != mapTermPrec.end())
-			ofstr << ",";
-		ofstr << "\n";
-	}
-	ofstr << "\t]\n";
-
-	// terminal operator associativities
-	const t_mapIdAssoc& mapTermAssoc = tab.GetTermAssocMap();
-
-	ofstr << "\n\tterm_assoc = [\n";
-	for(auto iter = mapTermAssoc.begin(); iter != mapTermAssoc.end(); std::advance(iter, 1))
-	{
-		const auto& [id, assoc] = *iter;
-
-		ofstr << "\t\t[ " << id << ", \"" << assoc << "\" ]";
-
-		if(std::next(iter, 1) != mapTermAssoc.end())
-			ofstr << ",";
-		ofstr << "\n";
-	}
-	ofstr << "\t]\n";
-
 	// semantic rule indices
 	const t_mapIdIdx& mapSemanticIdx = tab.GetSemanticIndexMap();
 	ofstr << "\n\tsemantic_idx = [\n";
@@ -303,6 +317,7 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 		ofstr << " ";
 	}
 	ofstr << "]";
+	// --------------------------------------------------------------------
 
 	ofstr << std::endl;
 	return true;

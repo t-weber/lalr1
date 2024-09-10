@@ -9,29 +9,7 @@
 #	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
 #
 
-
-#
-# get the internal table index of a token or nonterminal id
-#
-def get_table_index(idx_tab, id):
-	for entry in idx_tab:
-		if entry[0] == id:
-			return entry[1]
-
-	raise IndexError("No table index for id {0}.".format(id))
-	return None
-
-
-#
-# get the token or terminal id of an internal table index
-#
-def get_table_id(idx_tab, idx):
-	for entry in idx_tab:
-		if entry[1] == idx:
-			return entry[0]
-
-	raise IndexError("No id for table index {0}.".format(idx))
-	return None
+from .tables import get_table_index, get_table_id
 
 
 #
