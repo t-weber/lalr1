@@ -31,7 +31,7 @@ def write_parser_class(tables, outfile):
 	# shortcut for writing to the file
 	def pr(str): print(str, file = outfile)
 
-	pr("#\n# Parser created using liblalr1 by Tobias Weber, 2020-2022.\n" \
+	pr("#\n# Parser created using liblalr1 by Tobias Weber, 2020-2024.\n" \
 		"# DOI: https://doi.org/10.5281/zenodo.6987396\n#\n")
 
 	pr("class Parser:")

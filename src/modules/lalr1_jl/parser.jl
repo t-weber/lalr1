@@ -55,10 +55,10 @@ mutable struct Parser
 	states :: Vector{t_idx}      # parser states
 	symbols :: Vector            # symbol stack
 
+	accepted :: Bool             # parsing successful?
+
 	active_rules :: Dict{t_id, Any}  # active partial rules
 	cur_rule_handle :: t_idx     # global rule counter
-
-	accepted :: Bool             # parsing successful?
 
 
 	#
@@ -91,7 +91,7 @@ mutable struct Parser
 		parser.end_token = tables["consts"]["end"]
 		parser.start_idx = tables["consts"]["start"]
 
-		parser.input_tokens = []
+		parser.input_tokens = [ ]
 		parser.semantics = Dict{t_id, Function}()
 
 		# options
@@ -113,9 +113,9 @@ function reset(parser::Parser)
 	parser.lookahead = Dict{String, Any}()
 	parser.states = [ parser.start_idx ]    # parser states
 	parser.symbols = [ ]                    # symbol stack
+	parser.accepted = false
 	parser.active_rules = Dict{t_id, Any}() # active partial rules
 	parser.cur_rule_handle = 0              # global rule counter
-	parser.accepted = false
 end
 
 

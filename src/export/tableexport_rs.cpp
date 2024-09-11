@@ -18,10 +18,7 @@
 #include "options.h"
 #include "timer.h"
 
-#include <sstream>
 #include <fstream>
-#include <filesystem>
-#include <algorithm>
 #include <unordered_map>
 
 
@@ -234,9 +231,7 @@ bool TableExportRS::SaveParseTables(const TableGen& tab, const std::string& file
 
 		// get string identifier
 		if(auto iterStrId = mapTermStrIds.find(id); iterStrId != mapTermStrIds.end())
-		{
 			ofstr << " // " << iterStrId->second;
-		}
 
 		ofstr << "\n";
 	}
@@ -257,9 +252,7 @@ bool TableExportRS::SaveParseTables(const TableGen& tab, const std::string& file
 
 		// get string identifier
 		if(auto iterStrId = mapTermStrIds.find(id); iterStrId != mapTermStrIds.end())
-		{
 			ofstr << " // " << iterStrId->second;
-		}
 
 		ofstr << "\n";
 	}

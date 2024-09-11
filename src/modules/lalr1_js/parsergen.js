@@ -153,7 +153,7 @@ function create_parser(tables, outfile)
 	const fs = require("fs");
 
 	fs.writeFileSync(outfile,
-		"/*\n * Parser created using liblalr1 by Tobias Weber, 2020-2022.\n" +
+		"/*\n * Parser created using liblalr1 by Tobias Weber, 2020-2024.\n" +
 		" * DOI: https://doi.org/10.5281/zenodo.6987396\n */\n\n",
 		{"flag":"w"});
 

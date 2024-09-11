@@ -18,10 +18,7 @@
 #include "options.h"
 #include "timer.h"
 
-#include <sstream>
 #include <fstream>
-#include <filesystem>
-#include <algorithm>
 #include <unordered_map>
 
 
@@ -45,7 +42,7 @@ void TableExportTOML::SaveParseTable(const t_table& tab,
 	ostr << "\tcol_label = \"" << col_label << "\"\n";
 	ostr << "\telem_label = \"" << elem_label << "\"\n";
 
-	ostr << "\telems = [\n";
+	ostr << "\telems = [ # " << elem_label << "\n";
 	for(std::size_t row = 0; row < tab.size1(); ++row)
 	{
 		ostr << "\t\t[ ";
@@ -79,6 +76,10 @@ void TableExportTOML::SaveParseTable(const t_table& tab,
 		ostr << "]";
 		if(row < tab.size1() - 1)
 			ostr << ",";
+
+		if(row_label != "")
+			ostr << " # " << row_label << " " << row;
+
 		ostr << "\n";
 	}
 	ostr << "\t]\n";
@@ -190,8 +191,9 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 
 	// terminal operator precedences
 	const t_mapIdPrec& mapTermPrec = tab.GetTermPrecMap();
+	const t_mapIdStrId& mapTermStrIds = tab.GetTermStringIdMap();
 
-	ofstr << "\tterm_prec = [\n";
+	ofstr << "\tterm_prec = [ # [ term id, prec ] \n";
 	for(auto iter = mapTermPrec.begin(); iter != mapTermPrec.end(); std::advance(iter, 1))
 	{
 		const auto& [id, prec] = *iter;
@@ -200,6 +202,11 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 
 		if(std::next(iter, 1) != mapTermPrec.end())
 			ofstr << ",";
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id); iterStrId != mapTermStrIds.end())
+			ofstr << " # " << iterStrId->second;
+
 		ofstr << "\n";
 	}
 	ofstr << "\t]\n";
@@ -207,7 +214,7 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 	// terminal operator associativities
 	const t_mapIdAssoc& mapTermAssoc = tab.GetTermAssocMap();
 
-	ofstr << "\n\tterm_assoc = [\n";
+	ofstr << "\n\tterm_assoc = [ # [ term id, assoc ] \n";
 	for(auto iter = mapTermAssoc.begin(); iter != mapTermAssoc.end(); std::advance(iter, 1))
 	{
 		const auto& [id, assoc] = *iter;
@@ -216,6 +223,11 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 
 		if(std::next(iter, 1) != mapTermAssoc.end())
 			ofstr << ",";
+
+		// get string identifier
+		if(auto iterStrId = mapTermStrIds.find(id); iterStrId != mapTermStrIds.end())
+			ofstr << " # " << iterStrId->second;
+
 		ofstr << "\n";
 	}
 	ofstr << "\t]\n\n";
@@ -225,8 +237,7 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 	ofstr << "\n[indices]\n";
 	// terminal symbol indices
 	const t_mapIdIdx& mapTermIdx = tab.GetTermIndexMap();
-	const t_mapIdStrId& mapTermStrIds = tab.GetTermStringIdMap();
-	ofstr << "\tterm_idx = [\n";
+	ofstr << "\tterm_idx = [ # [ term id, term idx, term str_id ]\n";
 	for(auto iter = mapTermIdx.begin(); iter != mapTermIdx.end(); std::advance(iter, 1))
 	{
 		const auto& [id, idx] = *iter;
@@ -263,7 +274,7 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 	// non-terminal symbol indices
 	const t_mapIdIdx& mapNonTermIdx = tab.GetNontermIndexMap();
 	const t_mapIdStrId& mapNonTermStrIds = tab.GetNontermStringIdMap();
-	ofstr << "\n\tnonterm_idx = [\n";
+	ofstr << "\n\tnonterm_idx = [ # [ nonterm id, nonterm idx, nonterm str_id ] \n";
 	for(auto iter = mapNonTermIdx.begin(); iter != mapNonTermIdx.end(); std::advance(iter, 1))
 	{
 		const auto& [id, idx] = *iter;
@@ -283,7 +294,7 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 
 	// semantic rule indices
 	const t_mapIdIdx& mapSemanticIdx = tab.GetSemanticIndexMap();
-	ofstr << "\n\tsemantic_idx = [\n";
+	ofstr << "\n\tsemantic_idx = [ # [ rule id, rule idx ]\n";
 	for(auto iter = mapSemanticIdx.begin(); iter != mapSemanticIdx.end(); std::advance(iter, 1))
 	{
 		const auto& [id, idx] = *iter;
@@ -304,7 +315,7 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 			ofstr << ",";
 		ofstr << " ";
 	}
-	ofstr << "]";
+	ofstr << "]\n";
 
 	// index of lhs nonterminal in rule
 	const auto& ruleLhsIdx = tab.GetRuleLhsIndices();

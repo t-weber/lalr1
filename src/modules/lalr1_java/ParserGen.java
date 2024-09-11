@@ -298,7 +298,7 @@ public class ParserGen
 
 			pw.print("""
 			/**
-			 * Parser created using liblalr1 by Tobias Weber, 2020-2023.
+			 * Parser created using liblalr1 by Tobias Weber, 2020-2024.
 			 * DOI: https://doi.org/10.5281/zenodo.6987396
 			 */
 

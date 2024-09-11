@@ -173,7 +173,7 @@ const CODE_ACTIVE_RULES_RESET : &str =
 
 
 const CODE : &str = r#"/*
- * Parser created using liblalr1 by Tobias Weber, 2020-2022.
+ * Parser created using liblalr1 by Tobias Weber, 2020-2024.
  * DOI: https://doi.org/10.5281/zenodo.6987396
  */
 
