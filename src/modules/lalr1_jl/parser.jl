@@ -107,7 +107,7 @@ end
 #
 # reset the parser
 #
-function reset(parser::Parser)
+function reset(parser :: Parser)
 	parser.input_idx = 0
 	parser.lookahead_idx = 0
 	parser.lookahead = Dict{String, Any}()
@@ -122,7 +122,7 @@ end
 #
 # get the next lookahead token and its table index
 #
-function get_next_lookahead(parser::Parser)
+function get_next_lookahead(parser :: Parser)
 	parser.input_idx += 1
 	tok = parser.input_tokens[parser.input_idx]
 	tok_lval = length(tok) > 1 ? tok[2] : nothing
@@ -136,7 +136,7 @@ end
 # push the current lookahead token onto the symbol stack
 # and get the next lookahead
 #
-function push_lookahead(parser::Parser)
+function push_lookahead(parser :: Parser)
 	push!(parser.symbols, parser.lookahead)
 	get_next_lookahead(parser)
 end
@@ -145,12 +145,12 @@ end
 #
 # reduce using a semantic rule
 #
-function apply_rule(parser::Parser, rule_id :: t_id, num_rhs :: t_idx, lhs_id :: t_id)
+function apply_rule(parser :: Parser, rule_id :: t_id, num_rhs :: t_idx, lhs_id :: t_id)
 	# remove fully reduced rule from active rule stack and get return value
 	rule_ret = nothing
-	handle = -1
 
 	if parser.use_partials
+		handle = -1
 		rulestack = get!(parser.active_rules, rule_id, nothing)
 
 		if rulestack != nothing && length(rulestack) > 0
@@ -166,11 +166,15 @@ function apply_rule(parser::Parser, rule_id :: t_id, num_rhs :: t_idx, lhs_id ::
 				parser.active_rules[rule_id] = rulestack
 			end
 		end
-	end
 
-	if parser.debug
-		@printf("Reducing %d symbols using rule %d (handle %d).\n",
-			num_rhs, rule_id, handle)
+		if parser.debug
+			@printf("Reducing %d symbols using rule %d (handle %d).\n",
+				num_rhs, rule_id, handle)
+		end
+	else
+		if parser.debug
+			@printf("Reducing %d symbols using rule %d.\n", num_rhs, rule_id)
+		end
 	end
 
 	# get num_rhs argument symbols
@@ -194,7 +198,7 @@ end
 #
 # partially apply a semantic rule
 #
-function apply_partial_rule(parser::Parser, rule_id :: t_id, rule_len :: t_idx, before_shift :: Bool)
+function apply_partial_rule(parser :: Parser, rule_id :: t_id, rule_len :: t_idx, before_shift :: Bool)
 	arg_len = rule_len
 	if before_shift
 		# directly count the following lookahead terminal
@@ -304,7 +308,7 @@ end
 #
 # run LR(1) parser
 #
-function parse(parser::Parser)
+function parse(parser :: Parser)
 	reset(parser)
 	get_next_lookahead(parser)
 

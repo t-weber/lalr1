@@ -10,15 +10,15 @@
 #	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
 #
 
-using Printf
 using TOML
-
+using Printf
 
 module parsergen
 
+using Printf
+
 push!(LOAD_PATH, ".")
 push!(LOAD_PATH, @__DIR__)
-
 
 using tables: t_idx, t_id, get_table_index, get_table_id,
 	get_table_strid, has_table_entry, id_to_str
@@ -35,6 +35,8 @@ function write_parser(tables, outfile, gen_partials = false)
 
 	pr("#\n# Parser created using liblalr1 by Tobias Weber, 2020-2024.\n" *
 		"# DOI: https://doi.org/10.5281/zenodo.6987396\n#\n")
+
+	pr("using Printf\n")
 
 	pr("const t_idx = Integer")
 	pr("const t_id  = Integer\n")
@@ -90,7 +92,167 @@ function write_parser(tables, outfile, gen_partials = false)
 		end
 	pr("end\n")
 
-	# TODO
+	# get_next_lookahead function
+	pr("""
+	function get_next_lookahead(parser::Parser)
+		parser.input_index += 1
+		tok = parser.input_tokens[parser.input_idx]
+		tok_lval = length(tok) > 1 ? tok[2] : nothing
+		parser.lookahead = Dict{String, Any}( "is_term" => true, "id" => tok[1], "val" => tok_lval )
+	end
+	""")
+
+	# push_lookahead function
+	pr("""
+	function push_lookahead(parser::Parser)
+		push!(parser.symbols, parser.lookahead)
+		get_next_lookahead(parser)
+	end
+	""")
+
+	# apply_partial_rule function
+	if gen_partials
+		pr("""
+		function apply_partial_rule(parser::Parser, rule_id::t_id, rule_len::t_idx, before_shift::Bool)
+			arg_len = rule_len
+			if before_shift
+				rule_len += 1
+			end
+			already_seen_active_rule = false
+			insert_new_active_rule = false
+			seen_tokens_old = -1
+			rulestack = get!(parser.active_rules, rule_id, nothing)
+			if rulestack != nothing
+				if length(rulestack) > 0
+					active_rule = rulestack[end]
+					seen_tokens_old = active_rule["seen_tokens"]
+					if before_shift
+						if active_rule["seen_tokens"] < rule_len
+							active_rule["seen_tokens"] = rule_len
+						else
+							insert_new_active_rule = true
+						end
+					else  # before jump
+						if active_rule["seen_tokens"] == rule_len
+							already_seen_active_rule = true
+						else
+							active_rule["seen_tokens"] = rule_len
+						end
+					end
+					rulestack[end] = active_rule
+					parser.active_rules[rule_id] = rulestack
+				else
+					insert_new_active_rule = true
+				end
+			else
+				rulestack = []
+				parser.active_rules[rule_id] = rulestack
+				insert_new_active_rule = true
+			end
+			if insert_new_active_rule
+				seen_tokens_old = -1
+				active_rule = Dict{String, Any}()
+				active_rule["seen_tokens"] = rule_len
+				active_rule["retval"] = nothing
+				active_rule["handle"] = parser.cur_rule_handle
+				parser.cur_rule_handle += 1
+				push!(rulestack, active_rule)
+				parser.active_rules[rule_id] = rulestack
+			end
+			if !already_seen_active_rule
+				if !(rule_id in keys(parser.semantics))
+					return
+				end
+				active_rule = rulestack[end]
+				args = parser.symbols[end - arg_len + 1 : end]
+				save_back = false
+				if !before_shift || seen_tokens_old < rule_len - 1
+					if parser.debug
+						handle = active_rule["handle"]
+						@printf("Applying partial rule %d with length %d (handle %d). Before shift: %d.\\n",
+							rule_id, arg_len, handle, before_shift)
+					end
+					active_rule["retval"] = parser.semantics[rule_id](
+						args, false, active_rule["retval"])
+					save_back = true
+				end
+
+				if before_shift
+					if parser.debug
+						handle = active_rule["handle"]
+						@printf("Applying partial rule %d with length %d (handle %d). Before shift: %d.\\n",
+							rule_id, rule_len, handle, before_shift)
+					end
+					push!(args, parser.lookahead)
+					active_rule["retval"] = parser.semantics[rule_id](
+						args, false, active_rule["retval"])
+					save_back = true
+				end
+				if save_back
+					rulestack[end] = active_rule
+					parser.active_rules[rule_id] = rulestack
+				end
+			end
+		end
+		""")
+	end
+
+	# apply_rule function
+	pr("""
+	function apply_rule(parser::Parser, rule_id::t_id, num_rhs::t_idx, lhs_id::t_id)
+		rule_ret = nothing""")
+	if gen_partials
+	pr("""	handle = -1
+		if parser.use_partials
+			rulestack = get!(parser.active_rules, rule_id, nothing)
+			if rulestack != nothing && length(rulestack) > 0
+				active_rule = rulestack[end]
+				rule_ret = active_rule["retval"]
+				handle = active_rule["handle"]
+				if length(rulestack) == 1
+					delete!(parser.active_rules, rule_id)
+				else
+					pop!(rulestack)
+					parser.active_rules[rule_id] = rulestack
+				end
+			end
+			if parser.debug
+				@printf("Reducing %d symbols using rule %d (handle %d).\\n", num_rhs, rule_id, handle)
+			end
+		end
+	""")
+	else
+	pr("""
+		if parser.debug
+			@printf("Reducing %d symbols using rule %d.\\n", num_rhs, rule_id)
+		end
+	""")
+	end
+	pr("""
+		parser.dist_to_jump = num_rhs
+		args = parser.symbols[end - num_rhs + 1 : end]
+		self.symbols = self.symbols[0 : len(self.symbols) - num_rhs]
+		if rule_id in keys(parser.semantics)
+			rule_ret = parser.semantics[rule_id](args, true, rule_ret)
+		end
+		push!(parser.symbols, Dict{String, Any}( "is_term" => false, "id" => lhs_id, "val" => rule_ret ))
+	end
+	""")
+
+	# parse function
+	call_start_func = @sprintf("\tstate_%d(parser)", start_idx)
+
+	pr("""
+	function parse(parser::Parser)
+		reset(parser)
+		get_next_lookahead(parser)""")
+	pr(call_start_func)
+	pr("""
+		if length(parser.symbols) < 1 || !parser.accepted
+			return nothing
+		end
+		return parser.symbols[end]
+	end""")
 end
 
 
