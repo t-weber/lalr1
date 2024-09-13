@@ -25,9 +25,12 @@ parsing_code = "expr_parser.jl"
 parsing_tables = "expr.toml"
 
 if isfile(parsing_code)
+	using expr_parser
+	parsermod = expr_parser
 	use_recasc = true
 elseif isfile(parsing_tables)
 	using parser
+	parsermod = parser
 	use_recasc = false
 else
 	printstyled(stderr, "No parsing tables found.\n", color=:red, bold=true)
@@ -120,9 +123,9 @@ semantics = Dict{Integer, Function}(
 		end
 
 		if use_recasc
-			#theparser = expr_parser.Parser()
+			theparser = parsermod.Parser()
 		else
-			theparser = parser.Parser(tables)
+			theparser = parsermod.Parser(tables)
 		end
 
 		theparser.debug = false
@@ -136,7 +139,8 @@ semantics = Dict{Integer, Function}(
 		push!(input_tokens, [theparser.end_token])
 		theparser.input_tokens = input_tokens
 
-		result = parser.parse(theparser)
+		result = parsermod.parse(theparser)
+
 		if result != nothing
 			println(result["val"])
 		else

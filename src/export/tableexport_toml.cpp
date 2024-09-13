@@ -237,29 +237,45 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 	ofstr << "\n[indices]\n";
 	// terminal symbol indices
 	const t_mapIdIdx& mapTermIdx = tab.GetTermIndexMap();
-	ofstr << "\tterm_idx = [ # [ term id, term idx, term str_id ]\n";
+	ofstr << "\tterm_idx = [ # [ term id, term idx, term str_id, term_char_id ]\n";
 	for(auto iter = mapTermIdx.begin(); iter != mapTermIdx.end(); std::advance(iter, 1))
 	{
 		const auto& [id, idx] = *iter;
 
 		ofstr << "\t\t[ ";
+
+		// id
+		std::optional<int> special_id;
 		if(auto iter_special = special_idents.find(id);
-			tab.GetUseNegativeTableValues() && iter_special != special_idents.end())
+		   tab.GetUseNegativeTableValues() && iter_special != special_idents.end())
 		{
+			special_id = iter_special->second;
 			ofstr << iter_special->second;
 		}
 		else
 		{
-			//if(tab.GetUseOpChar() && isprintable(id))
-			//	ofstr << "\"" << get_escaped_char(char(id)) << "\"";
-			//else
-				ofstr << id;
+			ofstr << id;
 		}
+
+		// idx
 		ofstr << ", " << idx;
 
 		// get string identifier
 		if(auto iterStrId = mapTermStrIds.find(id); iterStrId != mapTermStrIds.end())
 			ofstr << ", \"" << iterStrId->second << "\"";
+
+		// get id with optional char id
+		if(special_id)
+		{
+			ofstr << ", " << *special_id;
+		}
+		else
+		{
+			if(tab.GetUseOpChar() && isprintable(id))
+				ofstr << ", '" << get_escaped_char(char(id)) << "'";
+			else
+				ofstr << ", " << id;
+		}
 
 		ofstr << " ]";
 

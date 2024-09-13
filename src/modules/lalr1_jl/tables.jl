@@ -52,10 +52,10 @@ end
 #
 # get the token or terminal string id of an internal table index
 #
-function get_table_strid(idx_tab, idx :: t_idx) :: t_id
+function get_table_strid(idx_tab, idx :: t_idx) :: String
 	for entry in idx_tab
 		if entry[2] == idx
-			return t_id(entry[3])
+			return entry[3]
 		end
 	end
 
@@ -76,10 +76,12 @@ end
 
 function id_to_str(id, end_token) :: String
 	if id == end_token && id >= 0
-		return "0x" + string(id, base = 16)
+		return "0x" * string(id, base = 16)
 		#return "end_id"
 	elseif typeof(id) == String
-		return "\"" + id + "\""
+		return "\"" * id * "\""
+	elseif typeof(id) == Char
+		return "'" * id * "'"
 	end
 
 	return string(id)

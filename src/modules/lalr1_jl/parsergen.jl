@@ -33,9 +33,6 @@ function write_parser(tables, outfile, gen_partials = false)
 		write(outfile, str * "\n")
 	end
 
-	pr("#\n# Parser created using liblalr1 by Tobias Weber, 2020-2024.\n" *
-		"# DOI: https://doi.org/10.5281/zenodo.6987396\n#\n")
-
 	pr("using Printf\n")
 
 	pr("const t_idx = Integer")
@@ -47,9 +44,11 @@ function write_parser(tables, outfile, gen_partials = false)
 		end_token :: t_idx
 		debug :: Bool
 		input_tokens :: Vector{Any}
+		input_idx :: Integer
 		semantics :: Dict{t_id, Function}
 		lookahead :: Dict{String, Any}
 		symbols :: Vector
+		dist_to_jump :: Integer
 		accepted :: Bool""")
 
 	if gen_partials
@@ -81,7 +80,7 @@ function write_parser(tables, outfile, gen_partials = false)
 	# reset function
 	pr("""
 	function reset(parser::Parser)
-		parser.input_index = -1
+		parser.input_idx = 0
 		parser.lookahead = Dict{String, Any}()
 		parser.dist_to_jump = 0
 		parser.accepted = false
@@ -95,7 +94,7 @@ function write_parser(tables, outfile, gen_partials = false)
 	# get_next_lookahead function
 	pr("""
 	function get_next_lookahead(parser::Parser)
-		parser.input_index += 1
+		parser.input_idx += 1
 		tok = parser.input_tokens[parser.input_idx]
 		tok_lval = length(tok) > 1 ? tok[2] : nothing
 		parser.lookahead = Dict{String, Any}( "is_term" => true, "id" => tok[1], "val" => tok_lval )
@@ -231,7 +230,7 @@ function write_parser(tables, outfile, gen_partials = false)
 	pr("""
 		parser.dist_to_jump = num_rhs
 		args = parser.symbols[end - num_rhs + 1 : end]
-		self.symbols = self.symbols[0 : len(self.symbols) - num_rhs]
+		deleteat!(parser.symbols, length(parser.symbols) - num_rhs + 1 : length(parser.symbols))
 		if rule_id in keys(parser.semantics)
 			rule_ret = parser.semantics[rule_id](args, true, rule_ret)
 		end
@@ -258,9 +257,9 @@ end
 
 function write_closure(tables, state_idx, outfile, gen_partials = false)
 	# lalr(1) tables
-	shift_tab = tables["shift"]["elems"][state_idx]
-	reduce_tab = tables["reduce"]["elems"][state_idx]
-	jump_tab = tables["jump"]["elems"][state_idx]
+	shift_tab = tables["shift"]["elems"][state_idx + 1]
+	reduce_tab = tables["reduce"]["elems"][state_idx + 1]
+	jump_tab = tables["jump"]["elems"][state_idx + 1]
 
 	# index helper tables
 	termidx_tab = tables["indices"]["term_idx"]
@@ -270,11 +269,11 @@ function write_closure(tables, state_idx, outfile, gen_partials = false)
 	lhsidx_tab = tables["indices"]["lhs_idx"]
 
 	# partial rule tables
-	part_term = tables["partials_rule_term"]["elems"][state_idx]
-	part_nonterm = tables["partials_rule_nonterm"]["elems"][state_idx]
-	part_term_len = tables["partials_matchlen_term"]["elems"][state_idx]
-	part_nonterm_len = tables["partials_matchlen_nonterm"]["elems"][state_idx]
-	part_nonterm_lhs = tables["partials_lhs_nonterm"]["elems"][state_idx]
+	part_term = tables["partials_rule_term"]["elems"][state_idx + 1]
+	part_nonterm = tables["partials_rule_nonterm"]["elems"][state_idx + 1]
+	part_term_len = tables["partials_matchlen_term"]["elems"][state_idx + 1]
+	part_nonterm_len = tables["partials_matchlen_nonterm"]["elems"][state_idx + 1]
+	part_nonterm_lhs = tables["partials_lhs_nonterm"]["elems"][state_idx + 1]
 
 	# special values
 	acc_token :: t_idx = tables["consts"]["acc"]
@@ -286,14 +285,197 @@ function write_closure(tables, state_idx, outfile, gen_partials = false)
 
 	# shortcut for writing to the file
 	function pr(str :: AbstractString)
-		write(outfile, str)
+		write(outfile, str * "\n")
 	end
 
-	# TODO
+	has_shift_entry = has_table_entry(shift_tab, err_token)
+	has_jump_entry = has_table_entry(jump_tab, err_token)
+
+	state_func = @sprintf("state_%d", state_idx)
+	pr("\nfunction " * state_func * "(parser::Parser)")
+
+	if has_shift_entry
+		pr("\tnext_state = nothing")
+	end
+
+	pr("\tla = parser.lookahead[\"id\"]")
+	num_la_cases = 0
+
+	rules_term_id = Dict()
+	acc_term_id = []
+	for term_idx = 0 : num_terms - 1
+		term_id = get_table_id(termidx_tab, term_idx)
+
+		newstate_idx = shift_tab[term_idx + 1]
+		rule_idx = reduce_tab[term_idx + 1]
+
+		# shift
+		if newstate_idx != err_token
+			term_strid = get_table_strid(termidx_tab, term_idx)
+			term_id_str = id_to_str(term_id, end_token)
+
+			ifstr = num_la_cases > 0 ? "elseif" : "if"
+			pr("\t" * ifstr * " la == " * term_id_str *
+				" # id: " * term_strid *
+				", idx: " * string(term_idx))
+			pr("\t\tnext_state = state_" * string(newstate_idx))
+
+			num_la_cases += 1
+
+			if gen_partials
+				partial_idx = part_term[term_idx + 1]
+				if partial_idx != err_token
+					partial_id = get_table_id(semanticidx_tab, partial_idx)
+					partial_len = part_term_len[term_idx + 1]
+					pr("\t\tif parser.use_partials")
+					pr("\t\t\tapply_partial_rule(parser, " * string(partial_id) * ", " * string(partial_len) * ", true)")
+					pr("\t\tend")
+				end
+			end
+
+		elseif rule_idx != err_token
+			# accept
+			if rule_idx == acc_token
+				push!(acc_term_id, term_id)
+			# reduce
+			else
+				if !(rule_idx in keys(rules_term_id))
+					rules_term_id[rule_idx] = []
+				end
+				push!(rules_term_id[rule_idx], term_id)
+			end
+		end
+	end
+
+	# reduce
+	for (rule_idx, term_id) in rules_term_id
+		ifstr = num_la_cases > 0 ? "elseif " : "if "
+
+		idstrs = []
+		idxstrs = []
+		for id in term_id
+			idstr = "la == " * id_to_str(id, end_token)
+			idxstr = string(get_table_index(termidx_tab, id))
+
+			push!(idstrs, idstr)
+			push!(idxstrs, idxstr)
+		end
+		termids = join(idstrs, " || ")
+		termidx = join(idxstrs, ", ")
+
+		pr("\t" * ifstr * termids * " # idx: " * termidx)
+
+		num_rhs = numrhs_tab[rule_idx + 1]
+		lhs_idx = lhsidx_tab[rule_idx + 1]
+		lhs_id = get_table_id(nontermidx_tab, lhs_idx)
+		rule_id = get_table_id(semanticidx_tab, rule_idx)
+		pr("\t\tapply_rule(parser, " * string(rule_id) * ", " *
+			string(num_rhs) * ", " * string(lhs_id) * ")")
+
+		num_la_cases += 1
+	end
+
+	if length(acc_term_id) > 0
+		ifstr = num_la_cases > 0 ? "elseif " : "if "
+
+		idstrs = []
+		idxstrs = []
+		for id in acc_term_id
+			idstr = "la == " * id_to_str(id, end_token)
+			idxstr = string(get_table_index(termidx_tab, id))
+
+			push!(idstrs, idstr)
+			push!(idxstrs, idxstr)
+		end
+		termids = join(idstrs, " || ")
+		termidx = join(idxstrs, ", ")
+
+		pr("\t" * ifstr * termids * " # idx: " * termidx)
+		pr("\t\tparser.accepted = true")
+
+		num_la_cases += 1
+	end
+
+	if num_la_cases > 0
+		pr("\telse")
+		pr("\t\tthrow(SystemError(\"Invalid terminal transition from state " *
+			string(state_idx) *
+			". Lookahead id: \" * string(la) * \"" *
+			".\"))")
+		pr("\tend")  # if(la == ...)
+	end
+
+	# shift
+	if has_shift_entry
+		pr("\tif next_state != nothing")
+		pr("\t\tpush_lookahead(parser)")
+		pr("\t\tnext_state(parser)")
+		pr("\tend")
+	end
+
+	# jump
+	if has_jump_entry
+		pr("\twhile parser.dist_to_jump == 0 && length(parser.symbols) > 0 && !parser.accepted")
+		pr("\t\ttopsym = parser.symbols[end]")
+		pr("\t\tif topsym[\"is_term\"]")
+		pr("\t\t\tbreak")
+		pr("\t\tend")
+
+		num_top_cases = 0
+		pr("\t\ttop = topsym[\"id\"]")
+		for nonterm_idx = 0 : num_nonterms - 1
+			nonterm_id = get_table_id(nontermidx_tab, nonterm_idx)
+			jump_state_idx = jump_tab[nonterm_idx + 1]
+
+			if jump_state_idx != err_token
+				nonterm_strid = get_table_strid(nontermidx_tab, nonterm_idx)
+
+				ifstr = num_top_cases > 0 ? "elseif" : "if"
+				pr("\t\t" * ifstr * " top == " * string(nonterm_id) *
+					" # id: " * string(nonterm_strid) *
+					", idx: " * string(nonterm_idx))
+
+				num_top_cases += 1
+
+				if gen_partials
+					lhs_id = part_nonterm_lhs[nonterm_idx + 1]
+					if lhs_id != err_token
+						lhs_idx = get_table_index(nontermidx_tab, lhs_id)
+						partial_idx = part_nonterm[lhs_idx]
+						if partial_idx != err_token
+							partial_id = get_table_id(semanticidx_tab, partial_idx)
+							partial_len = part_nonterm_len[lhs_idx]
+							pr("\t\t\tif parser.use_partials")
+							pr("\t\t\t\tapply_partial_rule(parser, " *
+								string(partial_id) * ", " *
+								string(partial_len) * ", false)")
+							pr("\t\t\tend")
+						end
+					end
+				end
+
+				pr("\t\t\tstate_" * string(jump_state_idx) * "(parser)")
+			end
+		end
+
+		if num_top_cases > 0
+			pr("\t\telse")
+			pr("\t\t\tthrow(SystemError(\"Invalid nonterminal transition from state " *
+				string(state_idx) *
+				". Top symbol id: \" * string(top) * \"" *
+				".\"))")
+			pr("\t\tend")
+		end
+
+		pr("\tend")  # while
+	end
+
+	pr("\tparser.dist_to_jump -= 1")
+	pr("end")  # state function
 end
 
 
-function create_parser(tables, outfile_name, gen_partials = false)
+function create_parser(tables, parser_name, outfile_name, gen_partials = false)
 	num_states = length(tables["shift"]["elems"])
 	if num_states == 0
 		printstyled(stderr, "Error: No states defined.\n", color=:red, bold=true)
@@ -301,13 +483,22 @@ function create_parser(tables, outfile_name, gen_partials = false)
 	end
 
 	outfile = open(outfile_name, write = true)
+
+	write(outfile,
+		"#\n# Parser created using liblalr1 by Tobias Weber, 2020-2024.\n" *
+		"# DOI: https://doi.org/10.5281/zenodo.6987396\n#\n\n")
+
+	write(outfile, "module " * parser_name * "\n\n")
+
 	# basic parser
 	write_parser(tables, outfile, gen_partials)
 
 	# closures
-	for state_idx = 1 : num_states
+	for state_idx = 0 : num_states - 1
 		write_closure(tables, state_idx, outfile, gen_partials)
 	end
+
+	write(outfile, "\nend\n")
 	close(outfile)
 
 	return true
@@ -323,7 +514,8 @@ function (@main)(args)
 	end
 
 	tablesfile_name = args[1]
-	outfile_name = splitext(tablesfile_name)[1] * "_parser.jl"
+	parser_name = splitext(tablesfile_name)[1] * "_parser"
+	outfile_name = parser_name * ".jl"
 
 	@printf("Creating parser \"%s\" -> \"%s\".\n", tablesfile_name, outfile_name)
 
@@ -331,7 +523,7 @@ function (@main)(args)
 	printstyled(tables["infos"] * "\n", color=:blue, bold=true)
 
 	gen_partials = true
-	if !parsergen.create_parser(tables, outfile_name, gen_partials)
+	if !parsergen.create_parser(tables, parser_name, outfile_name, gen_partials)
 		printstyled(stderr, "Error: Failed creating parser.\n", color=:red, bold=true)
 		return -1
 	end
