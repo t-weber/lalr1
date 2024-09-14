@@ -220,6 +220,10 @@ def write_closure(tables, state_idx, outfile):
 
 	pr(f"\tdef state_{state_idx}(self):")
 
+	pr("\t\tif self.debug:")
+	pr(f"\t\t\tprint(\"Entering state {state_idx}, lookahead: %s.\""\
+		"% str(self.lookahead))")
+
 	has_shift_entry = has_table_entry(shift_tab, err_token)
 	has_jump_entry = has_table_entry(jump_tab, err_token)
 
@@ -325,6 +329,9 @@ def write_closure(tables, state_idx, outfile):
 		pr(f"\t\t\t\t\traise RuntimeError(\"Invalid nonterminal transition from state {state_idx}.\")")
 
 	pr("\t\tself.dist_to_jump = self.dist_to_jump - 1")
+	pr("\t\tif self.debug:")
+	pr(f"\t\t\tprint(\"Exiting state {state_idx}, lookahead: %s, distance to jump: %d.\""\
+		"% (str(self.lookahead), self.dist_to_jump))")
 	pr("")
 
 

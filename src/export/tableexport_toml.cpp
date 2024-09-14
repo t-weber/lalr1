@@ -247,7 +247,7 @@ bool TableExportTOML::SaveParseTables(const TableGen& tab, const std::string& fi
 		// id
 		std::optional<int> special_id;
 		if(auto iter_special = special_idents.find(id);
-		   tab.GetUseNegativeTableValues() && iter_special != special_idents.end())
+			tab.GetUseNegativeTableValues() && iter_special != special_idents.end())
 		{
 			special_id = iter_special->second;
 			ofstr << iter_special->second;

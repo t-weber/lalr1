@@ -153,7 +153,7 @@ function apply_rule(parser :: Parser, rule_id :: t_id, num_rhs :: t_idx, lhs_id 
 		handle = -1
 		rulestack = get!(parser.active_rules, rule_id, nothing)
 
-		if rulestack != nothing && length(rulestack) > 0
+		if rulestack !== nothing && length(rulestack) > 0
 			active_rule = rulestack[end]
 			rule_ret = active_rule["retval"]
 			handle = active_rule["handle"]
@@ -211,7 +211,7 @@ function apply_partial_rule(parser :: Parser, rule_id :: t_id, rule_len :: t_idx
 
 	rulestack = get!(parser.active_rules, rule_id, nothing)
 
-	if rulestack != nothing
+	if rulestack !== nothing
 		if length(rulestack) > 0
 			active_rule = rulestack[end]
 			seen_tokens_old = active_rule["seen_tokens"]
@@ -325,9 +325,11 @@ function parse(parser :: Parser)
 
 		# errors
 		if new_state == parser.err_token && rule_idx == parser.err_token
-			throw(SystemError("No shift or reduce action defined."))
+			throw(SystemError("No shift or reduce action defined in state " *
+				string(top_state) * "."))
 		elseif new_state != parser.err_token && rule_idx != parser.err_token
-			throw(SystemError("Shift/reduce conflict."))
+			throw(SystemError("Shift/reduce conflict in state " *
+				string(top_state) * "."))
 
 		# accept
 		elseif rule_idx == parser.acc_token

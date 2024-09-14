@@ -14,6 +14,7 @@ import os
 import sys
 import math
 import random
+import time
 
 sys.path.append(".")
 sys.path.append("../../src/modules")
@@ -22,6 +23,8 @@ sys.path.append("../src/modules")
 import lexer
 from ids import *
 
+debug = False
+use_partials = False
 
 # select parser backend
 parsing_tables = "expr.json"
@@ -111,37 +114,44 @@ semantics = {
 #
 def main(args):
 	try:
-		if not use_recasc:
+		if use_recasc:
+			print("Using recursive-ascent parser.")
+			theparser = expr_parser.Parser()
+		else:
+			print("Using table-based parser.")
 			tablesfile = open(parsing_tables)
 			tables = json.load(tablesfile)
+			theparser = parser.Parser(tables)
+
+		theparser.debug = debug
+		theparser.use_partials = use_partials
+
+		theparser.semantics = semantics
+		end_token = theparser.end_token
 
 		while True:
+			theparser.reset()
+
 			sys.stdout.write("> ")
 			sys.stdout.flush()
 			input_str = sys.stdin.readline().strip()
 			if len(input_str) == 0:
 				continue
-
-			if use_recasc:
-				#print("Using recursive-ascent parser.")
-				theparser = expr_parser.Parser()
-			else:
-				#print("Using table-based parser.")
-				theparser = parser.Parser(tables)
-
-			theparser.debug = False
-			theparser.use_partials = False
-
-			theparser.semantics = semantics
-			end_token = theparser.end_token
+			elif input_str == "exit":
+				break
 
 			input_tokens = lexer.get_tokens(input_str)
 			input_tokens.append([end_token])
 			theparser.input_tokens = input_tokens
 
+			if debug:
+				print("Input tokens: %s." % str(input_tokens))
+
+			tick = time.time()
 			result = theparser.parse()
+			elapsed_time = (time.time() - tick) * 1000.
 			if result != None:
-				print(result["val"])
+				print("%g\t\t[t = %.4g ms]" % (result["val"], elapsed_time))
 			else:
 				print("Error while parsing.")
 				return -1

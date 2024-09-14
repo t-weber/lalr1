@@ -20,6 +20,9 @@ using Printf
 using lexer, ids
 
 
+debug = false
+use_partials = false
+
 # select parser backend
 parsing_code = "expr_parser.jl"
 parsing_tables = "expr.toml"
@@ -28,10 +31,14 @@ if isfile(parsing_code)
 	using expr_parser
 	parsermod = expr_parser
 	use_recasc = true
+
+	printstyled(stderr, "Using recursive-ascent parser.\n", color=:blue, bold=true)
 elseif isfile(parsing_tables)
 	using parser
 	parsermod = parser
 	use_recasc = false
+
+	printstyled(stderr, "Using table-based parser.\n", color=:blue, bold=true)
 else
 	printstyled(stderr, "No parsing tables found.\n", color=:red, bold=true)
 	exit(-1)
@@ -108,10 +115,17 @@ semantics = Dict{Integer, Function}(
 # load tables from a json file and run parser
 #
 #try
-	if !use_recasc
+	if use_recasc
+		theparser = parsermod.Parser()
+	else
 		using TOML
 		tables = TOML.parsefile(parsing_tables)
+		theparser = parsermod.Parser(tables)
 	end
+
+	theparser.debug = debug
+	theparser.use_partials = use_partials
+	theparser.semantics = semantics
 
 	while true
 		print("> ")
@@ -122,27 +136,20 @@ semantics = Dict{Integer, Function}(
 			break
 		end
 
-		if use_recasc
-			theparser = parsermod.Parser()
-		else
-			theparser = parsermod.Parser(tables)
-		end
-
-		theparser.debug = false
-		theparser.use_partials = false
-		theparser.semantics = semantics
+		parsermod.reset(theparser)
 
 		input_tokens = lexer.get_tokens(input_str)
-		if theparser.debug
+		if debug
 			@printf("Input tokens: %s\n", input_tokens)
 		end
 		push!(input_tokens, [theparser.end_token])
 		theparser.input_tokens = input_tokens
 
-		result = parsermod.parse(theparser)
-
-		if result != nothing
-			println(result["val"])
+		elapsed_time = (@elapsed result = parsermod.parse(theparser))
+		if result !== nothing
+			printstyled(result["val"], color=:green, bold=true)
+			elapsed_str = @sprintf("\t\t\t[t = %.4g ms]\n", elapsed_time * 1000)
+			printstyled(elapsed_str, color=:blue, bold=true)
 		else
 			printstyled(stderr, "Error while parsing.\n", color=:red, bold=true)
 		end

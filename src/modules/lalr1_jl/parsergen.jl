@@ -24,7 +24,8 @@ using tables: t_idx, t_id, get_table_index, get_table_id,
 	get_table_strid, has_table_entry, id_to_str
 
 
-function write_parser(tables, outfile, gen_partials = false)
+function write_parser(tables::Dict{String, Any},
+	outfile::IOStream, gen_partials::Bool = false)
 	end_token :: t_idx = tables["consts"]["end"]
 	start_idx :: t_idx = tables["consts"]["start"]
 
@@ -44,7 +45,7 @@ function write_parser(tables, outfile, gen_partials = false)
 		end_token :: t_idx
 		debug :: Bool
 		input_tokens :: Vector{Any}
-		input_idx :: Integer
+		input_idx :: t_idx
 		semantics :: Dict{t_id, Function}
 		lookahead :: Dict{String, Any}
 		symbols :: Vector
@@ -65,9 +66,9 @@ function write_parser(tables, outfile, gen_partials = false)
 	else
 		pr("\t\tparser.end_token = 0x" * string(end_token, base = 16))
 	end
+	pr("\t\tparser.debug = false")
 	pr("\t\tparser.input_tokens = [ ]")
 	pr("\t\tparser.semantics = Dict{t_id, Function}()")
-	pr("\t\tparser.debug = false")
 	if gen_partials  # partial rules
 		pr("\t\tparser.use_partials = true")
 	end
@@ -82,9 +83,9 @@ function write_parser(tables, outfile, gen_partials = false)
 	function reset(parser::Parser)
 		parser.input_idx = 0
 		parser.lookahead = Dict{String, Any}()
+		parser.symbols = [ ]
 		parser.dist_to_jump = 0
-		parser.accepted = false
-		parser.symbols = [ ]""")
+		parser.accepted = false""")
 		if gen_partials  # partial rules
 			pr("\tparser.active_rules = Dict{t_id, Any}()")
 			pr("\tparser.cur_rule_handle = 0\n")
@@ -121,7 +122,7 @@ function write_parser(tables, outfile, gen_partials = false)
 			insert_new_active_rule = false
 			seen_tokens_old = -1
 			rulestack = get!(parser.active_rules, rule_id, nothing)
-			if rulestack != nothing
+			if rulestack !== nothing
 				if length(rulestack) > 0
 					active_rule = rulestack[end]
 					seen_tokens_old = active_rule["seen_tokens"]
@@ -144,7 +145,7 @@ function write_parser(tables, outfile, gen_partials = false)
 					insert_new_active_rule = true
 				end
 			else
-				rulestack = []
+				rulestack = [ ]
 				parser.active_rules[rule_id] = rulestack
 				insert_new_active_rule = true
 			end
@@ -204,7 +205,7 @@ function write_parser(tables, outfile, gen_partials = false)
 	pr("""	handle = -1
 		if parser.use_partials
 			rulestack = get!(parser.active_rules, rule_id, nothing)
-			if rulestack != nothing && length(rulestack) > 0
+			if rulestack !== nothing && length(rulestack) > 0
 				active_rule = rulestack[end]
 				rule_ret = active_rule["retval"]
 				handle = active_rule["handle"]
@@ -215,15 +216,16 @@ function write_parser(tables, outfile, gen_partials = false)
 					parser.active_rules[rule_id] = rulestack
 				end
 			end
-			if parser.debug
-				@printf("Reducing %d symbols using rule %d (handle %d).\\n", num_rhs, rule_id, handle)
-			end
+		end
+		if parser.debug
+			@printf("Reducing %d symbol(s) using rule %d (handle %d).\\n",
+				num_rhs, rule_id, handle)
 		end
 	""")
 	else
 	pr("""
 		if parser.debug
-			@printf("Reducing %d symbols using rule %d.\\n", num_rhs, rule_id)
+			@printf("Reducing %d symbol(s) using rule %d.\\n", num_rhs, rule_id)
 		end
 	""")
 	end
@@ -255,7 +257,8 @@ function write_parser(tables, outfile, gen_partials = false)
 end
 
 
-function write_closure(tables, state_idx, outfile, gen_partials = false)
+function write_closure(tables::Dict{String, Any}, state_idx::t_idx,
+	outfile::IOStream, gen_partials::Bool = false)
 	# lalr(1) tables
 	shift_tab = tables["shift"]["elems"][state_idx + 1]
 	reduce_tab = tables["reduce"]["elems"][state_idx + 1]
@@ -295,11 +298,16 @@ function write_closure(tables, state_idx, outfile, gen_partials = false)
 	pr("\nfunction " * state_func * "(parser::Parser)")
 
 	if has_shift_entry
-		pr("\tnext_state = nothing")
+		pr("\tnext_state::Union{Function, Nothing} = nothing")
 	end
 
-	pr("\tla = parser.lookahead[\"id\"]")
+	pr("\tla = t_id(parser.lookahead[\"id\"])")
 	num_la_cases = 0
+
+	pr("\tif parser.debug")
+	pr("\t\t@printf(\"Entering state " * string(state_idx) *
+		", lookahead: %d.\\n\", la)")
+	pr("\tend")
 
 	rules_term_id = Dict()
 	acc_term_id = []
@@ -407,7 +415,7 @@ function write_closure(tables, state_idx, outfile, gen_partials = false)
 
 	# shift
 	if has_shift_entry
-		pr("\tif next_state != nothing")
+		pr("\tif next_state !== nothing")
 		pr("\t\tpush_lookahead(parser)")
 		pr("\t\tnext_state(parser)")
 		pr("\tend")
@@ -471,11 +479,18 @@ function write_closure(tables, state_idx, outfile, gen_partials = false)
 	end
 
 	pr("\tparser.dist_to_jump -= 1")
+
+	pr("\tif parser.debug")
+	pr("\t\t@printf(\"Exiting state " * string(state_idx) *
+		", lookahead: %d, distance to jump: %s.\\n\", la, parser.dist_to_jump)")
+	pr("\tend")
+
 	pr("end")  # state function
 end
 
 
-function create_parser(tables, parser_name, outfile_name, gen_partials = false)
+function create_parser(tables::Dict{String, Any}, parser_name::AbstractString,
+	outfile_name::AbstractString, gen_partials::Bool = false)
 	num_states = length(tables["shift"]["elems"])
 	if num_states == 0
 		printstyled(stderr, "Error: No states defined.\n", color=:red, bold=true)
@@ -507,9 +522,10 @@ end
 end  # module parsergen
 
 
-function (@main)(args)
+function parsergen_main(args)
 	if length(args) < 1
-		printstyled(stderr, "Please give a toml parsing table file.\n", color=:red, bold=true)
+		printstyled(stderr, "Please give a toml parsing table file.\n",
+			color=:red, bold=true)
 		return -1
 	end
 
@@ -523,10 +539,24 @@ function (@main)(args)
 	printstyled(tables["infos"] * "\n", color=:blue, bold=true)
 
 	gen_partials = true
-	if !parsergen.create_parser(tables, parser_name, outfile_name, gen_partials)
+	elapsed_time = (@elapsed parser_ok =
+		parsergen.create_parser(tables, parser_name, outfile_name, gen_partials))
+	if !parser_ok
 		printstyled(stderr, "Error: Failed creating parser.\n", color=:red, bold=true)
 		return -1
 	end
 
+	elapsed_str = @sprintf("Parser created in %.4g s.\n", elapsed_time)
+	println(elapsed_str)
+
 	return 0
+end
+
+
+@static if VERSION >= v"1.11"
+	function (@main)(args)
+		return parsergen_main(args)
+	end
+@static else
+	exit(parsergen_main(ARGS))
 end

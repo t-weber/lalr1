@@ -41,7 +41,7 @@ function get_matches(str :: AbstractString)
 	# get all possible matches
 	for to_match in token_regexes
 		the_match = match(to_match[1], str)
-		if the_match != nothing && the_match.offset == 1 #&& the_match.match == str
+		if the_match !== nothing && the_match.offset == 1 #&& the_match.match == str
 			lval = the_match.match
 
 			push!(matches, Any[
@@ -96,7 +96,7 @@ function get_tokens(str :: AbstractString)
 
 	while true
 		token, str = get_token(str)
-		if token == nothing
+		if token === nothing
 			break
 		end
 		push!(tokens, token)
