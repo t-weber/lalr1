@@ -557,6 +557,6 @@ end
 	function (@main)(args)
 		return parsergen_main(args)
 	end
-@static else
+else
 	exit(parsergen_main(ARGS))
 end
