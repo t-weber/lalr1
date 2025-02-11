@@ -549,16 +549,19 @@ bool %%PARSER_CLASS%%::CheckReturnSymbol(t_symbol& retsym, t_symbol_id expected_
 	t_symbol_id retid = retsym->GetId();
 	if(retid != expected_retid)
 	{
+		retsym->SetId(expected_retid);
+
 		if(m_debug)
 		{
+			// this may happen as we expect a reduced non-terminal id,
+			// but see a non-reduced one from further down a production rule
 			std::cerr
-				<< "Warning: Expected return symbol id " << expected_retid
+				<< "Info: Updated return symbol id to " << expected_retid
+				<< " from received id " << retid
 				<< " in semantic rule #" << rule_id
-				<< ", but received id " << retid << "."
-				<< std::endl;
+				<< "." << std::endl;
 		}
 
-		retsym->SetId(expected_retid);
 		return false;
 	}
 

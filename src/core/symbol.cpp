@@ -129,18 +129,6 @@ void Terminal::SetPrecedence(t_precedence prec, t_associativity assoc)
 }
 
 
-std::optional<t_precedence> Terminal::GetPrecedence() const
-{
-	return m_precedence;
-}
-
-
-std::optional<t_associativity> Terminal::GetAssociativity() const
-{
-	return m_associativity;
-}
-
-
 void Terminal::print(std::ostream& ostr, bool /*bnf*/) const
 {
 	ostr << GetStrId();

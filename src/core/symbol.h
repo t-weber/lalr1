@@ -120,8 +120,11 @@ public:
 	void SetAssociativity(char assoc);
 	void SetPrecedence(std::size_t prec, char assoc);
 
-	std::optional<t_precedence> GetPrecedence() const;
-	std::optional<t_associativity> GetAssociativity() const;
+	std::optional<t_precedence> GetPrecedence() const
+	{ return m_precedence; }
+
+	std::optional<t_associativity> GetAssociativity() const
+	{ return m_associativity; }
 
 
 public:

@@ -746,11 +746,13 @@ t_astbaseptr Parser::Parse(const t_toknodes& input) const
 				{
 					/*if(m_debug)
 					{
+						// this may happen as we expect a reduced non-terminal id,
+						// but see a non-reduced one further down a production rule
 						std::cerr
-							<< "Warning: Expected return symbol index " << lhs_expected_index
+							<< "Info: Updated return symbol index to " << lhs_expected_index
+							<< " from received index " << lhs_index
 							<< " in semantic rule #" << rule_idx
-							<< ", but received index " << lhs_index << "."
-							<< std::endl;
+							<< "." << std::endl;
 					}*/
 
 					lhs_index = lhs_expected_index;
