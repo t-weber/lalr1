@@ -154,86 +154,94 @@ static bool lr1_create_parser(
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 {
-	std::ios_base::sync_with_stdio(false);
-
-	// --------------------------------------------------------------------
-	// get program arguments
-	// --------------------------------------------------------------------
-	bool create_asc = false;
-	bool create_tables = false;
-	bool verbose = false;
-	bool no_debug_code = false;
-	bool no_comments = false;
-	bool no_error_code = false;
-	bool colours = false;
-	bool ascii = false;
-	bool la_deps = false;
-	bool write_graph = false;
-	bool name_states = false;
-	bool show_help = false;
-
-	args::options_description arg_descr("Script parser generator arguments");
-	arg_descr.add_options()
-		("asc,a", args::bool_switch(&create_asc), "create a recursive ascent parser [default]")
-		("table,t", args::bool_switch(&create_tables), "create LALR(1) tables")
-		("graph,g", args::bool_switch(&write_graph), "write a graph of the parser")
-		("verbose,v", args::bool_switch(&verbose), "enable verbose output for parser generation")
-		("nodebug,d", args::bool_switch(&no_debug_code), "disable generation of debug code for parser")
-		("nocomments,k", args::bool_switch(&no_comments), "disable generation of comments for parser")
-		("noerror,e", args::bool_switch(&no_error_code), "disable generation of error handling code for parser")
-		("colours,c", args::bool_switch(&colours), "enable colours in output")
-		("ascii,o", args::bool_switch(&ascii), "only use ascii characters in output")
-		("lookaheads,l", args::bool_switch(&la_deps), "print lookahead dependencies")
-		("names,n", args::bool_switch(&name_states), "name state functions")
-		("help,h", args::bool_switch(&show_help), "show help");
-
-	auto argparser = args::command_line_parser{argc, argv};
-	argparser.style(args::command_line_style::default_style);
-	argparser.options(arg_descr);
-
-	args::variables_map mapArgs;
-	auto parsedArgs = argparser.run();
-	args::store(parsedArgs, mapArgs);
-	args::notify(mapArgs);
-
-	if(show_help)
+	try
 	{
-		std::cout << "Script parser generator"
-			<< " by Tobias Weber <tobias.weber@tum.de>, 2022."
-			<< std::endl;
-		std::cout << "Internal data type lengths:"
-			<< " real: " << sizeof(t_real)*8 << " bits,"
-			<< " int: " << sizeof(t_int)*8 << " bits."
-			<< std::endl;
-		std::cout << "\n" << arg_descr << std::endl;
-		return 0;
+		std::ios_base::sync_with_stdio(false);
+
+		// --------------------------------------------------------------------
+		// get program arguments
+		// --------------------------------------------------------------------
+		bool create_asc = false;
+		bool create_tables = false;
+		bool verbose = false;
+		bool no_debug_code = false;
+		bool no_comments = false;
+		bool no_error_code = false;
+		bool colours = false;
+		bool ascii = false;
+		bool la_deps = false;
+		bool write_graph = false;
+		bool name_states = false;
+		bool show_help = false;
+
+		args::options_description arg_descr("Script parser generator arguments");
+		arg_descr.add_options()
+			("asc,a", args::bool_switch(&create_asc), "create a recursive ascent parser [default]")
+			("table,t", args::bool_switch(&create_tables), "create LALR(1) tables")
+			("graph,g", args::bool_switch(&write_graph), "write a graph of the parser")
+			("verbose,v", args::bool_switch(&verbose), "enable verbose output for parser generation")
+			("nodebug,d", args::bool_switch(&no_debug_code), "disable generation of debug code for parser")
+			("nocomments,k", args::bool_switch(&no_comments), "disable generation of comments for parser")
+			("noerror,e", args::bool_switch(&no_error_code), "disable generation of error handling code for parser")
+			("colours,c", args::bool_switch(&colours), "enable colours in output")
+			("ascii,o", args::bool_switch(&ascii), "only use ascii characters in output")
+			("lookaheads,l", args::bool_switch(&la_deps), "print lookahead dependencies")
+			("names,n", args::bool_switch(&name_states), "name state functions")
+			("help,h", args::bool_switch(&show_help), "show help");
+
+		auto argparser = args::command_line_parser{argc, argv};
+		argparser.style(args::command_line_style::default_style);
+		argparser.options(arg_descr);
+
+		args::variables_map mapArgs;
+		auto parsedArgs = argparser.run();
+		args::store(parsedArgs, mapArgs);
+		args::notify(mapArgs);
+
+		if(show_help)
+		{
+			std::cout << "Script parser generator"
+				<< " by Tobias Weber <tobias.weber@tum.de>, 2022."
+				<< std::endl;
+			std::cout << "Internal data type lengths:"
+				<< " real: " << sizeof(t_real)*8 << " bits,"
+				<< " int: " << sizeof(t_int)*8 << " bits."
+				<< std::endl;
+			std::cout << "\n" << arg_descr << std::endl;
+			return 0;
+		}
+
+		g_options.SetUseColour(colours);
+		g_options.SetUseAsciiChars(ascii);
+		g_options.SetPrintLookaheadDependencies(la_deps);
+
+		if(!create_asc && !create_tables)
+		{
+			/*std::cerr << "Warning: Neither recursive ascent parser"
+				<< " nor LALR(1) table generation was selected,"
+				<< " defaulting to recursive ascent parser."
+				<< std::endl;*/
+			create_asc = true;
+		}
+		// --------------------------------------------------------------------
+
+		t_timepoint start_parsergen = t_clock::now();
+
+		if(lr1_create_parser(create_asc, create_tables,
+			verbose, !no_debug_code, !no_comments, !no_error_code,
+			write_graph))
+		{
+			auto [run_time, time_unit] = get_elapsed_time<
+				t_real, t_timepoint>(start_parsergen);
+			std::cout << "Parser generation time: "
+				<< run_time << " " << time_unit << "."
+				<< std::endl;
+		}
 	}
-
-	g_options.SetUseColour(colours);
-	g_options.SetUseAsciiChars(ascii);
-	g_options.SetPrintLookaheadDependencies(la_deps);
-
-	if(!create_asc && !create_tables)
+	catch(const std::exception& err)
 	{
-		/*std::cerr << "Warning: Neither recursive ascent parser"
-			<< " nor LALR(1) table generation was selected,"
-			<< " defaulting to recursive ascent parser."
-			<< std::endl;*/
-		create_asc = true;
-	}
-	// --------------------------------------------------------------------
-
-	t_timepoint start_parsergen = t_clock::now();
-
-	if(lr1_create_parser(create_asc, create_tables,
-		verbose, !no_debug_code, !no_comments, !no_error_code,
-		write_graph))
-	{
-		auto [run_time, time_unit] = get_elapsed_time<
-			t_real, t_timepoint>(start_parsergen);
-		std::cout << "Parser generation time: "
-			<< run_time << " " << time_unit << "."
-			<< std::endl;
+		std::cerr << "Error: " << err.what() << std::endl;
+		return -1;
 	}
 
 	return 0;

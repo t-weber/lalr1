@@ -333,85 +333,93 @@ static bool run_vm(const std::string& prog)
 
 int main(int argc, char** argv)
 {
-	std::ios_base::sync_with_stdio(false);
-
-	// --------------------------------------------------------------------
-	// get program arguments
-	// --------------------------------------------------------------------
-	std::vector<std::string> progs;
-
-	bool debug_codegen = false;
-	bool debug_parser = false;
-	bool runvm = false;
-	bool direct_consts = false;
-	bool no_reloc = false;
-	bool optimise = false;
-
-	args::options_description arg_descr("Script compiler arguments");
-	arg_descr.add_options()
-	("run,r", args::bool_switch(&runvm), "directly run the compiled program")
-	("debug,d", args::bool_switch(&debug_codegen), "enable debug output for code generation")
-	("debugparser,p", args::bool_switch(&debug_parser), "enable debug output for parser")
-	("direct_consts", args::bool_switch(&direct_consts), "do not create a constants table")
-	("non_relocatable", args::bool_switch(&no_reloc), "create non-relocatable code")
-	("optimise,O", args::bool_switch(&optimise), "optimise code generation")
-	("prog", args::value<decltype(progs)>(&progs), "input program to run");
-
-	args::positional_options_description posarg_descr;
-	posarg_descr.add("prog", -1);
-
-	auto argparser = args::command_line_parser{argc, argv};
-	argparser.style(args::command_line_style::default_style);
-	argparser.options(arg_descr);
-	argparser.positional(posarg_descr);
-
-	args::variables_map mapArgs;
-	auto parsedArgs = argparser.run();
-	args::store(parsedArgs, mapArgs);
-	args::notify(mapArgs);
-
-	if(progs.size() == 0)
+	try
 	{
-		std::cout << "Script compiler"
-			<< " by Tobias Weber <tobias.weber@tum.de>, 2022."
-			<< std::endl;
-		std::cout << "Internal data type lengths:"
-			<< " real: " << sizeof(t_real)*8 << " bits,"
-			<< " int: " << sizeof(t_int)*8 << " bits,"
-			<< " address: " << sizeof(VM::t_addr)*8 << " bits."
-			<< std::endl;
+		std::ios_base::sync_with_stdio(false);
 
-		std::cerr << "Please specify an input script to compile.\n" << std::endl;
-		std::cout << arg_descr << std::endl;
-		return 0;
-	}
-	// --------------------------------------------------------------------
+		// --------------------------------------------------------------------
+		// get program arguments
+		// --------------------------------------------------------------------
+		std::vector<std::string> progs;
 
-	t_timepoint start_codegen = t_clock::now();
-	fs::path script_file = progs[0];
+		bool debug_codegen = false;
+		bool debug_parser = false;
+		bool runvm = false;
+		bool direct_consts = false;
+		bool no_reloc = false;
+		bool optimise = false;
 
-	if(auto [code_ok, prog] = lalr1_run_parser(
-		script_file.string(), debug_codegen, debug_parser,
-		direct_consts, no_reloc, optimise);
-		code_ok)
-	{
-		auto [run_time, time_unit] = get_elapsed_time<
-			t_real, t_timepoint>(start_codegen);
-		std::cout << "Code generation time: "
-			<< run_time << " " << time_unit << "."
-			<< std::endl;
-		if(runvm)
+		args::options_description arg_descr("Script compiler arguments");
+		arg_descr.add_options()
+		("run,r", args::bool_switch(&runvm), "directly run the compiled program")
+		("debug,d", args::bool_switch(&debug_codegen), "enable debug output for code generation")
+		("debugparser,p", args::bool_switch(&debug_parser), "enable debug output for parser")
+		("direct_consts", args::bool_switch(&direct_consts), "do not create a constants table")
+		("non_relocatable", args::bool_switch(&no_reloc), "create non-relocatable code")
+		("optimise,O", args::bool_switch(&optimise), "optimise code generation")
+		("prog", args::value<decltype(progs)>(&progs), "input program to run");
+
+		args::positional_options_description posarg_descr;
+		posarg_descr.add("prog", -1);
+
+		auto argparser = args::command_line_parser{argc, argv};
+		argparser.style(args::command_line_style::default_style);
+		argparser.options(arg_descr);
+		argparser.positional(posarg_descr);
+
+		args::variables_map mapArgs;
+		auto parsedArgs = argparser.run();
+		args::store(parsedArgs, mapArgs);
+		args::notify(mapArgs);
+
+		if(progs.size() == 0)
 		{
-			t_timepoint start_vm = t_clock::now();
-			if(run_vm(prog))
+			std::cout << "Script compiler"
+				<< " by Tobias Weber <tobias.weber@tum.de>, 2022."
+				<< std::endl;
+			std::cout << "Internal data type lengths:"
+				<< " real: " << sizeof(t_real)*8 << " bits,"
+				<< " int: " << sizeof(t_int)*8 << " bits,"
+				<< " address: " << sizeof(VM::t_addr)*8 << " bits."
+				<< std::endl;
+
+			std::cerr << "Please specify an input script to compile.\n" << std::endl;
+			std::cout << arg_descr << std::endl;
+			return 0;
+		}
+		// --------------------------------------------------------------------
+
+		t_timepoint start_codegen = t_clock::now();
+		fs::path script_file = progs[0];
+
+		if(auto [code_ok, prog] = lalr1_run_parser(
+			script_file.string(), debug_codegen, debug_parser,
+			direct_consts, no_reloc, optimise);
+			code_ok)
+		{
+			auto [run_time, time_unit] = get_elapsed_time<
+				t_real, t_timepoint>(start_codegen);
+			std::cout << "Code generation time: "
+				<< run_time << " " << time_unit << "."
+				<< std::endl;
+			if(runvm)
 			{
-				auto [vm_run_time, vm_time_unit] = get_elapsed_time<
-					t_real, t_timepoint>(start_vm);
-				std::cout << "VM execution time: "
-					<< vm_run_time << " " << vm_time_unit << "."
-					<< std::endl;
+				t_timepoint start_vm = t_clock::now();
+				if(run_vm(prog))
+				{
+					auto [vm_run_time, vm_time_unit] = get_elapsed_time<
+						t_real, t_timepoint>(start_vm);
+					std::cout << "VM execution time: "
+						<< vm_run_time << " " << vm_time_unit << "."
+						<< std::endl;
+				}
 			}
 		}
+	}
+	catch(const std::exception& err)
+	{
+		std::cerr << "Error: " << err.what() << std::endl;
+		return -1;
 	}
 
 	return 0;

@@ -185,12 +185,32 @@ bool TableGen::CreateParseTables()
 
 
 	// set a table item
-	auto set_tab_elem = [](std::vector<std::size_t>& vec, t_index idx,
-		std::size_t val, t_index filler = ERROR_VAL) -> void
+	auto set_tab_elem = [this](std::vector<std::size_t>& vec, t_index idx,
+		std::size_t val, t_index filler = ERROR_VAL, const char* tab_name = nullptr) -> void
 	{
 		if(vec.size() <= idx)
-			vec.resize(idx+1, filler);
-		vec[idx] = val;
+			vec.resize(idx + 1, filler);
+
+		if(vec[idx] == filler)
+		{
+			vec[idx] = val;
+		}
+		else if(vec[idx] != val)
+		{
+			std::ostringstream ostrErr;
+			ostrErr << "Error";
+			if(tab_name)
+				ostrErr << " in table " << tab_name;
+			ostrErr << ": Cannot set new value " << val
+				<< " because the table index " << idx
+				<< " already contains value " << vec[idx]
+				<< "." << std::endl;
+
+			if(GetStopOnConflicts())
+				throw std::runtime_error(ostrErr.str());
+			else
+				std::cerr << ostrErr.str() << std::endl;
+		}
 	};
 
 
@@ -223,12 +243,13 @@ bool TableGen::CreateParseTables()
 
 		// set table elements
 		std::vector<std::vector<t_index>>* tab = symIsTerm ? &action_shift : &jump;
+		const char* tab_name = symIsTerm ? "shift" : "jump";
 
 		const ClosurePtr& stateFrom = std::get<0>(transition);
 		const ClosurePtr& stateTo = std::get<1>(transition);
 		const Collection::t_elements& elemsFrom = std::get<3>(transition);
 
-		set_tab_elem((*tab)[stateFrom->GetId()], symIdx, stateTo->GetId());
+		set_tab_elem((*tab)[stateFrom->GetId()], symIdx, stateTo->GetId(), ERROR_VAL, tab_name);
 
 		if(GetGenPartialMatches())
 		{
@@ -238,8 +259,8 @@ bool TableGen::CreateParseTables()
 			{
 				// set partial match table elements
 				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
-				set_tab_elem(partials_rule_term[stateFrom->GetId()], symIdx, rule_idx);
-				set_tab_elem(partials_matchlen_term[stateFrom->GetId()], symIdx, rule_len, 0);
+				set_tab_elem(partials_rule_term[stateFrom->GetId()], symIdx, rule_idx, ERROR_VAL, "partials_rule_term");
+				set_tab_elem(partials_matchlen_term[stateFrom->GetId()], symIdx, rule_len, 0, "partials_matchlen_term");
 				// TODO: also save lhs_id to table to check against semantic rule's return type
 			}
 
@@ -249,9 +270,9 @@ bool TableGen::CreateParseTables()
 			{
 				// set partial match table elements
 				t_index rule_idx = GetTableIndex(rule_id, IndexTableKind::SEMANTIC);
-				set_tab_elem(partials_rule_nonterm[stateFrom->GetId()], symIdx, rule_idx);
-				set_tab_elem(partials_matchlen_nonterm[stateFrom->GetId()], symIdx, rule_len, 0);
-				set_tab_elem(partials_lhsid_nonterm[stateFrom->GetId()], symIdx, lhs_id);
+				set_tab_elem(partials_rule_nonterm[stateFrom->GetId()], symIdx, rule_idx, ERROR_VAL, "partials_rule_nonterm");
+				set_tab_elem(partials_matchlen_nonterm[stateFrom->GetId()], symIdx, rule_len, 0, "partials_matchlen_nonterm");
+				set_tab_elem(partials_lhsid_nonterm[stateFrom->GetId()], symIdx, lhs_id, ERROR_VAL, "partials_lhsid_nonterm");
 			}
 		}
 	}
@@ -278,13 +299,13 @@ bool TableGen::CreateParseTables()
 
 			t_index rule_idx = GetTableIndex(*rule_id, IndexTableKind::SEMANTIC);
 			set_tab_elem(m_numRhsSymsPerRule, rule_idx,
-				elem->GetRhs()->NumSymbols(false), 0);
+				elem->GetRhs()->NumSymbols(false), 0, "numRhsSymsPerRule");
 
 			//std::cerr << "Getting table index for lhs symbol " << elem->GetLhs()->GetStrId() << std::endl;
 			const t_index lhs_idx = GetTableIndex(
 				elem->GetLhs()->GetId(),
 				IndexTableKind::NONTERMINAL);
-			set_tab_elem(m_ruleLhsIdx, rule_idx, lhs_idx, 0);
+			set_tab_elem(m_ruleLhsIdx, rule_idx, lhs_idx, 0, "ruleLhsIdx,");
 			// TODO: also save lhs id to table to check against semantic rule's return type
 
 			auto& _reduce_row = action_reduce[closure->GetId()];
@@ -297,7 +318,7 @@ bool TableGen::CreateParseTables()
 					rule_idx = ACCEPT_VAL;
 
 				// semantic rule number -> reduce table
-				set_tab_elem(_reduce_row, laIdx, rule_idx);
+				set_tab_elem(_reduce_row, laIdx, rule_idx, ERROR_VAL, "reduce");
 			}
 		}
 	}
