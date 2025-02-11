@@ -671,7 +671,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 
 	// core element
 	ostr << lhs->GetStrId() << " " << g_options.GetArrowChar() << " [ ";
-	for(t_index rhs_idx=0; rhs_idx<rhs->size(); ++rhs_idx)
+	for(t_index rhs_idx = 0; rhs_idx < rhs->size(); ++rhs_idx)
 	{
 		if(elem.GetCursor() == rhs_idx)
 			ostr << g_options.GetCursorChar();

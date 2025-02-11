@@ -287,7 +287,7 @@ t_semanticargs %%PARSER_CLASS%%::GetArguments(t_stack& symbols, std::size_t num_
 	num_rhs = std::min(symbols.size(), num_rhs);
 	t_semanticargs args(num_rhs);
 
-	for(t_index arg=0; arg<num_rhs; ++arg)
+	for(t_index arg = 0; arg < num_rhs; ++arg)
 	{
 		args[num_rhs-arg-1] = std::move(symbols.top());
 		symbols.pop();

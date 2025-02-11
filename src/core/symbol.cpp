@@ -284,7 +284,7 @@ NonTerminalPtr NonTerminal::RemoveLeftRecursion(
 	std::deque<WordPtr> rulesWithLeftRecursion;
 	std::deque<WordPtr> rulesWithoutLeftRecursion;
 
-	for(t_index ruleidx=0; ruleidx<NumRules(); ++ruleidx)
+	for(t_index ruleidx = 0; ruleidx < NumRules(); ++ruleidx)
 	{
 		const WordPtr& rule = this->GetRule(ruleidx);
 		if(rule->NumSymbols() >= 1 && rule->GetSymbol(0)->hash() == this->hash())
@@ -349,7 +349,7 @@ void NonTerminal::print(std::ostream& ostr, bool bnf) const
 	std::string rule0sep = bnf ? " " :  "\t  ";
 
 	ostr << GetStrId() << lhsrhssep;
-	for(t_index i=0; i<NumRules(); ++i)
+	for(t_index i = 0; i < NumRules(); ++i)
 	{
 		if(i==0)
 			ostr << rule0sep;
@@ -417,13 +417,13 @@ void NonTerminal::CalcFirst(t_map_first& map_first,
 	set_first_perrule.resize(nonterm->NumRules());
 
 	// iterate rules
-	for(t_index rule_idx=0; rule_idx<nonterm->NumRules(); ++rule_idx)
+	for(t_index rule_idx = 0; rule_idx < nonterm->NumRules(); ++rule_idx)
 	{
 		const WordPtr& rule = nonterm->GetRule(rule_idx);
 
 		// iterate RHS of rule
 		const std::size_t num_all_symbols = rule->NumSymbols();
-		for(t_index sym_idx=0; sym_idx<num_all_symbols; ++sym_idx)
+		for(t_index sym_idx = 0; sym_idx < num_all_symbols; ++sym_idx)
 		{
 			const SymbolPtr& sym = (*rule)[sym_idx];
 
@@ -508,12 +508,12 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 	for(const NonTerminalPtr& lhs : allnonterms)
 	{
 		// iterate rules
-		for(t_index rule_idx=0; rule_idx<lhs->NumRules(); ++rule_idx)
+		for(t_index rule_idx = 0; rule_idx < lhs->NumRules(); ++rule_idx)
 		{
 			const WordPtr& rule = lhs->GetRule(rule_idx);
 
 			// iterate RHS of rule
-			for(t_index sym_idx=0; sym_idx<rule->NumSymbols(); ++sym_idx)
+			for(t_index sym_idx = 0; sym_idx < rule->NumSymbols(); ++sym_idx)
 			{
 				// continue if cur_nonterm is not in RHS of lhs rules
 				if(*(*rule)[sym_idx] != *cur_nonterm)
@@ -549,7 +549,7 @@ void NonTerminal::CalcFollow(const std::vector<NonTerminalPtr>& allnonterms,
 				bool is_last_sym = (next_sym_idx >= rule->NumSymbols());
 
 				// ... or only epsilon productions afterwards?
-				for(; next_sym_idx<rule->NumSymbols(); ++next_sym_idx)
+				for(; next_sym_idx < rule->NumSymbols(); ++next_sym_idx)
 				{
 					const SymbolPtr& sym = (*rule)[next_sym_idx];
 
@@ -713,7 +713,7 @@ const Terminal::t_terminalset& Word::CalcFirst(
 
 	t_map_first first_nonterms;
 
-	for(t_index sym_idx=offs; sym_idx<num_all_symbols; ++sym_idx)
+	for(t_index sym_idx = offs; sym_idx < num_all_symbols; ++sym_idx)
 	{
 		const SymbolPtr& sym = sym_idx < num_rule_symbols ? (*this)[sym_idx] : additional_sym;
 
@@ -803,7 +803,7 @@ t_hash Word::hash(t_index offs, const TerminalPtr& additional_sym) const
 	if(additional_sym && additional_sym.get())
 		++num_all_symbols;
 
-	for(t_index sym_idx=offs; sym_idx<num_all_symbols; ++sym_idx)
+	for(t_index sym_idx = offs; sym_idx < num_all_symbols; ++sym_idx)
 	{
 		const SymbolPtr& sym = sym_idx < num_rule_symbols ? (*this)[sym_idx] : additional_sym;
 
@@ -818,7 +818,7 @@ t_hash Word::hash(t_index offs, const TerminalPtr& additional_sym) const
 std::ostream& operator<<(std::ostream& ostr, const Word& word)
 {
 	const std::size_t num_syms = word.NumSymbols();
-	for(t_index idx=0; idx<num_syms; ++idx)
+	for(t_index idx = 0; idx < num_syms; ++idx)
 	{
 		ostr << word.GetSymbol(idx)->GetStrId();
 		if(idx < num_syms - 1)

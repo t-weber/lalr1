@@ -170,7 +170,7 @@ bool TableGen::CreateParseTables()
 	partials_matchlen_nonterm.resize(numStates);
 	partials_lhsid_nonterm.resize(numStates);
 
-	for(t_state_id state=0; state<numStates; ++state)
+	for(t_state_id state = 0; state < numStates; ++state)
 	{
 		action_shift[state].resize(numTerminals, ERROR_VAL);
 		action_reduce[state].resize(numTerminals, ERROR_VAL);
@@ -335,7 +335,7 @@ bool TableGen::CreateParseTables()
 	{
 		std::optional<Terminal::t_terminalset> lookbacks;
 
-		for(t_index termidx=0; termidx<numTerminals; ++termidx)
+		for(t_index termidx = 0; termidx < numTerminals; ++termidx)
 		{
 			// get table entries
 			t_index& shiftEntry = m_tabActionShift(state, termidx);

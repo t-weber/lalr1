@@ -739,10 +739,11 @@ bool Collection::SolveShiftReduceConflict(
 	t_index* shiftEntry, t_index* reduceEntry) const
 {
 	// no conflict?
-	if(*shiftEntry==ERROR_VAL || *reduceEntry==ERROR_VAL)
+	if(*shiftEntry == ERROR_VAL || *reduceEntry == ERROR_VAL)
 		return true;
 
 	bool solution_found = false;
+	constexpr bool debug = false;
 
 	// try to resolve conflict using operator precedences/associativities
 	if(sym_at_cursor && sym_at_cursor->IsTerminal())
@@ -755,6 +756,27 @@ bool Collection::SolveShiftReduceConflict(
 			if(ConflictSolution sol = solve_shift_reduce_conflict(lookback, term_at_cursor);
 				sol != ConflictSolution::NOT_FOUND)
 			{
+				if constexpr(debug)
+				{
+					std::cout << "Solved shift/reduce conflict between symbol "
+						<< lookback->GetStrId() << " and " << term_at_cursor->GetStrId()
+						<< " via ";
+					if(sol == ConflictSolution::DO_SHIFT)
+					{
+						std::cout << "a shift to state " << *shiftEntry
+							<< ". The alternative would have been a reduce"
+							<< " using rule " << *reduceEntry
+							<< "." << std::endl;
+					}
+					else if(sol == ConflictSolution::DO_REDUCE)
+					{
+						std::cout << "a reduce using rule " << *reduceEntry
+							<< ". The alternative would have been a shift"
+							<< " to state " << *shiftEntry
+							<< "." << std::endl;
+					}
+				}
+
 				if(sol == ConflictSolution::DO_SHIFT)
 					*reduceEntry = ERROR_VAL;
 				else if(sol == ConflictSolution::DO_REDUCE)

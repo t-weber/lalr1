@@ -157,17 +157,17 @@ Lexer::GetMatchingTokens(const std::string& str, std::size_t line)
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_symbol_id>(Token::NEQU), str, line));
 		}
-		if(str == "||" || str == "or")
+		else if(str == "||" || str == "or")
 		{
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_symbol_id>(Token::OR), str, line));
 		}
-		if(str == "&&" || str == "and")
+		else if(str == "&&" || str == "and")
 		{
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_symbol_id>(Token::AND), str, line));
 		}
-		if(str == "xor")
+		else if(str == "xor")
 		{
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_symbol_id>(Token::BIN_XOR), str, line));
